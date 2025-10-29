@@ -1,0 +1,169 @@
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+}
+
+.school-carousel {
+    position: fixed;
+    width: 102dvw;
+    height: 102dvh;
+    z-index: -1;
+}
+
+.school-carousel img {
+    filter: blur(4px);
+    object-fit: cover;
+}
+
+.school-carousel-curr {
+    z-index: 1;
+}
+
+.school-carousel-curr.switch {
+    opacity: 0;
+    transition: opacity 500ms ease-out;
+}
+
+.school-carousel::after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 50, 0.4);
+    z-index: 2;
+}
+
+.form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 40px;
+    border-radius: 15px;
+    backdrop-filter: blur(4px);
+}
+
+.form-logo {
+    position: relative;
+    height: 20dvh;
+    width: 20dvh;
+}
+
+.form-logo img {
+    object-fit: contain;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
+
+.form-welcome {
+    font: bold 1.5em "Crimson text", serif;
+    text-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+    width: 10em;
+    text-align: center;
+}
+
+.form-welcome.a {
+    color: #112856;
+}
+
+.form-welcome.b {
+    color: #ED1E28;
+}
+
+.form-signin {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    background-color: white;
+    color: #121212;
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+    padding: 0.3em 2em;
+    border-radius: 0.5em;
+    margin: 1em 0;
+}
+
+.form-signin-icon {
+    position: relative;
+    width: 2em;
+    height: 2em;
+}
+
+.form-terms-button {
+    border: none;
+    color: #585858;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.form-terms-overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+    position: fixed;
+    inset: 0;
+    transition: 2s;
+}
+
+.form-terms-content {
+    background-color: rgba(255, 255, 255, 0.8);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 40px;
+    border-radius: 15px;
+    color: #121212;
+    backdrop-filter: blur(4px);
+    max-height: 90dvh;
+    overflow-y: auto;
+}
+
+.form-terms-title {
+    font: bold 1.5em "Crimson Text", serif;
+    margin-bottom: 0.5em;
+}
+
+.form-terms-description {
+    font-size: 1em;
+    margin-bottom: 1em;
+    color: #585858;
+}
+
+.form-terms-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #585858;
+}
+
+.motto {
+    height: 1.5em;
+    font: 1.5em "Crimson text", serif;
+    letter-spacing: 0.2em;
+    margin: 30px 0 0 0;
+    text-align: center;
+}
+
+.school-carousel-group {
+    position: absolute;
+    bottom: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.school-carousel-items {
+    width: 40px;
+    height: 5px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+.school-carousel-items[data-state="on"] {
+    background-color: #ffffff;
+}
