@@ -1,9 +1,9 @@
 import Image from "next/image";
-import "./index.css";
+import "@/app/(pages)/index.css";
 import { Dialog } from "radix-ui";
 import { Cross2Icon } from "@radix-ui/react-icons";
-import CarouselClient from "../components/CarouselClient";
-import SignInButton from "../components/SignInButton";
+import CarouselClient from "@/app/components/CarouselClient";
+import SignInButton from "@/app/components/SignInButton";
 
 export default function Home() {
     return (
