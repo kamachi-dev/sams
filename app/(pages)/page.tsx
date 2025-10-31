@@ -3,6 +3,7 @@ import "./index.css";
 import { Dialog } from "radix-ui";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import CarouselClient from "../components/CarouselClient";
+import SignInButton from "../components/SignInButton";
 
 export default function Home() {
     return (
@@ -15,12 +16,7 @@ export default function Home() {
                 <h1 className="form-welcome a">Welcome to</h1>
                 <h1 className="form-welcome b">Student Attendance Management System SAMS</h1>
 
-                <button className="form-signin">
-                    <div className="form-signin-icon">
-                        <Image src="/icons/google.png" alt="" fill />
-                    </div>
-                    Sign in with Google
-                </button>
+                <SignInButton />
 
                 <Dialog.Root>
                     <Dialog.Trigger className="form-terms-button">Terms and Conditions</Dialog.Trigger>
@@ -81,7 +77,7 @@ export default function Home() {
                         </Dialog.Content>
                     </Dialog.Portal>
                 </Dialog.Root>
-            </div>
+            </div >
 
             <h1 className="motto">EXCELLENCE AND VIRTUE</h1>
         </>
