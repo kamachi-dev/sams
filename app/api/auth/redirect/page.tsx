@@ -1,17 +1,17 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { currentUser } from "@clerk/nextjs/server";
 import supabase from "@/app/services/supa";
 
 export default async function Redirect() {
-    const session = await getServerSession(authOptions);
+    const user = await currentUser();
 
-    if (!session?.user?.email) redirect("/");
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (!email) redirect("/");
 
     const { data, error } = await supabase
         .from("user")
         .select("role")
-        .eq("email", session.user.email)
+        .eq("email", email)
         .single();
 
     if (error || !data) {

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import "@/app/(pages)/index.css";
+import "@/app/(pages)/(login)/index.css";
 import { Dialog } from "radix-ui";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import CarouselClient from "@/app/components/CarouselClient";

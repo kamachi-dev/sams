@@ -1,3 +1,5 @@
+"use client";
+
 import SamsTemplate from "@/app/components/SamsTemplate";
 import { ThickArrowRightIcon } from "@radix-ui/react-icons";
 

@@ -1,17 +1,31 @@
+'use client';
+
 import React from "react";
 import Image from "next/image";
-import { Popover, Separator, Tabs } from "radix-ui";
+import { Popover, Separator, Tabs, Switch } from "radix-ui";
 import { GearIcon, ExitIcon, Half2Icon } from "@radix-ui/react-icons";
-import DynamicTitle from "./DynamicTitle";
-import Link from "next/link";
-import DynamicTheme from "./DynamicTheme";
+import { SignOutButton, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { usePathname } from 'next/navigation';
 
 interface Props {
     links: { label: string; Icon: React.ElementType; content: React.ReactNode }[];
 }
 
+function toggleTheme(checked: boolean) {
+    document.documentElement.classList.toggle('dark', checked);
+}
+
+function formatPathname(path = '') {
+    return path
+        .replace(/^\//, '')
+        .replace(/-([a-z])/g, (_, c) => ' ' + c.toUpperCase())
+        .replace(/^./, (c: string) => c.toUpperCase());
+}
+
 export default function SamsTemplate({ links }: Props) {
     const defaultTab = links && links.length > 0 ? links[0].label : undefined;
+    const pathname = usePathname() ?? '';
+    const title = React.useMemo(() => formatPathname(pathname), [pathname]);
 
     return (
         <Tabs.Root defaultValue={defaultTab} className="sams">
@@ -24,14 +38,15 @@ export default function SamsTemplate({ links }: Props) {
                             fill
                         />
                     </div>
-                    <DynamicTitle />
+                    <h1 className="sams-nav-header-title">{title}</h1>
                 </div>
-                <div className="sams-nav-pfp">
-                    <Image
-                        src="/icons/placeholder-pfp.png"
-                        alt="Profile Picture"
-                        fill
-                    />
+                <div className="sams-nav-pfp flex items-center justify-center">
+                    <SignedIn>
+                        <UserButton appearance={{ elements: { avatarBox: { width: 40, height: 40 } } }} />
+                    </SignedIn>
+                    <SignedOut>
+                        <Image src="/icons/placeholder-pfp.png" alt="Profile Picture" fill />
+                    </SignedOut>
                 </div>
                 <h2 className="sams-nav-username">Guest</h2>
                 <p className="sams-nav-email">guest@example.com</p>
@@ -52,10 +67,14 @@ export default function SamsTemplate({ links }: Props) {
                             <div className="flex items-center justify-between">
                                 <Half2Icon className="mr-2" />
                                 Dark Mode
-                                <DynamicTheme />
+                                <Switch.Root className="sams-nav-settings-switch" onCheckedChange={(checked) => toggleTheme(checked)}>
+                                    <Switch.Thumb className="sams-nav-settings-switch-thumb" />
+                                </Switch.Root>
                             </div>
                             <Popover.Arrow className="sams-nav-settings-arrow" />
-                            <Link href="/"><ExitIcon className="mr-2" />Signout</Link>
+                            <SignOutButton redirectUrl="/">
+                                <span className="flex items-center cursor-pointer"><ExitIcon className="mr-2" />Sign out</span>
+                            </SignOutButton>
                         </Popover.Content>
                     </Popover.Portal>
                 </Popover.Root>
