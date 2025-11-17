@@ -1,7 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import SamsError from "@/app/components/SamsError";
 import "./globals.css";
+import { Toast } from "radix-ui";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -13,21 +15,20 @@ const geistMono = Geist_Mono({
     subsets: ["latin"],
 });
 
-const metadata: Metadata = {
+export const metadata: Metadata = {
     title: "SAMS",
     description: "A Facial Recognition Based Attendance Management System",
     keywords: ["attendance", "facial recognition", "management", "mmcl"],
     authors: [{ name: "MMCL", url: "https://mcl.edu.ph" }],
-    viewport: {
-        width: "device-width",
-        initialScale: 1,
-    },
     icons: {
         icon: "/images/mmcl-logo.png",
     }
 };
 
-export { metadata };
+export const viewport: Viewport = {
+    width: "device-width",
+    initialScale: 1,
+};
 
 export default function RootLayout({
     children,
@@ -36,11 +37,14 @@ export default function RootLayout({
 }>) {
     return (
         <ClerkProvider>
-            <html lang="en">
-                <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-                    {children}
-                </body>
-            </html>
+            <Toast.Provider swipeDirection="right">
+                <html lang="en">
+                    <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+                        {children}
+                        <SamsError />
+                    </body>
+                </html>
+            </Toast.Provider>
         </ClerkProvider>
     );
 }

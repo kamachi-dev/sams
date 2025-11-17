@@ -1,34 +1,72 @@
-import { redirect } from "next/navigation";
-import { currentUser } from "@clerk/nextjs/server";
-import supabase from "@/app/services/supa";
+"use client";
 
-export default async function Redirect() {
-    const user = await currentUser();
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { Spinner } from "@radix-ui/themes";
 
-    const email = user?.primaryEmailAddress?.emailAddress;
-    if (!email) redirect("/");
+export default function Redirect() {
+    const router = useRouter();
+    const { user, isLoaded } = useUser();
 
-    const { data, error } = await supabase
-        .from("user")
-        .select("role")
-        .eq("email", email)
-        .single();
+    useEffect(() => {
+        async function handleRedirect() {
+            if (!isLoaded) return;
 
-    if (error || !data) {
-        console.error("Supabase error:", error);
-        redirect("/");
-    }
+            console.log("Logging In");
+            console.log("Clerk user:", user);
 
-    switch (data.role) {
-        case 0:
-            redirect("/admin-portal");
-        case 1:
-            redirect("/teacher-portal");
-        case 2:
-            redirect("/parent-portal");
-        case 3:
-            redirect("/student-portal");
-        default:
-            redirect("/");
-    }
+            const email = user?.primaryEmailAddress?.emailAddress;
+            if (!email) {
+                router.push("/");
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/user", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email }),
+                });
+
+                const { role, error } = await response.json();
+
+                if (error || role === undefined) {
+                    console.error("API error:", error);
+                    router.push(`/?error=${encodeURIComponent("Unable to retrieve user data.")}`);
+                    return;
+                }
+
+                switch (role) {
+                    case 0:
+                        router.push("/admin-portal");
+                        break;
+                    case 1:
+                        router.push("/teacher-portal");
+                        break;
+                    case 2:
+                        router.push("/parent-portal");
+                        break;
+                    case 3:
+                        router.push("/student-portal");
+                        break;
+                    default:
+                        router.push(`/?error=${encodeURIComponent("Invalid user role.")}`);
+                }
+            } catch (err) {
+                console.error("Fetch error:", err);
+                router.push(`/?error=${encodeURIComponent("Unable to retrieve user data.")}`);
+            }
+        }
+
+        handleRedirect();
+    }, [isLoaded, user, router]);
+
+    return (
+        <>
+            <p>Loading...</p>
+            <Spinner />
+            <p>Redirecting to User dashboard, please wait a second</p>
+        </>
+    );
 }

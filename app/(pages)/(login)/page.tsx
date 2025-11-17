@@ -1,11 +1,30 @@
+"use client";
+
 import Image from "next/image";
 import "@/app/(pages)/(login)/index.css";
 import { Dialog } from "radix-ui";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import CarouselClient from "@/app/components/CarouselClient";
-import SignInButton from "@/app/components/SignInButton";
+import { useClerk, useAuth } from "@clerk/nextjs";
+import { useEffect } from "react";
 
-export default function Home() {
+export default function Login() {
+    const { isSignedIn } = useAuth();
+    const { signOut, openSignIn } = useClerk();
+
+    async function logIn() {
+        await signOut();
+        openSignIn({
+            oauthFlow: "popup",
+            redirectUrl: "/api/auth/redirect",
+        });
+    }
+
+    useEffect(() => {
+        // if (isSignedIn) {
+        //     window.location.href = "/api/auth/redirect";
+        // }
+    }, [isSignedIn]);
     return (
         <>
             <CarouselClient />
@@ -16,7 +35,14 @@ export default function Home() {
                 <h1 className="form-welcome a">Welcome to</h1>
                 <h1 className="form-welcome b">Student Attendance Management System SAMS</h1>
 
-                <SignInButton />
+                <button onClick={logIn}>
+                    <div className="form-signin">
+                        <div className="form-signin-icon" style={{ width: 24, height: 24 }}>
+                            <Image src="/icons/google.png" alt="Google icon" width={24} height={24} />
+                        </div>
+                        Sign in with Google
+                    </div>
+                </button>
 
                 <Dialog.Root>
                     <Dialog.Trigger className="form-terms-button">Terms and Conditions</Dialog.Trigger>

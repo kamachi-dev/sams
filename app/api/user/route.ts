@@ -8,6 +8,22 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-    const data = await request.json()
-    return NextResponse.json({ receivedData: data })
+    const { email } = await request.json();
+
+    if (!email) {
+        return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    const { data, error } = await supabase
+        .from("user")
+        .select("role")
+        .eq("email", email)
+        .single();
+
+    if (error || !data) {
+        console.error("Supabase error:", error);
+        return NextResponse.json({ error: "Unable to retrieve user data" }, { status: 500 });
+    }
+
+    return NextResponse.json({ role: data.role });
 }
