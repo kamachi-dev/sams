@@ -7,6 +7,7 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import CarouselClient from "@/app/components/CarouselClient";
 import { useClerk, useAuth } from "@clerk/nextjs";
 import { useEffect } from "react";
+import { Error } from "@/app/components/SamsError";
 
 export default function Login() {
     const { isSignedIn } = useAuth();
@@ -21,10 +22,8 @@ export default function Login() {
     }
 
     useEffect(() => {
-        // if (isSignedIn) {
-        //     window.location.href = "/api/auth/redirect";
-        // }
-    }, [isSignedIn]);
+        Error("test");
+    }, []);
     return (
         <>
             <CarouselClient />
