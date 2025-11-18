@@ -5,24 +5,47 @@ import "@/app/(pages)/(login)/index.css";
 import { Dialog } from "radix-ui";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import CarouselClient from "@/app/components/CarouselClient";
-import { useClerk, useAuth } from "@clerk/nextjs";
-import { useEffect } from "react";
+import { useAuth, useClerk, useUser } from "@clerk/nextjs";
+import { useEffect, useRef, useState } from "react";
 import { Error } from "@/app/components/SamsError";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
-    const { isSignedIn } = useAuth();
     const { signOut, openSignIn } = useClerk();
+    const { isSignedIn } = useAuth();
+    const { user } = useUser();
+    const router = useRouter();
+    const isSigningIn = useRef(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    function directLogIn() {
+        if (isLoading) return;
+        setIsLoading(true);
+        fetch('/api/auth/redirect')
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) router.replace(res.data.path);
+                else {
+                    Error(`${res.error}`)
+                    setIsLoading(false);
+                };
+            })
+    }
 
     async function logIn() {
-        await signOut();
+        if (isSignedIn) await signOut();
         openSignIn({
-            oauthFlow: "popup",
-            redirectUrl: "/api/auth/redirect",
+            oauthFlow: "popup"
         });
+        isSigningIn.current = true;
     }
 
     useEffect(() => {
-        Error("test");
+        if (isSigningIn.current) {
+            Promise.resolve().then(() => {
+                if (isSigningIn.current) directLogIn();
+            });
+        }
     }, []);
     return (
         <>
@@ -34,14 +57,26 @@ export default function Login() {
                 <h1 className="form-welcome a">Welcome to</h1>
                 <h1 className="form-welcome b">Student Attendance Management System SAMS</h1>
 
-                <button onClick={logIn}>
-                    <div className="form-signin">
-                        <div className="form-signin-icon" style={{ width: 24, height: 24 }}>
-                            <Image src="/icons/google.png" alt="Google icon" width={24} height={24} />
-                        </div>
-                        Sign in with Google
+                {!isLoading && (
+                    <div className="form-signin-list">
+                        <button onClick={directLogIn}>
+                            {isSignedIn && <div className="form-signin">
+                                <div className="form-signin-icon" style={{ width: 24, height: 24 }}>
+                                    <Image src={user?.imageUrl ?? "/icons/google.png"} alt="User avatar" width={24} height={24} />
+                                </div>
+                                Continue as {user?.fullName}
+                            </div>}
+                        </button>
+                        <button onClick={logIn}>
+                            <div className="form-signin">
+                                <div className="form-signin-icon" style={{ width: 24, height: 24 }}>
+                                    <Image src="/icons/google.png" alt="Google icon" width={24} height={24} />
+                                </div>
+                                Sign in with Google
+                            </div>
+                        </button>
                     </div>
-                </button>
+                )}
 
                 <Dialog.Root>
                     <Dialog.Trigger className="form-terms-button">Terms and Conditions</Dialog.Trigger>
