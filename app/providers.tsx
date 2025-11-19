@@ -9,7 +9,13 @@ type Props = {
 
 export default function Providers({ children }: Props) {
     const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-    return (
+
+    if (!clerkKey) return (
+        <Toast.Provider>
+            {children}
+        </Toast.Provider>
+    );
+    else return (
         <ClerkProvider publishableKey={clerkKey}>
             <Toast.Provider swipeDirection="right">
                 {children}
