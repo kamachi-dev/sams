@@ -1,7 +1,21 @@
+"use client";
+
+import SamsTemplate from "@/app/components/SamsTemplate";
+import { ThickArrowRightIcon } from "@radix-ui/react-icons";
+
 export default function Teacher() {
     return (
-        <div>
-            <h1>Teacher Portal</h1>
-        </div>
+        <SamsTemplate links={[
+            {
+                label: "Dashboard", Icon: ThickArrowRightIcon, content: <>
+                    Dashboard shenanigans
+                </>
+            },
+            {
+                label: "Notifications", Icon: ThickArrowRightIcon, content: <>
+                    You got mail
+                </>
+            }
+        ]} />
     );
 }

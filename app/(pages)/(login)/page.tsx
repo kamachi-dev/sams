@@ -6,7 +6,7 @@ import { Dialog } from "radix-ui";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import CarouselClient from "@/app/components/CarouselClient";
 import { useAuth, useClerk, useUser } from "@clerk/nextjs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Error } from "@/app/components/SamsError";
 import { useRouter } from "next/navigation";
 
@@ -18,35 +18,30 @@ export default function Login() {
     const isSigningIn = useRef(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    function directLogIn() {
+    const directLogIn = useCallback(() => {
         if (isLoading) return;
+        isSigningIn.current = false;
         setIsLoading(true);
         fetch('/api/auth/redirect')
             .then(res => res.json())
             .then(res => {
                 if (res.success) router.replace(res.data.path);
                 else {
-                    Error(`${res.error}`)
+                    Error(`${res.error}`);
                     setIsLoading(false);
-                };
-            })
-    }
+                }
+            });
+    }, [isLoading, router]);
 
     async function logIn() {
-        if (isSignedIn) await signOut();
-        openSignIn({
-            oauthFlow: "popup"
-        });
         isSigningIn.current = true;
+        if (isSignedIn) await signOut();
+        openSignIn({ oauthFlow: "popup" });
     }
 
     useEffect(() => {
-        if (isSigningIn.current) {
-            Promise.resolve().then(() => {
-                if (isSigningIn.current) directLogIn();
-            });
-        }
-    }, []);
+        if (isSigningIn.current && isSignedIn && !isLoading) queueMicrotask(() => directLogIn());
+    }, [isSignedIn, isLoading, directLogIn]);
     return (
         <>
             <CarouselClient />

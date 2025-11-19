@@ -1,1 +1,0 @@
-// NextAuth types removed – Clerk is now used for authentication.
