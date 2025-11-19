@@ -4,13 +4,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import SamsError from "@/app/components/SamsError";
 import "./globals.css";
 import { Toast } from "radix-ui";
-import { Error } from "@/app/components/SamsError";
 
-// Explicitly pull the Clerk publishable key. Using NEXT_PUBLIC_ prefix ensures client exposure.
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-if (!clerkPublishableKey) {
-    Error("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is missing. Add it to your .env.local or host env variables.");
-}
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
