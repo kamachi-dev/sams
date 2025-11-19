@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
+import Providers from "./providers";
 import SamsError from "@/app/components/SamsError";
 import "./globals.css";
-import { Toast } from "radix-ui";
 
-const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+// Keep env evaluated at build for client provider; not used here directly.
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -38,15 +37,13 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <ClerkProvider publishableKey={clerkPublishableKey}>
-            <Toast.Provider swipeDirection="right">
-                <html lang="en">
-                    <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-                        {children}
-                        <SamsError />
-                    </body>
-                </html>
-            </Toast.Provider>
-        </ClerkProvider>
+        <html lang="en">
+            <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+                <Providers>
+                    {children}
+                    <SamsError />
+                </Providers>
+            </body>
+        </html>
     );
 }
