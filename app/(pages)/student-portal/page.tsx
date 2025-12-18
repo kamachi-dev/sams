@@ -7,12 +7,16 @@ export default function Student() {
     return (
         <SamsTemplate links={[
             {
-                label: "Dashboard", Icon: ThickArrowRightIcon, content: <>
+                label: "Dashboard",
+                Icon: ThickArrowRightIcon,
+                content: <>
                     Dashboard shenanigans
                 </>
             },
             {
-                label: "Notifications", Icon: ThickArrowRightIcon, content: <>
+                label: "Notifications",
+                Icon: ThickArrowRightIcon,
+                content: <>
                     You got mail
                 </>
             }

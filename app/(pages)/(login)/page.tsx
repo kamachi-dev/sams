@@ -22,7 +22,7 @@ export default function Login() {
         if (isLoading) return;
         isSigningIn.current = false;
         setIsLoading(true);
-        fetch('/api/auth/redirect')
+        fetch('/api/auth/callback')
             .then(res => res.json())
             .then(res => {
                 if (res.success) router.replace(res.data.path);
