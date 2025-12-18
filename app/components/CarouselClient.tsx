@@ -16,7 +16,6 @@ export default function CarouselClient() {
         setIsSwitching(true);
         setSelected(String(target));
         setTimeout(() => {
-            console.log("Switching to", val);
             setCurr(target);
             setIsSwitching(false);
         }, 500);

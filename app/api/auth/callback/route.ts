@@ -23,18 +23,45 @@ export async function GET() {
         });
     }
 
-    const { data: userData, error } = await supabase
-        .from("user")
-        .select("role")
-        .eq("email", email)
-        .single();
+    // const { data: userData, error: userError } = await supabase
+    //     .from("user")
+    //     .select("*")
+    //     .eq("email", email)
+    //     .single();
 
-    if (error || !userData) {
+    let userData;
+
+    try {
+        userData = (await supabase.query(
+            "SELECT * FROM account WHERE email = $1 LIMIT 1",
+            [email]
+        )).rows[0];
+    }
+    catch (error) {
         return NextResponse.json({
             success: false,
             status: 401,
-            data: null,
+            data: {
+                message: error
+            },
             error: "User data could not be retrieved"
+        });
+    }
+
+    try {
+        const updateData = (await supabase.query(
+            "UPDATE account SET pfp = $1 WHERE email = $2 RETURNING *",
+            [user.imageUrl, email]
+        )).rows[0];
+    }
+    catch (error) {
+        return NextResponse.json({
+            success: false,
+            status: 401,
+            data: {
+                message: error
+            },
+            error: "User profile picture could not be updated"
         });
     }
 
