@@ -1,11 +1,22 @@
 'use client';
 
-import React from "react";
+import React, { useEffect } from "react";
 import Image from "next/image";
 import { Popover, Separator, Tabs, Switch } from "radix-ui";
 import { GearIcon, ExitIcon, Half2Icon } from "@radix-ui/react-icons";
-import { SignOutButton, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { SignOutButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { usePathname } from 'next/navigation';
+import { Error } from "@/app/components/SamsError";
+import { get } from "http";
+
+
+type Account = {
+    id: string
+    email: string
+    pfp: string | null
+    role: string
+    created_at: string
+}
 
 interface Props {
     links: { label: string; Icon: React.ElementType; content: React.ReactNode }[];
@@ -22,10 +33,29 @@ function formatPathname(path = '') {
         .replace(/^./, (c: string) => c.toUpperCase());
 }
 
+async function getUserData() {
+    let user: Account | null = null;
+    await fetch('/api/user')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) user = data.data as Account
+            else Error(data.error || 'Failed to fetch user data');
+        });
+    return user;
+}
+
 export default function SamsTemplate({ links }: Props) {
     const defaultTab = links && links.length > 0 ? links[0].label : undefined;
     const pathname = usePathname() ?? '';
     const title = React.useMemo(() => formatPathname(pathname), [pathname]);
+    const [user, setUser] = React.useState<Account | null>(null);
+
+    useEffect(() => {
+        (async () => {
+            const userData = await getUserData();
+            setUser(userData);
+        })();
+    }, []);
 
     return (
         <Tabs.Root defaultValue={defaultTab} className="sams">
@@ -42,7 +72,7 @@ export default function SamsTemplate({ links }: Props) {
                 </div>
                 <div className="sams-nav-pfp flex items-center justify-center">
                     <SignedIn>
-                        <UserButton appearance={{ elements: { avatarBox: { width: 40, height: 40 } } }} />
+                        <Image src={user?.pfp ?? "/icons/placeholder-pfp.png"} alt="Profile Picture" fill />
                     </SignedIn>
                     <SignedOut>
                         <Image src="/icons/placeholder-pfp.png" alt="Profile Picture" fill />

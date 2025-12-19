@@ -19,16 +19,14 @@ html.dark {
     --foreground2: #707070;
     --foreground3: #3a3a3a;
     --accent1: #4F46E5;
-    --background: var(--background2);
-    --foreground: var(--foreground1);
 }
 
 body {
     background: var(--background2);
     color: var(--foreground1);
     font-family: Arial, Helvetica, sans-serif;
-    height: 100dvw;
-    width: 100dvw;
+    height: 100%;
+    width: 100%;
 }
 
 a {
@@ -67,8 +65,8 @@ a {
     margin: 6px;
     border: 2px solid var(--foreground2);
     display: flex;
-    width: calc(100dvw - 12px);
-    height: calc(100dvh - 12px);
+    width: calc(100dvw - 14px);
+    height: calc(100dvh - 14px);
 }
 
 .sams-content {

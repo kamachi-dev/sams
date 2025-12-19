@@ -53,7 +53,7 @@ export default function Login() {
                 <h1 className="form-welcome a">Welcome to</h1>
                 <h1 className="form-welcome b">Student Attendance Management System SAMS</h1>
 
-                {!isLoading && (
+                {!isLoading ? (
                     <div className="form-signin-list">
                         <button onClick={directLogIn}>
                             {isSignedIn && <div className="form-signin">
@@ -72,6 +72,8 @@ export default function Login() {
                             </div>
                         </button>
                     </div>
+                ) : (
+                    <div className="form-signin-loading">Please wait as we sign you in...</div>
                 )}
 
                 <Dialog.Root>

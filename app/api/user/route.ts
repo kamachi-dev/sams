@@ -1,29 +1,30 @@
+import { currentUser } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import supabase from '@/app/services/supa'
 
 export async function GET() {
-    const { data, error } = await supabase.from('user').select('*')
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data)
-}
+    try {
+        const user = await currentUser()
+        const data = (await supabase.query(
+            "SELECT * FROM account WHERE email = $1 LIMIT 1",
+            [user?.primaryEmailAddress?.emailAddress]
+        )).rows[0];
 
-export async function POST(request: Request) {
-    const { email } = await request.json();
-
-    if (!email) {
-        return NextResponse.json({ error: "Email is required" }, { status: 400 });
+        return NextResponse.json({
+            success: true,
+            status: 200,
+            data: data,
+            error: null
+        })
     }
-
-    const { data, error } = await supabase
-        .from("user")
-        .select("role")
-        .eq("email", email)
-        .single();
-
-    if (error || !data) {
-        console.error("Supabase error:", error);
-        return NextResponse.json({ error: "Unable to retrieve user data" }, { status: 500 });
+    catch (error) {
+        return NextResponse.json({
+            success: false,
+            status: 500,
+            data: {
+                message: error
+            },
+            error: 'User data could not be retrieved'
+        })
     }
-
-    return NextResponse.json({ role: data.role });
 }
