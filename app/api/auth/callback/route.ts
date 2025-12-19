@@ -23,12 +23,6 @@ export async function GET() {
         });
     }
 
-    // const { data: userData, error: userError } = await supabase
-    //     .from("user")
-    //     .select("*")
-    //     .eq("email", email)
-    //     .single();
-
     let userData;
 
     try {
