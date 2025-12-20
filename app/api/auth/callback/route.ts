@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
-import supabase from "@/app/services/supa";
+import db from "@/app/services/database";
 
 export async function GET() {
     const user = await currentUser();
@@ -26,7 +26,7 @@ export async function GET() {
     let userData;
 
     try {
-        userData = (await supabase.query(
+        userData = (await db.query(
             "SELECT * FROM account WHERE email = $1 LIMIT 1",
             [email]
         )).rows[0];
@@ -42,11 +42,30 @@ export async function GET() {
         });
     }
 
+    //DELETE THIS UPON PRODUCTION DEPLOYMENT, PROPER ID HANDLING MUST BE MADE IN THE FUTURE
     try {
-        const updateData = (await supabase.query(
-            "UPDATE account SET pfp = $1 WHERE email = $2 RETURNING *",
-            [user.imageUrl, email]
-        )).rows[0];
+        (await db.query(
+            "UPDATE account SET id = $1 WHERE email = $2 RETURNING *",
+            [user.id, email]
+        ));
+    }
+    catch (error) {
+        return NextResponse.json({
+            success: false,
+            status: 401,
+            data: {
+                message: error
+            },
+            error: "User ID could not be updated"
+        });
+    }
+    /////////////////////////////////////////
+
+    try {
+        (await db.query(
+            "UPDATE account SET pfp = $1 WHERE id = $2 RETURNING *",
+            [user.imageUrl, user.id]
+        ));
     }
     catch (error) {
         return NextResponse.json({
@@ -56,6 +75,23 @@ export async function GET() {
                 message: error
             },
             error: "User profile picture could not be updated"
+        });
+    }
+
+    try {
+        (await db.query(
+            "UPDATE account SET username = $1 WHERE id = $2 RETURNING *",
+            [user.fullName, user.id]
+        ));
+    }
+    catch (error) {
+        return NextResponse.json({
+            success: false,
+            status: 401,
+            data: {
+                message: error
+            },
+            error: "Username could not be updated"
         });
     }
 

@@ -1,13 +1,13 @@
 import { currentUser } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import supabase from '@/app/services/supa'
+import db from '@/app/services/database'
 
 export async function GET() {
     try {
         const user = await currentUser()
-        const data = (await supabase.query(
-            "SELECT * FROM account WHERE email = $1 LIMIT 1",
-            [user?.primaryEmailAddress?.emailAddress]
+        const data = (await db.query(
+            "SELECT * FROM account WHERE id = $1 LIMIT 1",
+            [user?.id]
         )).rows[0];
 
         return NextResponse.json({

@@ -9,6 +9,10 @@ export default function Parent() {
             {
                 label: "Dashboard",
                 Icon: ThickArrowRightIcon,
+                panels: [
+                    <div key={1}>Panel 1</div>,
+                    <div key={2}>Panel 2</div>
+                ],
                 content: <>
                     Dashboard shenanigans
                 </>
@@ -16,6 +20,10 @@ export default function Parent() {
             {
                 label: "Notifications",
                 Icon: ThickArrowRightIcon,
+                panels: [
+                    <div key={1}>Panel 1</div>,
+                    <div key={2}>Panel 2</div>
+                ],
                 content: <>
                     You got mail
                 </>

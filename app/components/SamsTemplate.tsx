@@ -7,19 +7,24 @@ import { GearIcon, ExitIcon, Half2Icon } from "@radix-ui/react-icons";
 import { SignOutButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { usePathname } from 'next/navigation';
 import { Error } from "@/app/components/SamsError";
-import { get } from "http";
 
 
 type Account = {
     id: string
+    username: string
     email: string
     pfp: string | null
-    role: string
+    role: number
     created_at: string
 }
 
 interface Props {
-    links: { label: string; Icon: React.ElementType; content: React.ReactNode }[];
+    links: {
+        label: string;
+        Icon: React.ElementType;
+        panels: React.ReactNode[];
+        content: React.ReactNode
+    }[];
 }
 
 function toggleTheme(checked: boolean) {
@@ -78,8 +83,8 @@ export default function SamsTemplate({ links }: Props) {
                         <Image src="/icons/placeholder-pfp.png" alt="Profile Picture" fill />
                     </SignedOut>
                 </div>
-                <h2 className="sams-nav-username">Guest</h2>
-                <p className="sams-nav-email">guest@example.com</p>
+                <h2 className="sams-nav-username">{user?.username ?? "Guest"}</h2>
+                <p className="sams-nav-email">{user?.email ?? "guest@example.com"}</p>
                 <Separator.Root className="sams-separator" decorative style={{ margin: "0 15px" }} />
                 <Tabs.List className="sams-nav-links">
                     {links.map(({ label, Icon }) => (
@@ -109,9 +114,22 @@ export default function SamsTemplate({ links }: Props) {
                     </Popover.Portal>
                 </Popover.Root>
             </nav>
-            {links.map(({ label, content }) => (
+            {links.map(({ label, content, panels }) => (
                 <Tabs.Content key={label} value={label} className="sams-content">
-                    {content}
+                    <div className="sams-content-header">
+                        <h1 className="sams-content-title">{label}</h1>
+                        <h2 className="sams-content-subtitle">Welcome to <span className="sams-content-subtitle-highlight">Student Attendance Management System SAMS+</span></h2>
+                        <div className="sams-content-panels">
+                            {
+                                panels.map((panel, index) => (
+                                    <div key={index} className="sams-content-panel">
+                                        {panel}
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    </div>
+                    <div className="sams-content-body">{content}</div>
                 </Tabs.Content>
             ))}
         </Tabs.Root>

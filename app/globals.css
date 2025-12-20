@@ -71,8 +71,48 @@ a {
 
 .sams-content {
     width: 80%;
-    padding: 10px;
     min-height: calc(100dvh - 16px);
+}
+
+.sams-content-header {
+    height: 13%;
+    margin-bottom: 7dvh;
+    background-color: var(--accent1);
+    color: var(--background1);
+    align-items: center;
+}
+
+.sams-content-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-left: 20px;
+}
+
+.sams-content-subtitle {
+    font-weight: bold;
+    margin-left: 20px;
+    color: var(--background1);
+}
+
+.sams-content-subtitle-highlight {
+    color: var(--foreground2);
+}
+
+.sams-content-panels {
+    position: relative;
+    display: flex;
+    justify-content: space-evenly;
+    top: 0%;
+    height: 100%;
+}
+
+.sams-content-panel {
+    height: 80%;
+    width: 30%;
+    background-color: var(--background1);
+    color: var(--accent1);
+    box-shadow: 0px 2px 1px var(--foreground3);
+    border-radius: 3px;
 }
 
 .sams-nav {
@@ -103,7 +143,7 @@ a {
 }
 
 .sams-nav-header-title {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #ED1E28;
 }
 

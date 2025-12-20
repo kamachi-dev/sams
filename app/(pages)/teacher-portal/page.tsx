@@ -9,6 +9,10 @@ export default function Teacher() {
             {
                 label: "Dashboard",
                 Icon: ThickArrowRightIcon,
+                panels: [
+                    <div key={1}>Panel 1</div>,
+                    <div key={2}>Panel 2</div>
+                ],
                 content: <>
                     <div>Dashboard shenanigans</div>
                     <p>More dashboard shenanigans</p>
@@ -22,6 +26,10 @@ export default function Teacher() {
             {
                 label: "Notifications",
                 Icon: ThickArrowRightIcon,
+                panels: [
+                    <div key={1}>Panel 1</div>,
+                    <div key={2}>Panel 2</div>
+                ],
                 content: <>
                     You got mail
                 </>
