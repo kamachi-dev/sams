@@ -3,7 +3,7 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "preinstall": "npm install --include=optional",
+        "postinstall": "npm install @tailwindcss/oxide --include=optional",
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
