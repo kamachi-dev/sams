@@ -3,7 +3,7 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "postinstall": "npm install @tailwindcss/oxide --include=optional",
+        "postinstall": "npm install @tailwindcss/oxide --include=optional && npm i --save-dev @types/pg",
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
