@@ -18,7 +18,7 @@ html.dark {
     --foreground1: #8f8f8f;
     --foreground2: #707070;
     --foreground3: #3a3a3a;
-    --accent1: #4F46E5;
+    --accent1: #3b3a53;
 }
 
 body {
@@ -235,6 +235,7 @@ a {
     margin: 5px 0;
     padding: 5px;
     min-width: 100px;
+    gap: 15px;
 }
 
 .sams-nav-link[data-state="active"] {
