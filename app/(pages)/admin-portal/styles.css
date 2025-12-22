@@ -1,7 +1,9 @@
 .import-button {
     margin-left: 0.5rem;
     padding: 0.5rem;
-    background-color: #e5e7eb;
+    background-color: var(--accent1);
+    color: var(--background1);
+    box-shadow: 0px 2px 2px var(--foreground3);
     border-radius: 0.375rem;
     cursor: pointer;
 }

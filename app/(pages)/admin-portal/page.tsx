@@ -2,7 +2,7 @@
 
 import SamsTemplate from "@/app/components/SamsTemplate";
 import Image from "next/image";
-import { Label } from "radix-ui";
+import { Label, Separator } from "radix-ui";
 import './styles.css';
 
 export default function Admin() {
@@ -35,7 +35,7 @@ export default function Admin() {
                     </div>
                 ],
                 content: <>
-                    <section>
+                    <section className="justify-center items-center flex flex-col gap-4">
                         <div className="flex justify-center items-center">
                             <Label.Root className="font-bold text-2xl">Import</Label.Root>
                             <button className="import-button">
@@ -48,6 +48,10 @@ export default function Admin() {
                                 <Label.Root>Schedule</Label.Root>
                             </button>
                         </div>
+                        <Separator.Root orientation="horizontal" className="sams-separator" />
+                    </section>
+                    <section>
+
                     </section>
                 </>
             }

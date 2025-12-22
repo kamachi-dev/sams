@@ -30,6 +30,14 @@ export async function GET() {
             "SELECT * FROM account WHERE email = $1 LIMIT 1",
             [email]
         )).rows[0];
+        if (!userData) {
+            return NextResponse.json({
+                success: false,
+                status: 404,
+                data: null,
+                error: "User not found in database"
+            });
+        }
     }
     catch (error) {
         return NextResponse.json({

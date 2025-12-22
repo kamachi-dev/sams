@@ -28,7 +28,6 @@ export default function Login() {
                 if (res.success) router.replace(res.data.path);
                 else {
                     Error(`${res.error}`);
-                    console.error(res.data?.message ?? "Unknown error during login");
                     setIsLoading(false);
                 }
             });
