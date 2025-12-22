@@ -1,9 +1,9 @@
 "use client";
 
 import SamsTemplate from "@/app/components/SamsTemplate";
-import { CopyIcon } from "@radix-ui/react-icons";
 import Image from "next/image";
 import { Label } from "radix-ui";
+import './styles.css';
 
 export default function Admin() {
     return (
@@ -35,7 +35,20 @@ export default function Admin() {
                     </div>
                 ],
                 content: <>
-                    Dashboard shenanigans
+                    <section>
+                        <div className="flex justify-center items-center">
+                            <Label.Root className="font-bold text-2xl">Import</Label.Root>
+                            <button className="import-button">
+                                <Label.Root>Students</Label.Root>
+                            </button>
+                            <button className="import-button">
+                                <Label.Root>Teachers</Label.Root>
+                            </button>
+                            <button className="import-button">
+                                <Label.Root>Schedule</Label.Root>
+                            </button>
+                        </div>
+                    </section>
                 </>
             }
         ]} />

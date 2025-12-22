@@ -70,17 +70,18 @@ export default function SamsTemplate({ links }: Props) {
                         <Image
                             src="/images/mmcl-logo-extended.png"
                             alt="SAMS Logo"
-                            fill
+                            width={120}
+                            height={40}
                         />
                     </div>
                     <h1 className="sams-nav-header-title">{title}</h1>
                 </div>
                 <div className="sams-nav-pfp flex items-center justify-center">
                     <SignedIn>
-                        <Image src={user?.pfp ?? "/icons/placeholder-pfp.png"} alt="Profile Picture" fill />
+                        <Image src={user?.pfp ?? "/icons/placeholder-pfp.png"} alt="Profile Picture" width={100} height={100} />
                     </SignedIn>
                     <SignedOut>
-                        <Image src="/icons/placeholder-pfp.png" alt="Profile Picture" fill />
+                        <Image src="/icons/placeholder-pfp.png" alt="Profile Picture" width={100} height={100} />
                     </SignedOut>
                 </div>
                 <h2 className="sams-nav-username">{user?.username ?? "Guest"}</h2>
