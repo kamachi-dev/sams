@@ -57,8 +57,12 @@ export default function SamsTemplate({ links }: Props) {
 
     useEffect(() => {
         (async () => {
-            const userData = await getUserData();
-            setUser(userData);
+            try {
+                const userData = await getUserData();
+                setUser(userData);
+            } catch (error) {
+                Error('Failed to load user data');
+            }
         })();
     }, []);
 
