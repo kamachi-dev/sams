@@ -27,7 +27,8 @@ body {
     font-family: Arial, Helvetica, sans-serif;
     height: 100%;
     width: 100%;
-    overflow: hidden;
+    /* allow page-level scrolling */
+    overflow: auto;
 }
 
 a {
@@ -50,15 +51,25 @@ a {
     width: 1px;
 }
 
+/* Hide all scrollbars globally while keeping scroll functionality */
 ::-webkit-scrollbar {
-    background-color: #b1b1b1;
-    border-radius: 0px 20px 20px 0px;
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: #8d8d8d;
-    border-radius: 0px 20px 20px 0px;
-    margin: 10px;
+    display: none;
+}
+
+/* Firefox */
+* {
+    scrollbar-width: none;
+}
+
+/* IE and Edge */
+* {
+    -ms-overflow-style: none;
 }
 
 .sams {
@@ -72,21 +83,37 @@ a {
 
 .sams-content {
     width: 80%;
-    min-height: calc(100dvh - 16px);
+    /* fix height to viewport minus borders/margins and allow internal scrolling */
+    height: calc(100dvh - 16px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Hide scrollbar for the main content area (still scrollable) */
+.sams-content::-webkit-scrollbar {
+    display: none;
+}
+.sams-content {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
 }
 
 .sams-content-header {
-    height: 13%;
-    margin-bottom: 7dvh;
+    height: auto;
+    min-height: 200px;
+    padding-bottom: 20px;
     background-color: var(--accent1);
     color: var(--background1);
     align-items: center;
+    position: relative;
+    z-index: 1;
 }
 
 .sams-content-title {
     font-size: 1.5rem;
     font-weight: bold;
     margin-left: 20px;
+    padding-top: 20px;
 }
 
 .sams-content-subtitle {
@@ -103,17 +130,24 @@ a {
     position: relative;
     display: flex;
     justify-content: space-evenly;
-    top: 0%;
-    height: 100%;
+    gap: 20px;
+    padding: 0 20px;
+    margin-top: 20px;
+    flex-wrap: nowrap;
+    z-index: 2;
 }
 
 .sams-content-panel {
-    height: 80%;
-    width: 30%;
+    height: auto;
+    min-height: 120px;
+    flex: 1;
+    max-width: 32%;
     background-color: var(--background1);
     color: var(--accent1);
     box-shadow: 0px 2px 1px var(--foreground3);
-    border-radius: 3px;
+    border: none;
+    overflow: hidden;
+    border-radius: 8px;
 }
 
 .sams-nav {
