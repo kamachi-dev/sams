@@ -7,3 +7,44 @@
     border-radius: 0.375rem;
     cursor: pointer;
 }
+
+.archive-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.archive-group-item {
+    padding: 0.5rem 1rem;
+    background-color: var(--foreground3);
+    color: var(--accent1);
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+.archive-group-item[data-state="on"] {
+    background-color: var(--accent1);
+    color: var(--background1);
+    box-shadow: 0px 2px 2px var(--foreground3);
+}
+
+.archive {
+    margin-top: 1rem;
+    justify-content: center;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.archive-item {
+    background-color: var(--background1);
+    width: 15dvw;
+    height: 10dvw;
+}
+
+.archive-item-header {
+    background-color: var(--accent1);
+    color: var(--background1);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
