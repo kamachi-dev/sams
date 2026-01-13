@@ -44,7 +44,14 @@ const subjectAttendance = [
     { subject: "Science", present: 36, late: 3, absent: 1, percentage: 90 },
     { subject: "English", present: 39, late: 1, absent: 0, percentage: 97.5 },
     { subject: "Filipino", present: 37, late: 2, absent: 1, percentage: 92.5 },
-    { subject: "Social Studies", present: 40, late: 0, absent: 0, percentage: 100 }
+    { subject: "Social Studies", present: 40, late: 0, absent: 0, percentage: 100 },
+    { subject: "Physical Education", present: 35, late: 4, absent: 1, percentage: 87.5 },
+    { subject: "Computer Science", present: 39, late: 1, absent: 0, percentage: 97.5 },
+    { subject: "Statistics", present: 36, late: 3, absent: 1, percentage: 90 },
+    { subject: "Research", present: 38, late: 2, absent: 0, percentage: 95 },
+    { subject: "Entrepreneurship", present: 37, late: 2, absent: 1, percentage: 92.5 },
+    { subject: "Ethics", present: 40, late: 0, absent: 0, percentage: 100 },
+    { subject: "Practical Research", present: 36, late: 3, absent: 1, percentage: 90 }
 ];
 
 const quarterlyData = [
@@ -72,6 +79,7 @@ export default function Student() {
     const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("weekly");
     const [selectedSubject, setSelectedSubject] = useState("all");
     const [isExporting, setIsExporting] = useState(false);
+    const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "subjects">("overview");
 
     const handleExport = () => {
         setIsExporting(true);
@@ -181,68 +189,234 @@ export default function Student() {
                     </div>
                 ],
                 content: (
-                    <div style={{ padding: "20px", width: "100%", maxWidth: "100%", overflow: "hidden" }}>
-                        {/* Student Info Card */}
+                    <div style={{ padding: "6px", width: "100%", maxWidth: "100%", overflow: "hidden" }}>
+                        
+                        {/* Tab Navigation */}
                         <div style={{
+                            display: "flex",
+                            gap: "4px",
+                            marginBottom: "8px",
+                            borderBottom: "2px solid #F2F2F2"
+                        }}>
+                            <button
+                                onClick={() => setActiveTab("overview")}
+                                style={{
+                                    padding: "8px 16px",
+                                    background: "none",
+                                    border: "none",
+                                    borderBottom: activeTab === "overview" ? "2px solid #1DA1F2" : "2px solid transparent",
+                                    color: activeTab === "overview" ? "#1DA1F2" : "#4F4F4F",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                    marginBottom: "-2px"
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (activeTab !== "overview") e.currentTarget.style.color = "#1DA1F2";
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (activeTab !== "overview") e.currentTarget.style.color = "#4F4F4F";
+                                }}
+                            >
+                                Overview
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("analytics")}
+                                style={{
+                                    padding: "8px 16px",
+                                    background: "none",
+                                    border: "none",
+                                    borderBottom: activeTab === "analytics" ? "2px solid #1DA1F2" : "2px solid transparent",
+                                    color: activeTab === "analytics" ? "#1DA1F2" : "#4F4F4F",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                    marginBottom: "-2px"
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (activeTab !== "analytics") e.currentTarget.style.color = "#1DA1F2";
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (activeTab !== "analytics") e.currentTarget.style.color = "#4F4F4F";
+                                }}
+                            >
+                                Analytics
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("subjects")}
+                                style={{
+                                    padding: "8px 16px",
+                                    background: "none",
+                                    border: "none",
+                                    borderBottom: activeTab === "subjects" ? "2px solid #1DA1F2" : "2px solid transparent",
+                                    color: activeTab === "subjects" ? "#1DA1F2" : "#4F4F4F",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                    marginBottom: "-2px"
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (activeTab !== "subjects") e.currentTarget.style.color = "#1DA1F2";
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (activeTab !== "subjects") e.currentTarget.style.color = "#4F4F4F";
+                                }}
+                            >
+                                Subject Breakdown
+                            </button>
+                        </div>
+
+                        {/* Overview Tab */}
+                        {activeTab === "overview" && (
+                            <div>
+                                {/* Student Info Card */}
+                                <div style={{
                             background: "white",
-                            padding: "20px",
-                            borderRadius: "8px",
-                            marginBottom: "20px",
+                            padding: "8px",
+                            borderRadius: "6px",
+                            marginBottom: "8px",
                             border: "1px solid #F2F2F2",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
                         }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                                <h3 style={{ color: "#1F2F57", fontSize: "18px", fontWeight: "600", margin: 0 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                <h3 style={{ color: "#1F2F57", fontSize: "14px", fontWeight: "600", margin: 0 }}>
                                     Student Information
                                 </h3>
-                                <div style={{ fontSize: "12px", color: "#BDBDBD" }}>
+                                <div style={{ fontSize: "10px", color: "#BDBDBD" }}>
                                     2nd Semester, S.Y. 2025-2026
                                 </div>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
                                 <div>
-                                    <div style={{ fontSize: "12px", color: "#BDBDBD", marginBottom: "4px" }}>Student Name</div>
-                                    <div style={{ fontSize: "14px", color: "#4F4F4F", fontWeight: "500" }}>{studentInfo.name}</div>
+                                    <div style={{ fontSize: "11px", color: "#BDBDBD", marginBottom: "2px" }}>Student Name</div>
+                                    <div style={{ fontSize: "12px", color: "#4F4F4F", fontWeight: "500" }}>{studentInfo.name}</div>
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: "12px", color: "#BDBDBD", marginBottom: "4px" }}>Student ID</div>
-                                    <div style={{ fontSize: "14px", color: "#4F4F4F", fontWeight: "500" }}>{studentInfo.studentId}</div>
+                                    <div style={{ fontSize: "11px", color: "#BDBDBD", marginBottom: "2px" }}>Student ID</div>
+                                    <div style={{ fontSize: "12px", color: "#4F4F4F", fontWeight: "500" }}>{studentInfo.studentId}</div>
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: "12px", color: "#BDBDBD", marginBottom: "4px" }}>Grade Level</div>
-                                    <div style={{ fontSize: "14px", color: "#4F4F4F", fontWeight: "500" }}>{studentInfo.grade}</div>
+                                    <div style={{ fontSize: "11px", color: "#BDBDBD", marginBottom: "2px" }}>Grade Level</div>
+                                    <div style={{ fontSize: "12px", color: "#4F4F4F", fontWeight: "500" }}>{studentInfo.grade}</div>
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: "12px", color: "#BDBDBD", marginBottom: "4px" }}>Section</div>
-                                    <div style={{ fontSize: "14px", color: "#4F4F4F", fontWeight: "500" }}>{studentInfo.section}</div>
+                                    <div style={{ fontSize: "11px", color: "#BDBDBD", marginBottom: "2px" }}>Section</div>
+                                    <div style={{ fontSize: "12px", color: "#4F4F4F", fontWeight: "500" }}>{studentInfo.section}</div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Filters and Export */}
+                        {/* Current Semester Summary */}
                         <div style={{
                             background: "white",
-                            padding: "16px 20px",
-                            borderRadius: "8px",
-                            marginBottom: "20px",
+                            padding: "8px",
+                            borderRadius: "6px",
+                            border: "1px solid #F2F2F2",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                            minWidth: 0,
+                            maxWidth: "100%",
+                            marginTop: "6px"
+                        }}>
+                            <div style={{ marginBottom: "8px" }}>
+                                <h3 style={{ color: "#1F2F57", fontSize: "14px", fontWeight: "600", marginBottom: "4px" }}>
+                                    Current Semester Summary
+                                </h3>
+                                <p style={{ fontSize: "11px", color: "#BDBDBD", margin: 0 }}>
+                                    Breakdown of your {totalDays} total class days
+                                </p>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "center" }}>
+                                <ResponsiveContainer width="100%" height={100}>
+                                    <PieChart>
+                                        <Pie
+                                            data={pieData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={28}
+                                            outerRadius={50}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {pieData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip contentStyle={{ background: "white", border: "1px solid #F2F2F2", borderRadius: "6px" }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div style={{ marginTop: "6px" }}>
+                                {pieData.map((entry) => (
+                                    <div key={entry.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <div style={{ width: "10px", height: "10px", borderRadius: "2px", background: entry.color }}></div>
+                                            <span style={{ fontSize: "12px", color: "#4F4F4F" }}>{entry.name}</span>
+                                        </div>
+                                        <div style={{ fontSize: "14px", fontWeight: "600", color: "#1F2F57" }}>
+                                            {entry.value} days
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                            </div>
+                        )}
+
+                        {/* Analytics Tab */}
+                        {activeTab === "analytics" && (
+                            <div>
+                                {/* Filters and Export */}
+                                <div style={{
+                            background: "white",
+                            padding: "6px 8px",
+                            borderRadius: "6px",
+                            marginBottom: "8px",
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
-                            gap: "16px",
+                            gap: "12px",
                             border: "1px solid #F2F2F2",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
                         }}>
-                            <div style={{ display: "flex", gap: "12px", flex: 1, flexWrap: "wrap" }}>
+                            <div style={{ display: "flex", gap: "6px", flex: 1, flexWrap: "wrap" }}>
+                                {/* Semester Filter */}
                                 <select
-                                    value={selectedView}
-                                    onChange={(e) => setSelectedView(e.target.value as any)}
                                     style={{
-                                        padding: "10px 16px",
+                                        padding: "6px 12px",
                                         borderRadius: "6px",
                                         border: "1px solid #BDBDBD",
                                         background: "white",
                                         color: "#4F4F4F",
-                                        fontSize: "14px",
+                                        fontSize: "13px",
+                                        cursor: "pointer",
+                                        transition: "all 0.2s ease"
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = "#1DA1F2";
+                                        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,161,242,0.1)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = "#BDBDBD";
+                                        e.currentTarget.style.boxShadow = "none";
+                                    }}
+                                >
+                                    <option value="1">1st Semester</option>
+                                    <option value="2">2nd Semester</option>
+                                </select>
+
+                                <select
+                                    value={selectedView}
+                                    onChange={(e) => setSelectedView(e.target.value as any)}
+                                    style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "6px",
+                                        border: "1px solid #BDBDBD",
+                                        background: "white",
+                                        color: "#4F4F4F",
+                                        fontSize: "13px",
                                         cursor: "pointer",
                                         transition: "all 0.2s ease"
                                     }}
@@ -265,12 +439,12 @@ export default function Student() {
                                     value={selectedSubject}
                                     onChange={(e) => setSelectedSubject(e.target.value)}
                                     style={{
-                                        padding: "10px 16px",
+                                        padding: "6px 12px",
                                         borderRadius: "6px",
                                         border: "1px solid #BDBDBD",
                                         background: "white",
                                         color: "#4F4F4F",
-                                        fontSize: "14px",
+                                        fontSize: "13px",
                                         cursor: "pointer",
                                         transition: "all 0.2s ease"
                                     }}
@@ -296,12 +470,12 @@ export default function Student() {
                                 onClick={handleExport}
                                 disabled={isExporting}
                                 style={{
-                                    padding: "10px 24px",
+                                    padding: "6px 16px",
                                     background: isExporting ? "#BDBDBD" : "#1DA1F2",
                                     color: "white",
                                     border: "none",
                                     borderRadius: "6px",
-                                    fontSize: "14px",
+                                    fontSize: "13px",
                                     fontWeight: "600",
                                     cursor: isExporting ? "not-allowed" : "pointer",
                                     display: "flex",
@@ -322,37 +496,37 @@ export default function Student() {
                                 }}
                             >
                                 <DownloadIcon style={{ width: "16px", height: "16px" }} />
-                                {isExporting ? "Exporting..." : "Export Report"}
+                                {isExporting ? "Exporting..." : "Export"}
                             </button>
                         </div>
 
                         {/* Main Content Grid */}
-                        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "20px", marginBottom: "20px" }}>
-                            {/* Attendance Trend Chart */}
-                            <div style={{
-                                background: "white",
-                                padding: "24px",
-                                borderRadius: "8px",
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px", marginBottom: "8px" }}>
+                            {/* Dynamic Chart based on selected view */}
+                            <div style={{ 
+                                background: "white", 
+                                padding: "8px", 
+                                borderRadius: "6px",
                                 border: "1px solid #F2F2F2",
                                 boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                                 minWidth: 0,
                                 maxWidth: "100%"
                             }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                                    <h3 style={{ color: "#1F2F57", fontSize: "16px", fontWeight: "600", margin: 0 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                    <h3 style={{ color: "#1F2F57", fontSize: "14px", fontWeight: "600", margin: 0 }}>
                                         {selectedView === "daily" && "Daily Attendance"}
                                         {selectedView === "weekly" && "Weekly Attendance Trend"}
                                         {selectedView === "monthly" && "Monthly Attendance Rate"}
                                         {selectedView === "quarterly" && "Quarterly Comparison"}
                                     </h3>
-                                    <div style={{ fontSize: "12px", color: "#BDBDBD" }}>
+                                    <div style={{ fontSize: "10px", color: "#BDBDBD" }}>
                                         {selectedView === "daily" && "Last 7 days"}
                                         {selectedView === "weekly" && "This month"}
                                         {selectedView === "monthly" && "This semester"}
                                         {selectedView === "quarterly" && "Academic year"}
                                     </div>
                                 </div>
-                                <ResponsiveContainer width="100%" height={280}>
+                                <ResponsiveContainer width="100%" height={240}>
                                     {selectedView === "weekly" ? (
                                         <BarChart data={weeklyTrend}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F2" />
@@ -398,82 +572,36 @@ export default function Student() {
                                     )}
                                 </ResponsiveContainer>
                             </div>
-
-                            {/* Attendance Distribution Pie Chart */}
-                            <div style={{
-                                background: "white",
-                                padding: "24px",
-                                borderRadius: "8px",
-                                border: "1px solid #F2F2F2",
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                minWidth: 0,
-                                maxWidth: "100%"
-                            }}>
-                                <div style={{ marginBottom: "16px" }}>
-                                    <h3 style={{ color: "#1F2F57", fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>
-                                        Current Semester Summary
-                                    </h3>
-                                    <p style={{ fontSize: "12px", color: "#BDBDBD", margin: 0 }}>
-                                        Breakdown of your {totalDays} total class days
-                                    </p>
-                                </div>
-                                <ResponsiveContainer width="100%" height={200}>
-                                    <PieChart>
-                                        <Pie
-                                            data={pieData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={50}
-                                            outerRadius={80}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {pieData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip contentStyle={{ background: "white", border: "1px solid #F2F2F2", borderRadius: "6px" }} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div style={{ marginTop: "16px" }}>
-                                    {pieData.map((entry) => (
-                                        <div key={entry.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                <div style={{ width: "12px", height: "12px", borderRadius: "2px", background: entry.color }}></div>
-                                                <span style={{ fontSize: "14px", color: "#4F4F4F" }}>{entry.name}</span>
-                                            </div>
-                                            <div style={{ fontSize: "16px", fontWeight: "600", color: "#1F2F57" }}>
-                                                {entry.value} days
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
                         </div>
+                            </div>
+                        )}
 
-                        {/* Subject-wise Attendance Table */}
-                        <div style={{
+                        {/* Subject Breakdown Tab */}
+                        {activeTab === "subjects" && (
+                            <div>
+                                {/* Subject-wise Attendance Table */}
+                                <div style={{
                             background: "white",
-                            padding: "24px",
-                            borderRadius: "8px",
+                            padding: "8px",
+                            borderRadius: "6px",
                             border: "1px solid #F2F2F2",
                             width: "100%",
                             maxWidth: "100%",
                             overflow: "hidden",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
                         }}>
-                            <h3 style={{ color: "#1F2F57", fontSize: "16px", fontWeight: "600", marginBottom: "20px" }}>
+                            <h3 style={{ color: "#1F2F57", fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
                                 Attendance by Subject
                             </h3>
-                            <div style={{ width: "100%", maxWidth: "100%", overflowX: "auto" }}>
+                            <div style={{ width: "100%", maxWidth: "100%", overflowX: "auto", maxHeight: "280px", overflowY: "auto" }}>
                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                     <thead>
                                         <tr style={{ borderBottom: "2px solid #F2F2F2" }}>
-                                            <th style={{ textAlign: "left", padding: "12px", color: "#1F2F57", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Subject</th>
-                                            <th style={{ textAlign: "center", padding: "12px", color: "#1F2F57", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Present</th>
-                                            <th style={{ textAlign: "center", padding: "12px", color: "#1F2F57", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Late</th>
-                                            <th style={{ textAlign: "center", padding: "12px", color: "#1F2F57", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Absent</th>
-                                            <th style={{ textAlign: "center", padding: "12px", color: "#1F2F57", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Attendance Rate</th>
+                                            <th style={{ textAlign: "left", padding: "8px 6px", color: "#1F2F57", fontSize: "11px", fontWeight: "600", textTransform: "uppercase" }}>Subject</th>
+                                            <th style={{ textAlign: "center", padding: "8px 6px", color: "#1F2F57", fontSize: "11px", fontWeight: "600", textTransform: "uppercase" }}>Present</th>
+                                            <th style={{ textAlign: "center", padding: "8px 6px", color: "#1F2F57", fontSize: "11px", fontWeight: "600", textTransform: "uppercase" }}>Late</th>
+                                            <th style={{ textAlign: "center", padding: "8px 6px", color: "#1F2F57", fontSize: "11px", fontWeight: "600", textTransform: "uppercase" }}>Absent</th>
+                                            <th style={{ textAlign: "center", padding: "8px 6px", color: "#1F2F57", fontSize: "11px", fontWeight: "600", textTransform: "uppercase" }}>Attendance Rate</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -481,27 +609,27 @@ export default function Student() {
                                             <tr key={index} style={{ borderBottom: "1px solid #F2F2F2", transition: "background 0.2s ease" }}
                                                 onMouseEnter={(e) => e.currentTarget.style.background = "#EAF4FF"}
                                                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-                                                <td style={{ padding: "16px 12px", color: "#4F4F4F", fontSize: "14px", fontWeight: "500" }}>{subject.subject}</td>
-                                                <td style={{ padding: "16px 12px", textAlign: "center" }}>
-                                                    <span style={{ padding: "4px 12px", background: "rgba(15,157,88,0.15)", color: "#0F9D58", borderRadius: "4px", fontSize: "13px", fontWeight: "500" }}>
+                                                <td style={{ padding: "10px 6px", color: "#4F4F4F", fontSize: "12px", fontWeight: "500" }}>{subject.subject}</td>
+                                                <td style={{ padding: "10px 6px", textAlign: "center" }}>
+                                                    <span style={{ padding: "3px 8px", background: "rgba(15,157,88,0.15)", color: "#0F9D58", borderRadius: "4px", fontSize: "11px", fontWeight: "500" }}>
                                                         {subject.present}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: "16px 12px", textAlign: "center" }}>
-                                                    <span style={{ padding: "4px 12px", background: "rgba(244,180,0,0.15)", color: "#F4B400", borderRadius: "4px", fontSize: "13px", fontWeight: "500" }}>
+                                                <td style={{ padding: "10px 6px", textAlign: "center" }}>
+                                                    <span style={{ padding: "3px 8px", background: "rgba(244,180,0,0.15)", color: "#F4B400", borderRadius: "4px", fontSize: "11px", fontWeight: "500" }}>
                                                         {subject.late}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: "16px 12px", textAlign: "center" }}>
-                                                    <span style={{ padding: "4px 12px", background: "rgba(219,68,55,0.15)", color: "#DB4437", borderRadius: "4px", fontSize: "13px", fontWeight: "500" }}>
+                                                <td style={{ padding: "10px 6px", textAlign: "center" }}>
+                                                    <span style={{ padding: "3px 8px", background: "rgba(219,68,55,0.15)", color: "#DB4437", borderRadius: "4px", fontSize: "11px", fontWeight: "500" }}>
                                                         {subject.absent}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: "16px 12px", textAlign: "center" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                                                <td style={{ padding: "10px 6px", textAlign: "center" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                                                         <div style={{
-                                                            width: "60px",
-                                                            height: "6px",
+                                                            width: "50px",
+                                                            height: "5px",
                                                             background: "#F2F2F2",
                                                             borderRadius: "3px",
                                                             overflow: "hidden"
@@ -513,7 +641,7 @@ export default function Student() {
                                                                 transition: "width 0.3s ease"
                                                             }}></div>
                                                         </div>
-                                                        <span style={{ fontSize: "14px", fontWeight: "600", color: "#1F2F57" }}>
+                                                        <span style={{ fontSize: "12px", fontWeight: "600", color: "#1F2F57" }}>
                                                             {subject.percentage}%
                                                         </span>
                                                     </div>
@@ -524,6 +652,8 @@ export default function Student() {
                                 </table>
                             </div>
                         </div>
+                            </div>
+                        )}
                     </div>
                 )
             },

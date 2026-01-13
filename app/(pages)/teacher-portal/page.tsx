@@ -22,28 +22,43 @@ const weeklyComparison = [
     { week: "Week 4", present: 90, late: 7, absent: 3 }
 ];
 
+const monthlyData = [
+    { month: "Aug", present: 350, late: 35, absent: 15 },
+    { month: "Sep", present: 365, late: 28, absent: 12 },
+    { month: "Oct", present: 340, late: 42, absent: 20 },
+    { month: "Nov", present: 375, late: 22, absent: 10 },
+    { month: "Dec", present: 360, late: 30, absent: 15 }
+];
+
+const quarterlyData = [
+    { quarter: "1st Quarter", present: 88, late: 8, absent: 4 },
+    { quarter: "2nd Quarter", present: 85, late: 10, absent: 5 },
+    { quarter: "3rd Quarter", present: 90, late: 7, absent: 3 },
+    { quarter: "4th Quarter", present: 87, late: 9, absent: 4 }
+];
+
 // Student list with recent attendance
 const recentStudents = [
-    { id: 1, name: "Juan Dela Cruz", status: "Present", time: "8:00 AM" },
-    { id: 2, name: "Maria Santos", status: "Present", time: "8:05 AM" },
-    { id: 3, name: "Pedro Reyes", status: "Late", time: "8:25 AM" },
-    { id: 4, name: "Ana Garcia", status: "Present", time: "7:55 AM" },
-    { id: 5, name: "Carlos Mendoza", status: "Absent", time: "-" },
-    { id: 6, name: "Sofia Rodriguez", status: "Present", time: "7:58 AM" },
-    { id: 7, name: "Miguel Torres", status: "Present", time: "8:02 AM" },
-    { id: 8, name: "Isabella Fernandez", status: "Late", time: "8:30 AM" },
-    { id: 9, name: "Diego Martinez", status: "Present", time: "7:52 AM" },
-    { id: 10, name: "Valentina Lopez", status: "Present", time: "8:08 AM" },
-    { id: 11, name: "Gabriel Ramirez", status: "Absent", time: "-" },
-    { id: 12, name: "Camila Gonzalez", status: "Present", time: "7:59 AM" },
-    { id: 13, name: "Lucas Sanchez", status: "Present", time: "8:03 AM" },
-    { id: 14, name: "Emma Diaz", status: "Late", time: "8:28 AM" },
-    { id: 15, name: "Mateo Morales", status: "Present", time: "7:57 AM" },
-    { id: 16, name: "Olivia Castro", status: "Present", time: "8:01 AM" },
-    { id: 17, name: "Santiago Ramos", status: "Present", time: "8:06 AM" },
-    { id: 18, name: "Mia Flores", status: "Absent", time: "-" },
-    { id: 19, name: "Sebastian Cruz", status: "Present", time: "7:54 AM" },
-    { id: 20, name: "Luna Herrera", status: "Present", time: "8:04 AM" }
+    { id: 1, name: "Juan Dela Cruz", status: "Present", time: "8:00 AM", confidence: "96%" },
+    { id: 2, name: "Maria Santos", status: "Present", time: "8:05 AM", confidence: "94%" },
+    { id: 3, name: "Pedro Reyes", status: "Late", time: "8:25 AM", confidence: "89%" },
+    { id: 4, name: "Ana Garcia", status: "Present", time: "7:55 AM", confidence: "98%" },
+    { id: 5, name: "Carlos Mendoza", status: "Absent", time: "-", confidence: "No Detection" },
+    { id: 6, name: "Sofia Rodriguez", status: "Present", time: "7:58 AM", confidence: "92%" },
+    { id: 7, name: "Miguel Torres", status: "Present", time: "8:02 AM", confidence: "97%" },
+    { id: 8, name: "Isabella Fernandez", status: "Late", time: "8:30 AM", confidence: "85%" },
+    { id: 9, name: "Diego Martinez", status: "Present", time: "7:52 AM", confidence: "93%" },
+    { id: 10, name: "Valentina Lopez", status: "Present", time: "8:08 AM", confidence: "95%" },
+    { id: 11, name: "Gabriel Ramirez", status: "Absent", time: "-", confidence: "No Detection" },
+    { id: 12, name: "Camila Gonzalez", status: "Present", time: "7:59 AM", confidence: "91%" },
+    { id: 13, name: "Lucas Sanchez", status: "Present", time: "8:03 AM", confidence: "96%" },
+    { id: 14, name: "Emma Diaz", status: "Late", time: "8:28 AM", confidence: "88%" },
+    { id: 15, name: "Mateo Morales", status: "Present", time: "7:57 AM", confidence: "94%" },
+    { id: 16, name: "Olivia Castro", status: "Present", time: "8:01 AM", confidence: "97%" },
+    { id: 17, name: "Santiago Ramos", status: "Present", time: "8:06 AM", confidence: "90%" },
+    { id: 18, name: "Mia Flores", status: "Absent", time: "-", confidence: "No Detection" },
+    { id: 19, name: "Sebastian Cruz", status: "Present", time: "7:54 AM", confidence: "95%" },
+    { id: 20, name: "Luna Herrera", status: "Present", time: "8:04 AM", confidence: "93%" }
 ];
 
 export default function Teacher() {
@@ -53,6 +68,8 @@ export default function Teacher() {
     const [selectedGradeLevel, setSelectedGradeLevel] = useState("all");
     const [selectedSection, setSelectedSection] = useState("all");
     const [selectedQuarter, setSelectedQuarter] = useState("current");
+    const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "records">("overview");
+    const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("weekly");
 
     // Calculate totals
     const totalStudents = 34;
@@ -167,144 +184,523 @@ export default function Teacher() {
                     </div>
                 ],
                 content: <>
-                    <div style={{ padding: "24px" }}>
+                    <div style={{ padding: "8px" }}>
                         
-                        {/* Filter and Search Section */}
-                        <div style={{ 
-                            background: "#FFFFFF",
-                            padding: "20px",
-                            borderRadius: "8px",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                            marginBottom: "24px",
-                            border: "1px solid #F2F2F2",
-                            transition: "box-shadow 0.2s ease"
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"}
-                        onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)"}>
-                            <div style={{ 
-                                display: "flex", 
-                                gap: "12px", 
-                                alignItems: "center",
-                                flexWrap: "wrap",
-                                justifyContent: "space-between"
-                            }}>
+                        {/* Tab Navigation */}
+                        <div style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginBottom: "12px",
+                            borderBottom: "2px solid #F2F2F2"
+                        }}>
+                            <button
+                                onClick={() => setActiveTab("overview")}
+                                style={{
+                                    padding: "12px 24px",
+                                    background: "none",
+                                    border: "none",
+                                    borderBottom: activeTab === "overview" ? "2px solid #1DA1F2" : "2px solid transparent",
+                                    color: activeTab === "overview" ? "#1DA1F2" : "#4F4F4F",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                    marginBottom: "-2px"
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (activeTab !== "overview") e.currentTarget.style.color = "#1DA1F2";
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (activeTab !== "overview") e.currentTarget.style.color = "#4F4F4F";
+                                }}
+                            >
+                                Overview
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("analytics")}
+                                style={{
+                                    padding: "12px 24px",
+                                    background: "none",
+                                    border: "none",
+                                    borderBottom: activeTab === "analytics" ? "2px solid #1DA1F2" : "2px solid transparent",
+                                    color: activeTab === "analytics" ? "#1DA1F2" : "#4F4F4F",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                    marginBottom: "-2px"
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (activeTab !== "analytics") e.currentTarget.style.color = "#1DA1F2";
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (activeTab !== "analytics") e.currentTarget.style.color = "#4F4F4F";
+                                }}
+                            >
+                                Analytics
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("records")}
+                                style={{
+                                    padding: "12px 24px",
+                                    background: "none",
+                                    border: "none",
+                                    borderBottom: activeTab === "records" ? "2px solid #1DA1F2" : "2px solid transparent",
+                                    color: activeTab === "records" ? "#1DA1F2" : "#4F4F4F",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                    marginBottom: "-2px"
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (activeTab !== "records") e.currentTarget.style.color = "#1DA1F2";
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (activeTab !== "records") e.currentTarget.style.color = "#4F4F4F";
+                                }}
+                            >
+                                Attendance Records
+                            </button>
+                        </div>
+
+                        {/* Overview Tab */}
+                        {activeTab === "overview" && (
+                            <div>
+                                {/* Quick Summary Statistics */}
                                 <div style={{ 
-                                    display: "flex", 
-                                    gap: "12px", 
-                                    alignItems: "center",
-                                    flexWrap: "wrap",
-                                    flex: 1
+                                    display: "grid", 
+                                    gridTemplateColumns: "repeat(3, 1fr)", 
+                                    gap: "8px",
+                                    width: "100%",
+                                    marginBottom: "6px"
                                 }}>
-                                <select 
-                                    value={selectedSubject}
-                                    onChange={(e) => setSelectedSubject(e.target.value)}
-                                    style={{ 
-                                        padding: "10px 16px",
-                                        borderRadius: "6px",
-                                        border: "1px solid #BDBDBD",
-                                        fontSize: "14px",
-                                        cursor: "pointer",
-                                        minWidth: "130px",
-                                        transition: "all 0.2s ease",
-                                        background: "#FFFFFF",
-                                        color: "#4F4F4F"
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = "#1DA1F2";
-                                        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,161,242,0.1)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = "#BDBDBD";
-                                        e.currentTarget.style.boxShadow = "none";
+                                    {/* Average Attendance Rate */}
+                                    <div style={{
+                                        background: "linear-gradient(135deg, #0F9D58 0%, #0d8549 100%)",
+                                        padding: "16px",
+                                        borderRadius: "8px",
+                                        color: "white"
                                     }}>
-                                    <option value="all">All Subjects</option>
-                                    <option value="math">Mathematics</option>
-                                    <option value="science">Science</option>
-                                    <option value="english">English</option>
-                                </select>
+                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Avg. Attendance Rate</div>
+                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{classSemesterAttendance}%</div>
+                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>This semester</div>
+                                    </div>
 
-                                <select                                     value={selectedGradeLevel}
-                                    onChange={(e) => setSelectedGradeLevel(e.target.value)}
-                                    style={{ 
-                                        padding: "10px 16px",
-                                        borderRadius: "6px",
-                                        border: "1px solid #BDBDBD",
-                                        fontSize: "14px",
-                                        cursor: "pointer",
-                                        minWidth: "130px",
-                                        transition: "all 0.2s ease",
-                                        background: "#FFFFFF",
-                                        color: "#4F4F4F"
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = "#1DA1F2";
-                                        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,161,242,0.1)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = "#BDBDBD";
-                                        e.currentTarget.style.boxShadow = "none";
+                                    {/* Today's Present */}
+                                    <div style={{
+                                        background: "linear-gradient(135deg, #1DA1F2 0%, #1a8cd8 100%)",
+                                        padding: "16px",
+                                        borderRadius: "8px",
+                                        color: "white"
                                     }}>
-                                    <option value="all">All Grade Levels</option>
-                                    <option value="11">Grade 11</option>
-                                    <option value="12">Grade 12</option>
-                                </select>
+                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Today's Present</div>
+                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{todayPresent}/{totalStudents}</div>
+                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>{((todayPresent/totalStudents)*100).toFixed(1)}% attendance</div>
+                                    </div>
 
-                                <select 
-                                    value={selectedSection}
-                                    onChange={(e) => setSelectedSection(e.target.value)}
-                                    style={{ 
-                                        padding: "10px 16px",
-                                        borderRadius: "6px",
-                                        border: "1px solid #BDBDBD",
-                                        fontSize: "14px",
-                                        cursor: "pointer",
-                                        minWidth: "130px",
-                                        transition: "all 0.2s ease",
-                                        background: "#FFFFFF",
-                                        color: "#4F4F4F"
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = "#1DA1F2";
-                                        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,161,242,0.1)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = "#BDBDBD";
-                                        e.currentTarget.style.boxShadow = "none";
+                                    {/* Late Students */}
+                                    <div style={{
+                                        background: "linear-gradient(135deg, #F4B400 0%, #d99f00 100%)",
+                                        padding: "16px",
+                                        borderRadius: "8px",
+                                        color: "white"
                                     }}>
-                                    <option value="all">All Sections</option>
-                                    <option value="a">Section A</option>
-                                    <option value="b">Section B</option>
-                                    <option value="c">Section C</option>
-                                </select>
+                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Late Today</div>
+                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{recentStudents.filter(s => s.status === "Late").length}</div>
+                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>Students tardy</div>
+                                    </div>
 
-                                <select 
-                                    value={selectedQuarter}
-                                    onChange={(e) => setSelectedQuarter(e.target.value)}
-                                    style={{ 
-                                        padding: "10px 16px",
-                                        borderRadius: "6px",
-                                        border: "1px solid #BDBDBD",
-                                        fontSize: "14px",
-                                        cursor: "pointer",
-                                        minWidth: "130px",
-                                        transition: "all 0.2s ease",
-                                        background: "#FFFFFF",
-                                        color: "#4F4F4F"
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = "#1DA1F2";
-                                        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,161,242,0.1)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = "#BDBDBD";
-                                        e.currentTarget.style.boxShadow = "none";
+                                    {/* Absent Students */}
+                                    <div style={{
+                                        background: "linear-gradient(135deg, #DB4437 0%, #c23929 100%)",
+                                        padding: "16px",
+                                        borderRadius: "8px",
+                                        color: "white"
                                     }}>
-                                    <option value="all">All Quarters</option>
-                                    <option value="1">1st Quarter</option>
-                                    <option value="2">2nd Quarter</option>
-                                    <option value="3">3rd Quarter</option>
-                                    <option value="4">4th Quarter</option>
-                                </select>
+                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Absent Today</div>
+                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{recentStudents.filter(s => s.status === "Absent").length}</div>
+                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>Students missing</div>
+                                    </div>
+                                    {/* Perfect Attendance */}
+                                    <div style={{
+                                        background: "linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)",
+                                        padding: "16px",
+                                        borderRadius: "8px",
+                                        color: "white"
+                                    }}>
+                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Perfect Attendance</div>
+                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{recentStudents.filter(s => s.status === "Present").length - recentStudents.filter(s => s.status === "Late").length}</div>
+                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>On time today</div>
+                                    </div>
+
+                                    {/* Total Classes This Week */}
+                                    <div style={{
+                                        background: "linear-gradient(135deg, #FF9800 0%, #F57C00 100%)",
+                                        padding: "16px",
+                                        borderRadius: "8px",
+                                        color: "white"
+                                    }}>
+                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Classes This Week</div>
+                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>5</div>
+                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>Days conducted</div>
+                                    </div>                                </div>
+                            </div>
+                        )}
+
+                        {/* Analytics Tab */}
+                        {activeTab === "analytics" && (
+                            <div>
+                                {/* Filters and Export */}
+                                <div style={{
+                                    background: "white",
+                                    padding: "6px 8px",
+                                    borderRadius: "6px",
+                                    marginBottom: "8px",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    border: "1px solid #F2F2F2",
+                                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                                    flexWrap: "wrap"
+                                }}>
+                                    <div style={{ display: "flex", gap: "6px", flex: 1, flexWrap: "wrap", alignItems: "center" }}>
+                                        <select 
+                                            value={selectedSubject}
+                                            onChange={(e) => setSelectedSubject(e.target.value)}
+                                            style={{ 
+                                                padding: "6px 12px",
+                                                borderRadius: "6px",
+                                                border: "1px solid #BDBDBD",
+                                                fontSize: "13px",
+                                                cursor: "pointer",
+                                                minWidth: "110px",
+                                                transition: "all 0.2s ease",
+                                                background: "#FFFFFF",
+                                                color: "#4F4F4F"
+                                            }}>
+                                            <option value="all">All Subjects</option>
+                                            <option value="math">Mathematics</option>
+                                            <option value="science">Science</option>
+                                            <option value="english">English</option>
+                                        </select>
+
+                                        <select value={selectedGradeLevel}
+                                            onChange={(e) => setSelectedGradeLevel(e.target.value)}
+                                            style={{ 
+                                                padding: "6px 12px",
+                                                borderRadius: "6px",
+                                                border: "1px solid #BDBDBD",
+                                                fontSize: "13px",
+                                                cursor: "pointer",
+                                                minWidth: "110px",
+                                                transition: "all 0.2s ease",
+                                                background: "#FFFFFF",
+                                                color: "#4F4F4F"
+                                            }}>
+                                            <option value="all">All Grades</option>
+                                            <option value="11">Grade 11</option>
+                                            <option value="12">Grade 12</option>
+                                        </select>
+
+                                        <select 
+                                            value={selectedSection}
+                                            onChange={(e) => setSelectedSection(e.target.value)}
+                                            style={{ 
+                                                padding: "6px 12px",
+                                                borderRadius: "6px",
+                                                border: "1px solid #BDBDBD",
+                                                fontSize: "13px",
+                                                cursor: "pointer",
+                                                minWidth: "110px",
+                                                transition: "all 0.2s ease",
+                                                background: "#FFFFFF",
+                                                color: "#4F4F4F"
+                                            }}>
+                                            <option value="all">All Sections</option>
+                                            <option value="a">Section A</option>
+                                            <option value="b">Section B</option>
+                                            <option value="c">Section C</option>
+                                        </select>
+
+                                        <select 
+                                            value={selectedQuarter}
+                                            onChange={(e) => setSelectedQuarter(e.target.value)}
+                                            style={{ 
+                                                padding: "6px 12px",
+                                                borderRadius: "6px",
+                                                border: "1px solid #BDBDBD",
+                                                fontSize: "13px",
+                                                cursor: "pointer",
+                                                minWidth: "110px",
+                                                transition: "all 0.2s ease",
+                                                background: "#FFFFFF",
+                                                color: "#4F4F4F"
+                                            }}>
+                                            <option value="current">Current Quarter</option>
+                                            <option value="1">1st Quarter</option>
+                                            <option value="2">2nd Quarter</option>
+                                            <option value="3">3rd Quarter</option>
+                                            <option value="4">4th Quarter</option>
+                                        </select>
+
+                                        <select
+                                            value={selectedView}
+                                            onChange={(e) => setSelectedView(e.target.value as any)}
+                                            style={{
+                                                padding: "6px 12px",
+                                                borderRadius: "6px",
+                                                border: "1px solid #BDBDBD",
+                                                background: "white",
+                                                color: "#4F4F4F",
+                                                fontSize: "13px",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease"
+                                            }}
+                                        >
+                                            <option value="daily">Daily View</option>
+                                            <option value="weekly">Weekly View</option>
+                                            <option value="monthly">Monthly View</option>
+                                            <option value="quarterly">Quarterly View</option>
+                                        </select>
+                                    </div>
+
+                                    <button 
+                                        onClick={handleExport}
+                                        disabled={isExporting}
+                                        style={{
+                                            background: isExporting ? "#BDBDBD" : "#1DA1F2",
+                                            color: "white",
+                                            border: "none",
+                                            padding: "6px 12px",
+                                            borderRadius: "6px",
+                                            cursor: isExporting ? "not-allowed" : "pointer",
+                                            fontSize: "13px",
+                                            fontWeight: "600",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                            transition: "all 0.2s ease",
+                                            whiteSpace: "nowrap"
+                                        }}>
+                                        <DownloadIcon style={{ animation: isExporting ? "spin 1s linear infinite" : "none" }} />
+                                        {isExporting ? "Exporting..." : "Export"}
+                                    </button>
+                                </div>
+
+                                {/* Charts Section */}
+                                <div style={{ 
+                                    display: "grid", 
+                                    gridTemplateColumns: "1fr", 
+                                    gap: "12px",
+                                    width: "100%",
+                                    maxWidth: "100%",
+                                    overflow: "hidden"
+                                        }}>
+                                    {selectedView === "daily" && (
+                                    <div style={{ 
+                                        background: "#FFFFFF", 
+                                padding: "12px", 
+                                borderRadius: "8px",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                                border: "1px solid #F2F2F2",
+                                minWidth: 0,
+                                maxWidth: "100%"
+                            }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                    <h3 style={{ 
+                                        fontSize: "16px", 
+                                        fontWeight: "600", 
+                                        color: "#1F2F57",
+                                        margin: 0
+                                    }}>Daily Attendance Trend</h3>
+                                    <span style={{
+                                        fontSize: "11px",
+                                        color: "#4F4F4F",
+                                        padding: "3px 6px",
+                                        background: "#F2F2F2",
+                                        borderRadius: "4px"
+                                    }}>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                                </div>
+                                <ResponsiveContainer width="100%" height={240}>
+                                    <LineChart data={attendanceTrends}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F2" />
+                                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                                        <YAxis tick={{ fontSize: 12 }} />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                background: "#FFFFFF",
+                                                border: "1px solid #F2F2F2",
+                                                borderRadius: "8px",
+                                                boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+                                            }}
+                                        />
+                                        <Legend />
+                                        <Line type="monotone" dataKey="present" stroke="#0F9D58" strokeWidth={3} name="Present" dot={{ r: 5 }} activeDot={{ r: 7 }} />
+                                        <Line type="monotone" dataKey="late" stroke="#F4B400" strokeWidth={3} name="Late" dot={{ r: 5 }} activeDot={{ r: 7 }} />
+                                        <Line type="monotone" dataKey="absent" stroke="#DB4437" strokeWidth={3} name="Absent" dot={{ r: 5 }} activeDot={{ r: 7 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                                    </div>
+                                            )}
+
+                                    {selectedView === "weekly" && (
+                                    <div style={{ 
+                                background: "#FFFFFF", 
+                                padding: "12px", 
+                                borderRadius: "8px",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                                border: "1px solid #F2F2F2",
+                                minWidth: 0,
+                                maxWidth: "100%"
+                            }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                    <h3 style={{ 
+                                        fontSize: "16px", 
+                                        fontWeight: "600", 
+                                        color: "#1F2F57",
+                                        margin: 0
+                                    }}>Weekly Attendance Comparison</h3>
+                                    <span style={{
+                                        fontSize: "11px",
+                                        color: "#4F4F4F",
+                                        padding: "3px 6px",
+                                        background: "#F2F2F2",
+                                        borderRadius: "4px"
+                                    }}>Last 4 Weeks</span>
+                                </div>
+                                <ResponsiveContainer width="100%" height={240}>
+                                    <BarChart data={weeklyComparison} barSize={60}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F2" />
+                                        <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                                        <YAxis tick={{ fontSize: 12 }} />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                background: "#FFFFFF",
+                                                border: "1px solid #F2F2F2",
+                                                borderRadius: "8px",
+                                                boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+                                            }}
+                                        />
+                                        <Legend />
+                                        <Bar dataKey="present" fill="#0F9D58" radius={[4, 4, 0, 0]} name="Present" />
+                                        <Bar dataKey="late" fill="#F4B400" radius={[4, 4, 0, 0]} name="Late" />
+                                        <Bar dataKey="absent" fill="#DB4437" radius={[4, 4, 0, 0]} name="Absent" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                                    )}
+
+                                    {selectedView === "monthly" && (
+                                    <div style={{ 
+                                background: "#FFFFFF", 
+                                padding: "12px", 
+                                borderRadius: "8px",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                                border: "1px solid #F2F2F2",
+                                minWidth: 0,
+                                maxWidth: "100%"
+                            }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                    <h3 style={{ 
+                                        fontSize: "16px", 
+                                        fontWeight: "600", 
+                                        color: "#1F2F57",
+                                        margin: 0
+                                    }}>Monthly Attendance Summary</h3>
+                                    <span style={{
+                                        fontSize: "11px",
+                                        color: "#4F4F4F",
+                                        padding: "3px 6px",
+                                        background: "#F2F2F2",
+                                        borderRadius: "4px"
+                                    }}>Last 5 Months</span>
+                                </div>
+                                <ResponsiveContainer width="100%" height={240}>
+                                    <BarChart data={monthlyData} barSize={50}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F2" />
+                                        <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                                        <YAxis tick={{ fontSize: 12 }} />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                background: "#FFFFFF",
+                                                border: "1px solid #F2F2F2",
+                                                borderRadius: "8px",
+                                                boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+                                            }}
+                                        />
+                                        <Legend />
+                                        <Bar dataKey="present" fill="#0F9D58" radius={[4, 4, 0, 0]} name="Present" />
+                                        <Bar dataKey="late" fill="#F4B400" radius={[4, 4, 0, 0]} name="Late" />
+                                        <Bar dataKey="absent" fill="#DB4437" radius={[4, 4, 0, 0]} name="Absent" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                                    )}
+
+                                    {selectedView === "quarterly" && (
+                                    <div style={{ 
+                                background: "#FFFFFF", 
+                                padding: "12px", 
+                                borderRadius: "8px",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                                border: "1px solid #F2F2F2",
+                                minWidth: 0,
+                                maxWidth: "100%"
+                            }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                    <h3 style={{ 
+                                        fontSize: "16px", 
+                                        fontWeight: "600", 
+                                        color: "#1F2F57",
+                                        margin: 0
+                                    }}>Quarterly Attendance Overview</h3>
+                                    <span style={{
+                                        fontSize: "11px",
+                                        color: "#4F4F4F",
+                                        padding: "3px 6px",
+                                        background: "#F2F2F2",
+                                        borderRadius: "4px"
+                                    }}>4 Quarters</span>
+                                </div>
+                                <ResponsiveContainer width="100%" height={240}>
+                                    <BarChart data={quarterlyData} barSize={70}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F2" />
+                                        <XAxis dataKey="quarter" tick={{ fontSize: 12 }} />
+                                        <YAxis tick={{ fontSize: 12 }} />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                background: "#FFFFFF",
+                                                border: "1px solid #F2F2F2",
+                                                borderRadius: "8px",
+                                                boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+                                            }}
+                                        />
+                                        <Legend />
+                                        <Bar dataKey="present" fill="#0F9D58" radius={[4, 4, 0, 0]} name="Present" />
+                                        <Bar dataKey="late" fill="#F4B400" radius={[4, 4, 0, 0]} name="Late" />
+                                        <Bar dataKey="absent" fill="#DB4437" radius={[4, 4, 0, 0]} name="Absent" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                                    </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Attendance Records Tab */}
+                        {activeTab === "records" && (
+                            <div>
+                                {/* Search Bar */}
+                                <div style={{
+                                    background: "white",
+                                    padding: "12px 16px",
+                                    borderRadius: "8px",
+                                    marginBottom: "16px",
+                                    border: "1px solid #F2F2F2",
+                                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
+                                }}>
 
                                 <div style={{ position: "relative", flex: 1, minWidth: "250px" }}>
                                     <MagnifyingGlassIcon style={{ 
@@ -344,204 +740,47 @@ export default function Teacher() {
                                 </div>
                                 </div>
                                 
-                                <button 
-                                    onClick={handleExport}
-                                    disabled={isExporting}
-                                    style={{
-                                        background: isExporting ? "#BDBDBD" : "#1DA1F2",
-                                        color: "white",
-                                        border: "none",
-                                        padding: "10px 20px",
-                                        borderRadius: "6px",
-                                        cursor: isExporting ? "not-allowed" : "pointer",
-                                        fontSize: "14px",
-                                        fontWeight: "600",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        transition: "all 0.2s ease",
-                                        transform: "scale(1)"
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isExporting) {
-                                            e.currentTarget.style.background = "#1a8cd8";
-                                            e.currentTarget.style.transform = "scale(1.02)";
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = isExporting ? "#BDBDBD" : "#1DA1F2";
-                                        e.currentTarget.style.transform = "scale(1)";
-                                    }}
-                                    onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.98)"}
-                                    onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}  
-                                >
-                                    <DownloadIcon style={{ animation: isExporting ? "spin 1s linear infinite" : "none" }} />
-                                    {isExporting ? "Exporting..." : "Export"}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Charts Section */}
-                        <div style={{ 
-                            display: "grid", 
-                            gridTemplateColumns: "repeat(auto-fit, minmax(500px, 1fr))", 
-                            gap: "24px",
-                            marginBottom: "32px",
-                            width: "100%",
-                            maxWidth: "100%",
-                            overflow: "hidden"
-                        }}>
-                            {/* Daily Attendance Trend */}
-                            <div style={{ 
-                                background: "#FFFFFF", 
-                                padding: "24px", 
-                                borderRadius: "8px",
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                border: "1px solid #F2F2F2",
-                                transition: "all 0.3s ease",
-                                minWidth: 0,
-                                maxWidth: "100%"
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)";
-                                e.currentTarget.style.transform = "translateY(-2px)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
-                                e.currentTarget.style.transform = "translateY(0)";
-                            }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                                    <h3 style={{ 
-                                        fontSize: "18px", 
-                                        fontWeight: "600", 
-                                        color: "#1F2F57",
-                                        margin: 0
-                                    }}>Daily Attendance Trend</h3>
-                                    <span style={{
-                                        fontSize: "12px",
-                                        color: "#4F4F4F",
-                                        padding: "4px 8px",
-                                        background: "#F2F2F2",
-                                        borderRadius: "6px"
-                                    }}>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-                                </div>
-                                <ResponsiveContainer width="100%" height={280}>
-                                    <LineChart data={attendanceTrends}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F2" />
-                                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                                        <YAxis tick={{ fontSize: 12 }} />
-                                        <Tooltip 
-                                            contentStyle={{
-                                                background: "#FFFFFF",
-                                                border: "1px solid #F2F2F2",
-                                                borderRadius: "8px",
-                                                boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
-                                            }}
-                                        />
-                                        <Legend />
-                                        <Line type="monotone" dataKey="present" stroke="#0F9D58" strokeWidth={3} name="Present" dot={{ r: 5 }} activeDot={{ r: 7 }} />
-                                        <Line type="monotone" dataKey="late" stroke="#F4B400" strokeWidth={3} name="Late" dot={{ r: 5 }} activeDot={{ r: 7 }} />
-                                        <Line type="monotone" dataKey="absent" stroke="#DB4437" strokeWidth={3} name="Absent" dot={{ r: 5 }} activeDot={{ r: 7 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-
-                            {/* Weekly Comparison */}
-                            <div style={{ 
-                                background: "#FFFFFF", 
-                                padding: "24px", 
-                                borderRadius: "8px",
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                border: "1px solid #F2F2F2",
-                                transition: "all 0.3s ease",
-                                minWidth: 0,
-                                maxWidth: "100%"
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)";
-                                e.currentTarget.style.transform = "translateY(-2px)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
-                                e.currentTarget.style.transform = "translateY(0)";
-                            }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                                    <h3 style={{ 
-                                        fontSize: "18px", 
-                                        fontWeight: "600", 
-                                        color: "#1F2F57",
-                                        margin: 0
-                                    }}>Weekly Comparison</h3>
-                                    <span style={{
-                                        fontSize: "12px",
-                                        color: "#4F4F4F",
-                                        padding: "4px 8px",
-                                        background: "#F2F2F2",
-                                        borderRadius: "6px"
-                                    }}>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-                                </div>
-                                <ResponsiveContainer width="100%" height={280}>
-                                    <BarChart data={weeklyComparison}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F2" />
-                                        <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                                        <YAxis tick={{ fontSize: 12 }} />
-                                        <Tooltip 
-                                            contentStyle={{
-                                                background: "#FFFFFF",
-                                                border: "1px solid #F2F2F2",
-                                                borderRadius: "8px",
-                                                boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
-                                            }}
-                                        />
-                                        <Legend />
-                                        <Bar dataKey="present" fill="#0F9D58" radius={[8, 8, 0, 0]} name="Present" />
-                                        <Bar dataKey="late" fill="#F4B400" radius={[8, 8, 0, 0]} name="Late" />
-                                        <Bar dataKey="absent" fill="#DB4437" radius={[8, 8, 0, 0]} name="Absent" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
-                        {/* Recent Attendance Table */}
-                        <div style={{ 
-                            background: "#FFFFFF", 
-                            padding: "24px", 
-                            borderRadius: "8px",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                            border: "1px solid #F2F2F2",
-                            transition: "box-shadow 0.3s ease",
-                            width: "100%",
-                            maxWidth: "100%",
-                            overflow: "hidden"
-                        }}
+                                {/* Recent Attendance Table */}
+                                <div style={{ 
+                                    background: "#FFFFFF", 
+                                    padding: "8px", 
+                                    borderRadius: "6px",
+                                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                                    border: "1px solid #F2F2F2",
+                                    transition: "box-shadow 0.3s ease",
+                                    width: "100%",
+                                    maxWidth: "100%",
+                                    overflow: "hidden"
+                                }}
                         onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)"}
                         onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)"}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                                 <h3 style={{ 
-                                    fontSize: "18px", 
+                                    fontSize: "14px", 
                                     fontWeight: "600", 
                                     color: "#1F2F57",
                                     margin: 0
                                 }}>Today&apos;s Attendance</h3>
                                 <span style={{
-                                    fontSize: "12px",
+                                    fontSize: "10px",
                                     color: "#4F4F4F",
-                                    padding: "4px 8px",
+                                    padding: "2px 6px",
                                     background: "#F2F2F2",
-                                    borderRadius: "6px"
+                                    borderRadius: "4px"
                                 }}>{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
                             </div>
-                            <div style={{ maxHeight: "400px", overflowY: "auto", overflowX: "auto" }}>
+                            <div style={{ maxHeight: "200px", overflowY: "auto", overflowX: "auto" }}>
                                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                     <thead>
                                         <tr style={{ borderBottom: "2px solid #F2F2F2" }}>
-                                            <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "13px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student Name</th>
-                                            <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "13px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-                                            <th style={{ padding: "14px 12px", textAlign: "left", fontSize: "13px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Time</th>
+                                            <th style={{ padding: "8px 6px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student Name</th>
+                                            <th style={{ padding: "8px 6px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
+                                            <th style={{ padding: "8px 6px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Time</th>
+                                            <th style={{ padding: "8px 6px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Facial Recognition Confidence</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {recentStudents.map((student) => (
+                                        {recentStudents.filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase())).map((student) => (
                                             <tr key={student.id} style={{ 
                                                 borderBottom: "1px solid #F2F2F2",
                                                 transition: "background 0.15s ease",
@@ -549,14 +788,12 @@ export default function Teacher() {
                                             }}
                                             onMouseEnter={(e) => e.currentTarget.style.background = "#EAF4FF"}
                                             onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-                                                <td style={{ padding: "16px 12px", fontSize: "14px", color: "#4F4F4F", fontWeight: "500" }}>
-                                                    {student.name}
-                                                </td>
-                                                <td style={{ padding: "16px 12px" }}>
+                                                <td style={{ padding: "6px 6px", fontSize: "12px", color: "#4F4F4F" }}>{student.name}</td>
+                                                <td style={{ padding: "6px 6px" }}>
                                                     <span style={{ 
-                                                        padding: "6px 14px",
-                                                        borderRadius: "16px",
-                                                        fontSize: "12px",
+                                                        padding: "4px 10px",
+                                                        borderRadius: "12px",
+                                                        fontSize: "11px",
                                                         fontWeight: "700",
                                                         background: student.status === "Present" ? "rgba(15,157,88,0.15)" : student.status === "Late" ? "rgba(244,180,0,0.15)" : "rgba(219,68,55,0.15)",
                                                         color: student.status === "Present" ? "#0F9D58" : student.status === "Late" ? "#F4B400" : "#DB4437",
@@ -568,8 +805,11 @@ export default function Teacher() {
                                                         {student.status}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: "16px 12px", fontSize: "14px", color: "#4F4F4F", fontWeight: "500" }}>
+                                                <td style={{ padding: "6px 6px", fontSize: "12px", color: "#4F4F4F", fontWeight: "500" }}>
                                                     {student.time}
+                                                </td>
+                                                <td style={{ padding: "6px 6px", fontSize: "12px", color: student.confidence === "No Detection" ? "#DB4437" : "#0F9D58", fontWeight: "600" }}>
+                                                    {student.confidence}
                                                 </td>
                                             </tr>
                                         ))}
@@ -577,6 +817,8 @@ export default function Teacher() {
                                 </table>
                             </div>
                         </div>
+                            </div>
+                        )}
                         
                         {/* Add spin animation for export button */}
                         <style>{`
