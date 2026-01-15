@@ -3,54 +3,35 @@
 import SamsTemplate from "@/app/components/SamsTemplate";
 import Image from "next/image";
 import { Label, Separator, ToggleGroup } from "radix-ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import './styles.css';
 
 export default function Admin() {
-    const groups = ["1", "2", "3", "4", "5"];
-    const [selectedGroup, setSelectedGroup] = useState<string>(groups[0]);
-    const notesByGroup: Record<string, [string, string][]> = {
-        "1": [
-            ["Note 1-A", "descriptive content"],
-            ["Note 1-B", "descriptive content"],
-            ["Note 1-C", "descriptive content"],
-            ["Note 1-D", "descriptive content"],
-            ["Note 1-E", "descriptive content"],
-            ["Note 1-F", "descriptive content"],
-        ],
-        "2": [
-            ["Note 2-A", "descriptive content"],
-            ["Note 2-B", "descriptive content"],
-            ["Note 2-C", "descriptive content"],
-            ["Note 2-D", "descriptive content"],
-            ["Note 2-E", "descriptive content"],
-            ["Note 2-F", "descriptive content"],
-        ],
-        "3": [
-            ["Note 3-A", "descriptive content"],
-            ["Note 3-B", "descriptive content"],
-            ["Note 3-C", "descriptive content"],
-            ["Note 3-D", "descriptive content"],
-            ["Note 3-E", "descriptive content"],
-            ["Note 3-F", "descriptive content"],
-        ],
-        "4": [
-            ["Note 4-A", "descriptive content"],
-            ["Note 4-B", "descriptive content"],
-            ["Note 4-C", "descriptive content"],
-            ["Note 4-D", "descriptive content"],
-            ["Note 4-E", "descriptive content"],
-            ["Note 4-F", "descriptive content"],
-        ],
-        "5": [
-            ["Note 5-A", "descriptive content"],
-            ["Note 5-B", "descriptive content"],
-            ["Note 5-C", "descriptive content"],
-            ["Note 5-D", "descriptive content"],
-            ["Note 5-E", "descriptive content"],
-            ["Note 5-F", "descriptive content"],
-        ],
+    type ArchiveItem = {
+        created_at: string;
+        school_year: string;
+        id: string;
+        notes: string;
     };
+
+    type ArchiveResponse = {
+        success: boolean;
+        status: number;
+        data: ArchiveItem[];
+        error: unknown | null;
+    };
+
+    const [archive, setArchive] = useState<ArchiveResponse | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    useEffect(() => {
+        (async () => {
+            const res: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
+            setArchive(res);
+            if (res?.data?.length) {
+                setSelectedId(res.data[0].id);
+            }
+        })();
+    }, []);
     return (
         <SamsTemplate links={[
             {
@@ -99,28 +80,35 @@ export default function Admin() {
                         <ToggleGroup.Root
                             type="single"
                             className="archive-group"
-                            value={selectedGroup}
-                            onValueChange={(val) => val && setSelectedGroup(val)}
+                            value={selectedId ?? ''}
+                            onValueChange={(val) => setSelectedId(val || null)}
                         >
-                            {groups.map((value) => (
-                                <ToggleGroup.Item key={value} value={value} className="archive-group-item">
-                                    {value}
+                            {archive?.data.map((item) => (
+                                <ToggleGroup.Item key={item.id} value={item.id} className="archive-group-item">
+                                    {item.school_year}
                                 </ToggleGroup.Item>
                             ))}
                         </ToggleGroup.Root>
                     </section>
                     <section>
                         <div className="archive">
-                            {notesByGroup[selectedGroup]?.map((note, idx) => (
-                                <div key={`${selectedGroup}-${idx}`} className="archive-item">
-                                    <div className="archive-item-header">
-                                        {note[0]}
+                            {(() => {
+                                const selected = archive?.data.find(d => d.id === selectedId);
+                                if (!selected) return null;
+                                return (
+                                    <div key={selected.id} className="archive-item">
+                                        <div className="archive-item-header">
+                                            <div className="flex flex-col items-start">
+                                                <span className="font-bold">School Year: {selected.school_year} - {parseInt(selected.school_year) + 1}</span>
+                                                <span className="text-sm opacity-70">Created: {new Date(selected.created_at).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                        <div className="archive-item-content">
+                                            {selected.notes}
+                                        </div>
                                     </div>
-                                    <div className="archive-item-content">
-                                        {note[1]}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })()}
                         </div>
                     </section>
                 </>
