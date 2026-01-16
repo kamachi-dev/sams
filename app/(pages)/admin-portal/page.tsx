@@ -3,7 +3,7 @@
 import SamsTemplate from "@/app/components/SamsTemplate";
 import Image from "next/image";
 import { Label, Separator, ToggleGroup } from "radix-ui";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import './styles.css';
 
 export default function Admin() {
@@ -23,6 +23,34 @@ export default function Admin() {
 
     const [archive, setArchive] = useState<ArchiveResponse | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [importStatus, setImportStatus] = useState<string | null>(null);
+
+    const studentFileRef = useRef<HTMLInputElement | null>(null);
+    const teacherFileRef = useRef<HTMLInputElement | null>(null);
+
+    async function handleCsvUpload(file: File, endpoint: string) {
+        try {
+            setImportStatus("Uploading...");
+            const text = await file.text();
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/csv' },
+                body: text
+            });
+            const json = await res.json();
+            if (!res.ok || json?.success === false) {
+                setImportStatus(`Import failed: ${json?.error ?? res.statusText}`);
+                return;
+            }
+            const imported = json?.data?.imported ?? 0;
+            const invalid = json?.data?.invalid?.length ?? 0;
+            setImportStatus(`Import complete: ${imported} rows, ${invalid} invalid`);
+        } catch (err: unknown) {
+            setImportStatus(`Import error: ${err instanceof Error ? err.message : String(err)}`);
+        } finally {
+            setTimeout(() => setImportStatus(null), 5000);
+        }
+    }
     useEffect(() => {
         (async () => {
             const res: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
@@ -64,16 +92,41 @@ export default function Admin() {
                     <section className="justify-center items-center flex flex-col gap-4">
                         <div className="flex justify-center items-center mt-1.5">
                             <Label.Root className="font-bold text-2xl">Import</Label.Root>
-                            <button className="import-button">
+                            <button className="import-button" onClick={() => studentFileRef.current?.click()}>
                                 <Label.Root>Students</Label.Root>
                             </button>
-                            <button className="import-button">
+                            <button className="import-button" onClick={() => teacherFileRef.current?.click()}>
                                 <Label.Root>Teachers</Label.Root>
                             </button>
                             <button className="import-button">
                                 <Label.Root>Schedule</Label.Root>
                             </button>
+                            <input
+                                ref={studentFileRef}
+                                type="file"
+                                accept=".csv,text/csv"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) handleCsvUpload(f, '/api/students');
+                                    e.currentTarget.value = '';
+                                }}
+                            />
+                            <input
+                                ref={teacherFileRef}
+                                type="file"
+                                accept=".csv,text/csv"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) handleCsvUpload(f, '/api/teachers');
+                                    e.currentTarget.value = '';
+                                }}
+                            />
                         </div>
+                        {importStatus && (
+                            <div className="text-sm opacity-80 mt-2">{importStatus}</div>
+                        )}
                         <Separator.Root orientation="horizontal" className="sams-separator" />
                     </section>
                     <section>
