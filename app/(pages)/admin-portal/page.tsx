@@ -26,6 +26,10 @@ export default function Admin() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [importStatus, setImportStatus] = useState<string | null>(null);
 
+    const [studentCount, setStudentCount] = useState<number | null>(null);
+    const [teacherCount, setTeacherCount] = useState<number | null>(null);
+    const [classCount, setClassCount] = useState<number | null>(null);
+
     const studentFileRef = useRef<HTMLInputElement | null>(null);
     const teacherFileRef = useRef<HTMLInputElement | null>(null);
 
@@ -66,6 +70,18 @@ export default function Admin() {
             if (res?.data?.length) {
                 setSelectedId(res.data[0].id);
             }
+            const studentCountRes = await fetch('/api/students/count').then(res => res.json());
+            if (studentCountRes?.success) {
+                setStudentCount(Number(studentCountRes.data.count));
+            }
+            const teacherCountRes = await fetch('/api/teachers/count').then(res => res.json());
+            if (teacherCountRes?.success) {
+                setTeacherCount(Number(teacherCountRes.data.count));
+            }
+            const classCountRes = await fetch('/api/classes/count').then(res => res.json());
+            if (classCountRes?.success) {
+                setClassCount(Number(classCountRes.data.count));
+            }
         })();
     }, []);
     return (
@@ -78,21 +94,21 @@ export default function Admin() {
                         <Image src="/icons/people.svg" alt="" width={40} height={40} />
                         <div className="flex flex-col items-center">
                             <Label.Root className="font-bold">Total Num of Students</Label.Root>
-                            <span>1500</span>
+                            <span>{studentCount ?? 'Loading...'}</span>
                         </div>
                     </div>,
                     <div key={2} className="flex justify-center items-center gap-4 h-full">
                         <Image src="/icons/people.svg" alt="" width={40} height={40} />
                         <div className="flex flex-col items-center">
                             <Label.Root className="font-bold">Total Num of Teachers</Label.Root>
-                            <span>1500</span>
+                            <span>{teacherCount ?? 'Loading...'}</span>
                         </div>
                     </div>,
                     <div key={3} className="flex justify-center items-center gap-4 h-full">
                         <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
                         <div className="flex flex-col items-center">
                             <Label.Root className="font-bold">Total Num of Classes</Label.Root>
-                            <span>1500</span>
+                            <span>{classCount ?? 'Loading...'}</span>
                         </div>
                     </div>
                 ],
