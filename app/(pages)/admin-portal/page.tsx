@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Label, Separator, ToggleGroup } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import './styles.css';
+import { Error } from "@/app/components/SamsError";
 
 export default function Admin() {
     type ArchiveItem = {
@@ -31,22 +32,29 @@ export default function Admin() {
     async function handleCsvUpload(file: File, endpoint: string) {
         try {
             setImportStatus("Uploading...");
-            const text = await file.text();
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/csv' },
-                body: text
-            });
+            const form = new FormData();
+            form.append('file', file);
+            const res = await fetch(endpoint, { method: 'POST', body: form });
             const json = await res.json();
             if (!res.ok || json?.success === false) {
                 setImportStatus(`Import failed: ${json?.error ?? res.statusText}`);
                 return;
             }
-            const imported = json?.data?.imported ?? 0;
-            const invalid = json?.data?.invalid?.length ?? 0;
+            const imported = Array.isArray(json?.data)
+                ? json.data.length
+                : (json?.data?.imported ?? 0);
+            const invalid = Array.isArray(json?.data?.invalid)
+                ? json.data.invalid.length
+                : (json?.data?.invalid?.length ?? 0);
             setImportStatus(`Import complete: ${imported} rows, ${invalid} invalid`);
         } catch (err: unknown) {
-            setImportStatus(`Import error: ${err instanceof Error ? err.message : String(err)}`);
+            let message = 'Unknown error';
+            if (err instanceof Error) {
+                const error = err as Error;
+                message = error.message
+            };
+            Error(message);
+            setImportStatus(`Import error: ${message}`);
         } finally {
             setTimeout(() => setImportStatus(null), 5000);
         }
@@ -104,7 +112,7 @@ export default function Admin() {
                             <input
                                 ref={studentFileRef}
                                 type="file"
-                                accept=".csv,text/csv"
+                                accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                                 className="hidden"
                                 onChange={(e) => {
                                     const f = e.target.files?.[0];
@@ -115,7 +123,7 @@ export default function Admin() {
                             <input
                                 ref={teacherFileRef}
                                 type="file"
-                                accept=".csv,text/csv"
+                                accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                                 className="hidden"
                                 onChange={(e) => {
                                     const f = e.target.files?.[0];
