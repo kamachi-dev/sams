@@ -4,6 +4,7 @@ import SamsTemplate from "@/app/components/SamsTemplate";
 import { ThickArrowRightIcon, MagnifyingGlassIcon, PersonIcon, DownloadIcon, ExclamationTriangleIcon, BackpackIcon } from "@radix-ui/react-icons";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from "recharts";
 import { useState } from "react";
+import './styles.css';
 
 // Mock attendance data
 const attendanceTrends = [
@@ -89,176 +90,59 @@ export default function Teacher() {
                 label: "Dashboard",
                 Icon: ThickArrowRightIcon,
                 panels: [
-                    // Number of Students - Enhanced with trend
-                    <div key="total" style={{ 
-                        background: "#1DA1F2", 
-                        color: "white", 
-                        padding: "24px",
-                        borderRadius: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "16px",
-                        border: "none",
-                        boxShadow: "none",
-                        transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                        cursor: "pointer"
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-4px)";
-                        e.currentTarget.style.boxShadow = "0 8px 16px rgba(29,161,242,0.3)";
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "none";
-                    }}>
-                        <PersonIcon style={{ width: "48px", height: "48px", opacity: 1 }} />
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "6px", fontWeight: "500" }}>Number of Students</div>
-                            <div style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
-                                <div style={{ fontSize: "38px", fontWeight: "700" }}>{totalStudents}</div>
+                    // Number of Students
+                    <div key="total" className="teacher-panel-card blue">
+                        <PersonIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Number of Students</div>
+                            <div className="teacher-panel-value-group">
+                                <div className="teacher-panel-value">{totalStudents}</div>
                             </div>
                         </div>
                     </div>,
                     
-                    // Students with Warnings - Enhanced with trend
-                    <div key="warnings" style={{ 
-                        background: "#FFAC01", 
-                        color: "white", 
-                        padding: "24px",
-                        borderRadius: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "16px",
-                        border: "none",
-                        boxShadow: "none",
-                        transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                        cursor: "pointer",
-                        position: "relative"
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-4px)";
-                        e.currentTarget.style.boxShadow = "0 8px 16px rgba(244,180,0,0.3)";
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "none";
-                    }}>
-                        <ExclamationTriangleIcon style={{ width: "48px", height: "48px", opacity: 1 }} />
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "6px", fontWeight: "500" }}>Students with Warnings</div>
-                            <div style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
-                                <div style={{ fontSize: "38px", fontWeight: "700" }}>{studentsWithWarnings}</div>
+                    // Students with Warnings
+                    <div key="warnings" className="teacher-panel-card warning">
+                        <ExclamationTriangleIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Students with Warnings</div>
+                            <div className="teacher-panel-value-group">
+                                <div className="teacher-panel-value">{studentsWithWarnings}</div>
                             </div>
                         </div>
                     </div>,
                     
-                    // Class Semester Attendance - Enhanced with trend
-                    <div key="semester" style={{ 
-                        background: "#0F9D58", 
-                        color: "white", 
-                        padding: "24px",
-                        borderRadius: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "16px",
-                        border: "none",
-                        boxShadow: "none",
-                        transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                        cursor: "pointer"
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-4px)";
-                        e.currentTarget.style.boxShadow = "0 8px 16px rgba(15,157,88,0.3)";
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "none";
-                    }}>
-                        <BackpackIcon style={{ width: "48px", height: "48px", opacity: 1 }} />
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: "13px", opacity: 0.85, marginBottom: "6px", fontWeight: "500" }}>Class Semester Attendance</div>
-                            <div style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
-                                <div style={{ fontSize: "38px", fontWeight: "700" }}>{classSemesterAttendance}%</div>
+                    // Class Semester Attendance
+                    <div key="semester" className="teacher-panel-card success">
+                        <BackpackIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Class Semester Attendance</div>
+                            <div className="teacher-panel-value-group">
+                                <div className="teacher-panel-value">{classSemesterAttendance}%</div>
                             </div>
                         </div>
                     </div>
                 ],
                 content: <>
-                    <div style={{ padding: "8px" }}>
+                    <div className="teacher-main-container">
                         
                         {/* Tab Navigation */}
-                        <div style={{
-                            display: "flex",
-                            gap: "8px",
-                            marginBottom: "12px",
-                            borderBottom: "2px solid #F2F2F2"
-                        }}>
+                        <div className="teacher-tabs">
                             <button
                                 onClick={() => setActiveTab("overview")}
-                                style={{
-                                    padding: "12px 24px",
-                                    background: "none",
-                                    border: "none",
-                                    borderBottom: activeTab === "overview" ? "2px solid #1DA1F2" : "2px solid transparent",
-                                    color: activeTab === "overview" ? "#1DA1F2" : "#4F4F4F",
-                                    fontSize: "14px",
-                                    fontWeight: "600",
-                                    cursor: "pointer",
-                                    transition: "all 0.2s ease",
-                                    marginBottom: "-2px"
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (activeTab !== "overview") e.currentTarget.style.color = "#1DA1F2";
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (activeTab !== "overview") e.currentTarget.style.color = "#4F4F4F";
-                                }}
+                                className={`teacher-tab ${activeTab === "overview" ? "active" : ""}`}
                             >
                                 Overview
                             </button>
                             <button
                                 onClick={() => setActiveTab("analytics")}
-                                style={{
-                                    padding: "12px 24px",
-                                    background: "none",
-                                    border: "none",
-                                    borderBottom: activeTab === "analytics" ? "2px solid #1DA1F2" : "2px solid transparent",
-                                    color: activeTab === "analytics" ? "#1DA1F2" : "#4F4F4F",
-                                    fontSize: "14px",
-                                    fontWeight: "600",
-                                    cursor: "pointer",
-                                    transition: "all 0.2s ease",
-                                    marginBottom: "-2px"
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (activeTab !== "analytics") e.currentTarget.style.color = "#1DA1F2";
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (activeTab !== "analytics") e.currentTarget.style.color = "#4F4F4F";
-                                }}
+                                className={`teacher-tab ${activeTab === "analytics" ? "active" : ""}`}
                             >
                                 Analytics
                             </button>
                             <button
                                 onClick={() => setActiveTab("records")}
-                                style={{
-                                    padding: "12px 24px",
-                                    background: "none",
-                                    border: "none",
-                                    borderBottom: activeTab === "records" ? "2px solid #1DA1F2" : "2px solid transparent",
-                                    color: activeTab === "records" ? "#1DA1F2" : "#4F4F4F",
-                                    fontSize: "14px",
-                                    fontWeight: "600",
-                                    cursor: "pointer",
-                                    transition: "all 0.2s ease",
-                                    marginBottom: "-2px"
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (activeTab !== "records") e.currentTarget.style.color = "#1DA1F2";
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (activeTab !== "records") e.currentTarget.style.color = "#4F4F4F";
-                                }}
+                                className={`teacher-tab ${activeTab === "records" ? "active" : ""}`}
                             >
                                 Attendance Records
                             </button>
@@ -268,82 +152,46 @@ export default function Teacher() {
                         {activeTab === "overview" && (
                             <div>
                                 {/* Quick Summary Statistics */}
-                                <div style={{ 
-                                    display: "grid", 
-                                    gridTemplateColumns: "repeat(3, 1fr)", 
-                                    gap: "8px",
-                                    width: "100%",
-                                    marginBottom: "6px"
-                                }}>
+                                <div className="teacher-stats-grid">
                                     {/* Average Attendance Rate */}
-                                    <div style={{
-                                        background: "linear-gradient(135deg, #0F9D58 0%, #0d8549 100%)",
-                                        padding: "16px",
-                                        borderRadius: "8px",
-                                        color: "white"
-                                    }}>
-                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Avg. Attendance Rate</div>
-                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{classSemesterAttendance}%</div>
-                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>This semester</div>
+                                    <div className="teacher-stat-card green">
+                                        <div className="teacher-stat-label">Avg. Attendance Rate</div>
+                                        <div className="teacher-stat-value">{classSemesterAttendance}%</div>
+                                        <div className="teacher-stat-sublabel">This semester</div>
                                     </div>
 
                                     {/* Today's Present */}
-                                    <div style={{
-                                        background: "linear-gradient(135deg, #1DA1F2 0%, #1a8cd8 100%)",
-                                        padding: "16px",
-                                        borderRadius: "8px",
-                                        color: "white"
-                                    }}>
-                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Today's Present</div>
-                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{todayPresent}/{totalStudents}</div>
-                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>{((todayPresent/totalStudents)*100).toFixed(1)}% attendance</div>
+                                    <div className="teacher-stat-card blue">
+                                        <div className="teacher-stat-label">Today's Present</div>
+                                        <div className="teacher-stat-value">{todayPresent}/{totalStudents}</div>
+                                        <div className="teacher-stat-sublabel">{((todayPresent/totalStudents)*100).toFixed(1)}% attendance</div>
                                     </div>
 
                                     {/* Late Students */}
-                                    <div style={{
-                                        background: "linear-gradient(135deg, #F4B400 0%, #d99f00 100%)",
-                                        padding: "16px",
-                                        borderRadius: "8px",
-                                        color: "white"
-                                    }}>
-                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Late Today</div>
-                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{recentStudents.filter(s => s.status === "Late").length}</div>
-                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>Students tardy</div>
+                                    <div className="teacher-stat-card yellow">
+                                        <div className="teacher-stat-label">Late Today</div>
+                                        <div className="teacher-stat-value">{recentStudents.filter(s => s.status === "Late").length}</div>
+                                        <div className="teacher-stat-sublabel">Students tardy</div>
                                     </div>
 
                                     {/* Absent Students */}
-                                    <div style={{
-                                        background: "linear-gradient(135deg, #DB4437 0%, #c23929 100%)",
-                                        padding: "16px",
-                                        borderRadius: "8px",
-                                        color: "white"
-                                    }}>
-                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Absent Today</div>
-                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{recentStudents.filter(s => s.status === "Absent").length}</div>
-                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>Students missing</div>
+                                    <div className="teacher-stat-card red">
+                                        <div className="teacher-stat-label">Absent Today</div>
+                                        <div className="teacher-stat-value">{recentStudents.filter(s => s.status === "Absent").length}</div>
+                                        <div className="teacher-stat-sublabel">Students missing</div>
                                     </div>
                                     {/* Perfect Attendance */}
-                                    <div style={{
-                                        background: "linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)",
-                                        padding: "16px",
-                                        borderRadius: "8px",
-                                        color: "white"
-                                    }}>
-                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Perfect Attendance</div>
-                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>{recentStudents.filter(s => s.status === "Present").length - recentStudents.filter(s => s.status === "Late").length}</div>
-                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>On time today</div>
+                                    <div className="teacher-stat-card purple">
+                                        <div className="teacher-stat-label">Perfect Attendance</div>
+                                        <div className="teacher-stat-value">{recentStudents.filter(s => s.status === "Present").length - recentStudents.filter(s => s.status === "Late").length}</div>
+                                        <div className="teacher-stat-sublabel">On time today</div>
                                     </div>
 
                                     {/* Total Classes This Week */}
-                                    <div style={{
-                                        background: "linear-gradient(135deg, #FF9800 0%, #F57C00 100%)",
-                                        padding: "16px",
-                                        borderRadius: "8px",
-                                        color: "white"
-                                    }}>
-                                        <div style={{ fontSize: "12px", opacity: 0.9, marginBottom: "8px" }}>Classes This Week</div>
-                                        <div style={{ fontSize: "32px", fontWeight: "bold" }}>5</div>
-                                        <div style={{ fontSize: "11px", opacity: 0.8, marginTop: "4px" }}>Days conducted</div>
+                                    <div className="teacher-stat-card orange">
+                                        <div className="teacher-stat-label">Classes This Week</div>
+                                        <div className="teacher-stat-value">5</div>
+                                        <div className="teacher-stat-sublabel">Days conducted</div>
                                     </div>                                </div>
                             </div>
                         )}
@@ -352,34 +200,12 @@ export default function Teacher() {
                         {activeTab === "analytics" && (
                             <div>
                                 {/* Filters and Export */}
-                                <div style={{
-                                    background: "white",
-                                    padding: "6px 8px",
-                                    borderRadius: "6px",
-                                    marginBottom: "8px",
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    border: "1px solid #F2F2F2",
-                                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                    flexWrap: "wrap"
-                                }}>
-                                    <div style={{ display: "flex", gap: "6px", flex: 1, flexWrap: "wrap", alignItems: "center" }}>
+                                <div className="teacher-filters">
+                                    <div className="teacher-filters-group">
                                         <select 
                                             value={selectedSubject}
                                             onChange={(e) => setSelectedSubject(e.target.value)}
-                                            style={{ 
-                                                padding: "6px 12px",
-                                                borderRadius: "6px",
-                                                border: "1px solid #BDBDBD",
-                                                fontSize: "13px",
-                                                cursor: "pointer",
-                                                minWidth: "110px",
-                                                transition: "all 0.2s ease",
-                                                background: "#FFFFFF",
-                                                color: "#4F4F4F"
-                                            }}>
+                                            className="teacher-select">
                                             <option value="all">All Subjects</option>
                                             <option value="math">Mathematics</option>
                                             <option value="science">Science</option>
@@ -388,17 +214,7 @@ export default function Teacher() {
 
                                         <select value={selectedGradeLevel}
                                             onChange={(e) => setSelectedGradeLevel(e.target.value)}
-                                            style={{ 
-                                                padding: "6px 12px",
-                                                borderRadius: "6px",
-                                                border: "1px solid #BDBDBD",
-                                                fontSize: "13px",
-                                                cursor: "pointer",
-                                                minWidth: "110px",
-                                                transition: "all 0.2s ease",
-                                                background: "#FFFFFF",
-                                                color: "#4F4F4F"
-                                            }}>
+                                            className="teacher-select">
                                             <option value="all">All Grades</option>
                                             <option value="11">Grade 11</option>
                                             <option value="12">Grade 12</option>
@@ -407,17 +223,7 @@ export default function Teacher() {
                                         <select 
                                             value={selectedSection}
                                             onChange={(e) => setSelectedSection(e.target.value)}
-                                            style={{ 
-                                                padding: "6px 12px",
-                                                borderRadius: "6px",
-                                                border: "1px solid #BDBDBD",
-                                                fontSize: "13px",
-                                                cursor: "pointer",
-                                                minWidth: "110px",
-                                                transition: "all 0.2s ease",
-                                                background: "#FFFFFF",
-                                                color: "#4F4F4F"
-                                            }}>
+                                            className="teacher-select">
                                             <option value="all">All Sections</option>
                                             <option value="a">Section A</option>
                                             <option value="b">Section B</option>
@@ -427,17 +233,7 @@ export default function Teacher() {
                                         <select 
                                             value={selectedQuarter}
                                             onChange={(e) => setSelectedQuarter(e.target.value)}
-                                            style={{ 
-                                                padding: "6px 12px",
-                                                borderRadius: "6px",
-                                                border: "1px solid #BDBDBD",
-                                                fontSize: "13px",
-                                                cursor: "pointer",
-                                                minWidth: "110px",
-                                                transition: "all 0.2s ease",
-                                                background: "#FFFFFF",
-                                                color: "#4F4F4F"
-                                            }}>
+                                            className="teacher-select">
                                             <option value="current">Current Quarter</option>
                                             <option value="1">1st Quarter</option>
                                             <option value="2">2nd Quarter</option>
@@ -448,16 +244,7 @@ export default function Teacher() {
                                         <select
                                             value={selectedView}
                                             onChange={(e) => setSelectedView(e.target.value as any)}
-                                            style={{
-                                                padding: "6px 12px",
-                                                borderRadius: "6px",
-                                                border: "1px solid #BDBDBD",
-                                                background: "white",
-                                                color: "#4F4F4F",
-                                                fontSize: "13px",
-                                                cursor: "pointer",
-                                                transition: "all 0.2s ease"
-                                            }}
+                                            className="teacher-select"
                                         >
                                             <option value="daily">Daily View</option>
                                             <option value="weekly">Weekly View</option>
@@ -469,59 +256,19 @@ export default function Teacher() {
                                     <button 
                                         onClick={handleExport}
                                         disabled={isExporting}
-                                        style={{
-                                            background: isExporting ? "#BDBDBD" : "#1DA1F2",
-                                            color: "white",
-                                            border: "none",
-                                            padding: "6px 12px",
-                                            borderRadius: "6px",
-                                            cursor: isExporting ? "not-allowed" : "pointer",
-                                            fontSize: "13px",
-                                            fontWeight: "600",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "6px",
-                                            transition: "all 0.2s ease",
-                                            whiteSpace: "nowrap"
-                                        }}>
-                                        <DownloadIcon style={{ animation: isExporting ? "spin 1s linear infinite" : "none" }} />
+                                        className="teacher-export-btn">
+                                        <DownloadIcon className={isExporting ? "spin-animation" : ""} />
                                         {isExporting ? "Exporting..." : "Export"}
                                     </button>
                                 </div>
 
                                 {/* Charts Section */}
-                                <div style={{ 
-                                    display: "grid", 
-                                    gridTemplateColumns: "1fr", 
-                                    gap: "12px",
-                                    width: "100%",
-                                    maxWidth: "100%",
-                                    overflow: "hidden"
-                                        }}>
+                                <div className="teacher-charts-container">
                                     {selectedView === "daily" && (
-                                    <div style={{ 
-                                        background: "#FFFFFF", 
-                                padding: "12px", 
-                                borderRadius: "8px",
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                border: "1px solid #F2F2F2",
-                                minWidth: 0,
-                                maxWidth: "100%"
-                            }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                    <h3 style={{ 
-                                        fontSize: "16px", 
-                                        fontWeight: "600", 
-                                        color: "#1F2F57",
-                                        margin: 0
-                                    }}>Daily Attendance Trend</h3>
-                                    <span style={{
-                                        fontSize: "11px",
-                                        color: "#4F4F4F",
-                                        padding: "3px 6px",
-                                        background: "#F2F2F2",
-                                        borderRadius: "4px"
-                                    }}>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                                    <div className="teacher-chart-card">
+                                <div className="teacher-chart-header">
+                                    <h3 className="teacher-chart-title">Daily Attendance Trend</h3>
+                                    <span className="teacher-chart-meta">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                                 </div>
                                 <ResponsiveContainer width="100%" height={240}>
                                     <LineChart data={attendanceTrends}>
@@ -546,29 +293,10 @@ export default function Teacher() {
                                             )}
 
                                     {selectedView === "weekly" && (
-                                    <div style={{ 
-                                background: "#FFFFFF", 
-                                padding: "12px", 
-                                borderRadius: "8px",
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                border: "1px solid #F2F2F2",
-                                minWidth: 0,
-                                maxWidth: "100%"
-                            }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                    <h3 style={{ 
-                                        fontSize: "16px", 
-                                        fontWeight: "600", 
-                                        color: "#1F2F57",
-                                        margin: 0
-                                    }}>Weekly Attendance Comparison</h3>
-                                    <span style={{
-                                        fontSize: "11px",
-                                        color: "#4F4F4F",
-                                        padding: "3px 6px",
-                                        background: "#F2F2F2",
-                                        borderRadius: "4px"
-                                    }}>Last 4 Weeks</span>
+                                    <div className="teacher-chart-card">
+                                <div className="teacher-chart-header">
+                                    <h3 className="teacher-chart-title">Weekly Attendance Comparison</h3>
+                                    <span className="teacher-chart-meta">Last 4 Weeks</span>
                                 </div>
                                 <ResponsiveContainer width="100%" height={240}>
                                     <BarChart data={weeklyComparison} barSize={60}>
@@ -593,29 +321,10 @@ export default function Teacher() {
                                     )}
 
                                     {selectedView === "monthly" && (
-                                    <div style={{ 
-                                background: "#FFFFFF", 
-                                padding: "12px", 
-                                borderRadius: "8px",
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                border: "1px solid #F2F2F2",
-                                minWidth: 0,
-                                maxWidth: "100%"
-                            }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                    <h3 style={{ 
-                                        fontSize: "16px", 
-                                        fontWeight: "600", 
-                                        color: "#1F2F57",
-                                        margin: 0
-                                    }}>Monthly Attendance Summary</h3>
-                                    <span style={{
-                                        fontSize: "11px",
-                                        color: "#4F4F4F",
-                                        padding: "3px 6px",
-                                        background: "#F2F2F2",
-                                        borderRadius: "4px"
-                                    }}>Last 5 Months</span>
+                                    <div className="teacher-chart-card">
+                                <div className="teacher-chart-header">
+                                    <h3 className="teacher-chart-title">Monthly Attendance Summary</h3>
+                                    <span className="teacher-chart-meta">Last 5 Months</span>
                                 </div>
                                 <ResponsiveContainer width="100%" height={240}>
                                     <BarChart data={monthlyData} barSize={50}>
@@ -640,29 +349,10 @@ export default function Teacher() {
                                     )}
 
                                     {selectedView === "quarterly" && (
-                                    <div style={{ 
-                                background: "#FFFFFF", 
-                                padding: "12px", 
-                                borderRadius: "8px",
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                border: "1px solid #F2F2F2",
-                                minWidth: 0,
-                                maxWidth: "100%"
-                            }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                    <h3 style={{ 
-                                        fontSize: "16px", 
-                                        fontWeight: "600", 
-                                        color: "#1F2F57",
-                                        margin: 0
-                                    }}>Quarterly Attendance Overview</h3>
-                                    <span style={{
-                                        fontSize: "11px",
-                                        color: "#4F4F4F",
-                                        padding: "3px 6px",
-                                        background: "#F2F2F2",
-                                        borderRadius: "4px"
-                                    }}>4 Quarters</span>
+                                    <div className="teacher-chart-card">
+                                <div className="teacher-chart-header">
+                                    <h3 className="teacher-chart-title">Quarterly Attendance Overview</h3>
+                                    <span className="teacher-chart-meta">4 Quarters</span>
                                 </div>
                                 <ResponsiveContainer width="100%" height={240}>
                                     <BarChart data={quarterlyData} barSize={70}>
@@ -693,122 +383,49 @@ export default function Teacher() {
                         {activeTab === "records" && (
                             <div>
                                 {/* Search Bar */}
-                                <div style={{
-                                    background: "white",
-                                    padding: "12px 16px",
-                                    borderRadius: "8px",
-                                    marginBottom: "16px",
-                                    border: "1px solid #F2F2F2",
-                                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
-                                }}>
+                                <div className="teacher-search-container">
 
-                                <div style={{ position: "relative", flex: 1, minWidth: "250px" }}>
-                                    <MagnifyingGlassIcon style={{ 
-                                        position: "absolute", 
-                                        left: "14px", 
-                                        top: "50%", 
-                                        transform: "translateY(-50%)",
-                                        color: "#BDBDBD",
-                                        width: "18px",
-                                        height: "18px",
-                                        transition: "color 0.2s ease",
-                                        pointerEvents: "none"
-                                    }} />
+                                <div className="teacher-search-wrapper">
+                                    <MagnifyingGlassIcon className="teacher-search-icon" />
                                     <input 
                                         type="text" 
                                         placeholder="Search student..." 
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        style={{ 
-                                            width: "100%",
-                                            padding: "10px 14px 10px 44px", 
-                                            border: "1px solid #BDBDBD",
-                                            borderRadius: "6px",
-                                            fontSize: "14px",
-                                            transition: "all 0.2s ease",
-                                            color: "#4F4F4F"
-                                        }}
-                                        onFocus={(e) => {
-                                            e.currentTarget.style.borderColor = "#1DA1F2";
-                                            e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,161,242,0.1)";
-                                        }}
-                                        onBlur={(e) => {
-                                            e.currentTarget.style.borderColor = "#BDBDBD";
-                                            e.currentTarget.style.boxShadow = "none";
-                                        }}
+                                        className="teacher-search-input"
                                     />
                                 </div>
                                 </div>
                                 
                                 {/* Recent Attendance Table */}
-                                <div style={{ 
-                                    background: "#FFFFFF", 
-                                    padding: "8px", 
-                                    borderRadius: "6px",
-                                    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                                    border: "1px solid #F2F2F2",
-                                    transition: "box-shadow 0.3s ease",
-                                    width: "100%",
-                                    maxWidth: "100%",
-                                    overflow: "hidden"
-                                }}
-                        onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)"}
-                        onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)"}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                <h3 style={{ 
-                                    fontSize: "14px", 
-                                    fontWeight: "600", 
-                                    color: "#1F2F57",
-                                    margin: 0
-                                }}>Today&apos;s Attendance</h3>
-                                <span style={{
-                                    fontSize: "10px",
-                                    color: "#4F4F4F",
-                                    padding: "2px 6px",
-                                    background: "#F2F2F2",
-                                    borderRadius: "4px"
-                                }}>{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                                <div className="teacher-table-container">
+                            <div className="teacher-table-header">
+                                <h3 className="teacher-table-title">Today&apos;s Attendance</h3>
+                                <span className="teacher-table-date">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
                             </div>
-                            <div style={{ maxHeight: "200px", overflowY: "auto", overflowX: "auto" }}>
-                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <div className="teacher-table-scroll">
+                                <table className="teacher-table">
                                     <thead>
-                                        <tr style={{ borderBottom: "2px solid #F2F2F2" }}>
-                                            <th style={{ padding: "8px 6px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student Name</th>
-                                            <th style={{ padding: "8px 6px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</th>
-                                            <th style={{ padding: "8px 6px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Time</th>
-                                            <th style={{ padding: "8px 6px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#1F2F57", textTransform: "uppercase", letterSpacing: "0.05em" }}>Facial Recognition Confidence</th>
+                                        <tr>
+                                            <th>Student Name</th>
+                                            <th>Status</th>
+                                            <th>Time</th>
+                                            <th>Facial Recognition Confidence</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {recentStudents.filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase())).map((student) => (
-                                            <tr key={student.id} style={{ 
-                                                borderBottom: "1px solid #F2F2F2",
-                                                transition: "background 0.15s ease",
-                                                cursor: "pointer"
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = "#EAF4FF"}
-                                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-                                                <td style={{ padding: "6px 6px", fontSize: "12px", color: "#4F4F4F" }}>{student.name}</td>
-                                                <td style={{ padding: "6px 6px" }}>
-                                                    <span style={{ 
-                                                        padding: "4px 10px",
-                                                        borderRadius: "12px",
-                                                        fontSize: "11px",
-                                                        fontWeight: "700",
-                                                        background: student.status === "Present" ? "rgba(15,157,88,0.15)" : student.status === "Late" ? "rgba(244,180,0,0.15)" : "rgba(219,68,55,0.15)",
-                                                        color: student.status === "Present" ? "#0F9D58" : student.status === "Late" ? "#F4B400" : "#DB4437",
-                                                        display: "inline-block",
-                                                        transition: "transform 0.2s ease"
-                                                    }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-                                                    onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}>
+                                            <tr key={student.id}>
+                                                <td>{student.name}</td>
+                                                <td>
+                                                    <span className={`status-badge ${student.status.toLowerCase()}`}>
                                                         {student.status}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: "6px 6px", fontSize: "12px", color: "#4F4F4F", fontWeight: "500" }}>
+                                                <td className="time-cell">
                                                     {student.time}
                                                 </td>
-                                                <td style={{ padding: "6px 6px", fontSize: "12px", color: student.confidence === "No Detection" ? "#DB4437" : "#0F9D58", fontWeight: "600" }}>
+                                                <td className={`confidence-cell ${student.confidence === "No Detection" ? "not-detected" : "detected"}`}>
                                                     {student.confidence}
                                                 </td>
                                             </tr>
@@ -819,14 +436,6 @@ export default function Teacher() {
                         </div>
                             </div>
                         )}
-                        
-                        {/* Add spin animation for export button */}
-                        <style>{`
-                            @keyframes spin {
-                                from { transform: rotate(0deg); }
-                                to { transform: rotate(360deg); }
-                            }
-                        `}</style>
 
                     </div>
                 </>
@@ -836,9 +445,9 @@ export default function Teacher() {
                 Icon: PersonIcon,
                 panels: [],
                 content: <>
-                    <div style={{ padding: "24px" }}>
-                        <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "16px", color: "#1F2F57" }}>Student Data</h2>
-                        <p style={{ color: "#4F4F4F" }}>Student data management will be displayed here</p>
+                    <div className="teacher-content-section">
+                        <h2 className="teacher-section-title">Student Data</h2>
+                        <p className="teacher-section-text">Student data management will be displayed here</p>
                     </div>
                 </>
             }
