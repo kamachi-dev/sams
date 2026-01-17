@@ -4,9 +4,10 @@ import React, { useEffect } from "react";
 import Image from "next/image";
 import { Popover, Separator, Tabs, Switch } from "radix-ui";
 import { GearIcon, ExitIcon, Half2Icon } from "@radix-ui/react-icons";
-import { SignOutButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { useAuth, SignOutButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { usePathname } from 'next/navigation';
 import { Error } from "@/app/components/SamsError";
+import { useRouter } from "next/navigation";
 
 
 type Account = {
@@ -50,21 +51,30 @@ async function getUserData() {
 }
 
 export default function SamsTemplate({ links }: Props) {
+    const { isSignedIn } = useAuth();
     const defaultTab = links && links.length > 0 ? links[0].label : undefined;
     const pathname = usePathname() ?? '';
     const title = React.useMemo(() => formatPathname(pathname), [pathname]);
     const [user, setUser] = React.useState<Account | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         (async () => {
             try {
                 const userData = await getUserData();
                 setUser(userData);
-            } catch (error) {
+            } catch {
                 Error('Failed to load user data');
             }
         })();
     }, []);
+
+    useEffect(() => {
+        if (!isSignedIn) {
+            Error('You have been signed out. Redirecting to login page.');
+            router.replace('/');
+        }
+    }, [isSignedIn]);
 
     return (
         <Tabs.Root defaultValue={defaultTab} className="sams">
