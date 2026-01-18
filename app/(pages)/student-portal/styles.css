@@ -1,0 +1,600 @@
+/* Student Portal Styles */
+
+/* Panel Cards */
+.student-panel-card {
+    padding: 24px;
+    border-radius: 8px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border: none;
+}
+
+.student-panel-card.green {
+    background: linear-gradient(135deg, #0F9D58 0%, #0C7A44 100%);
+}
+
+.student-panel-card.blue {
+    background: #1DA1F2;
+}
+
+.student-panel-card.dark {
+    background: #1F2F57;
+}
+
+.student-panel-icon {
+    width: 48px;
+    height: 48px;
+    opacity: 0.9;
+}
+
+.student-panel-content {
+    flex: 1;
+}
+
+.student-panel-label {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-bottom: 4px;
+}
+
+.student-panel-value {
+    font-size: 36px;
+    font-weight: bold;
+}
+
+.student-panel-sub {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+/* Main Container */
+.student-main-container {
+    padding: 6px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Tab Navigation */
+.student-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+    border-bottom: 2px solid #F2F2F2;
+}
+
+.student-tab {
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #4F4F4F;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: -2px;
+}
+
+.student-tab.active {
+    border-bottom-color: #1DA1F2;
+    color: #1DA1F2;
+}
+
+.student-tab:hover:not(.active) {
+    color: #1DA1F2;
+}
+
+/* Info Card */
+.student-info-card {
+    background: white;
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    border: 1px solid #F2F2F2;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.student-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.student-info-title {
+    color: #1F2F57;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.student-info-meta {
+    font-size: 10px;
+    color: #BDBDBD;
+}
+
+.student-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.student-info-field-label {
+    font-size: 11px;
+    color: #BDBDBD;
+    margin-bottom: 2px;
+}
+
+.student-info-field-value {
+    font-size: 12px;
+    color: #4F4F4F;
+    font-weight: 500;
+}
+
+/* Summary Card */
+.student-summary-card {
+    background: white;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #F2F2F2;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    min-width: 0;
+    max-width: 100%;
+    margin-top: 6px;
+}
+
+.student-summary-header {
+    margin-bottom: 8px;
+}
+
+.student-summary-title {
+    color: #1F2F57;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.student-summary-desc {
+    font-size: 11px;
+    color: #BDBDBD;
+    margin: 0;
+}
+
+.student-summary-chart {
+    display: flex;
+    justify-content: center;
+}
+
+.student-summary-legend {
+    margin-top: 6px;
+}
+
+.student-legend-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.student-legend-label-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.student-legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+
+.student-legend-label {
+    font-size: 12px;
+    color: #4F4F4F;
+}
+
+.student-legend-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1F2F57;
+}
+
+/* Filters Section */
+.student-filters {
+    background: white;
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #F2F2F2;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.student-filters-group {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+    flex-wrap: wrap;
+}
+
+.student-select {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #BDBDBD;
+    background: white;
+    color: #4F4F4F;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.student-select:hover {
+    border-color: #1DA1F2;
+    box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
+}
+
+.student-export-btn {
+    padding: 6px 16px;
+    background: #1DA1F2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.student-export-btn:hover:not(:disabled) {
+    background: #1a8cd8;
+    transform: scale(1.02);
+}
+
+.student-export-btn:disabled {
+    background: #BDBDBD;
+    cursor: not-allowed;
+    transform: scale(1);
+}
+
+.student-export-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* Chart Container */
+.student-chart-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.student-chart-card {
+    background: white;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #F2F2F2;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    min-width: 0;
+    max-width: 100%;
+}
+
+.student-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.student-chart-title {
+    color: #1F2F57;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.student-chart-meta {
+    font-size: 10px;
+    color: #BDBDBD;
+}
+
+/* Subject Table */
+.student-subject-table-container {
+    background: white;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #F2F2F2;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.student-subject-table-title {
+    color: #1F2F57;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.student-subject-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.student-subject-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.student-subject-table thead tr {
+    border-bottom: 2px solid #F2F2F2;
+}
+
+.student-subject-table th {
+    text-align: left;
+    padding: 8px 6px;
+    color: #1F2F57;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.student-subject-table th.center {
+    text-align: center;
+}
+
+.student-subject-table tbody tr {
+    border-bottom: 1px solid #F2F2F2;
+    transition: background 0.2s ease;
+}
+
+.student-subject-table tbody tr:hover {
+    background: #EAF4FF;
+}
+
+.student-subject-table td {
+    padding: 10px 6px;
+    color: #4F4F4F;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.student-subject-table td.center {
+    text-align: center;
+}
+
+/* Subject Status Badges */
+.subject-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.subject-badge.present {
+    background: rgba(15, 157, 88, 0.15);
+    color: #0F9D58;
+}
+
+.subject-badge.late {
+    background: rgba(244, 180, 0, 0.15);
+    color: #F4B400;
+}
+
+.subject-badge.absent {
+    background: rgba(219, 68, 55, 0.15);
+    color: #DB4437;
+}
+
+/* Attendance Rate Cell */
+.attendance-rate-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.attendance-progress-bar {
+    width: 50px;
+    height: 5px;
+    background: #F2F2F2;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.attendance-progress-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.attendance-progress-fill.high {
+    background: #0F9D58;
+}
+
+.attendance-progress-fill.medium {
+    background: #F4B400;
+}
+
+.attendance-progress-fill.low {
+    background: #DB4437;
+}
+
+.attendance-percentage {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1F2F57;
+}
+
+/* Records Placeholder */
+.student-records-placeholder {
+    padding: 40px;
+    text-align: center;
+}
+
+.student-records-icon {
+    width: 64px;
+    height: 64px;
+    color: #BDBDBD;
+    margin: 0 auto 16px;
+}
+
+.student-records-title {
+    color: #4F4F4F;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.student-records-desc {
+    color: #BDBDBD;
+    font-size: 14px;
+}
+/* Subject Breakdown Table */
+.student-subjects-card {
+    background: white;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #F2F2F2;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.student-subjects-title {
+    color: #1F2F57;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.student-subjects-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.student-subjects-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.student-subjects-table thead tr {
+    border-bottom: 2px solid #F2F2F2;
+}
+
+.student-subjects-table th {
+    text-align: left;
+    padding: 8px 6px;
+    color: #1F2F57;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.student-subjects-table th.center {
+    text-align: center;
+}
+
+.student-subjects-table tbody tr {
+    border-bottom: 1px solid #F2F2F2;
+    transition: background 0.2s ease;
+    cursor: pointer;
+}
+
+.student-subjects-table tbody tr:hover {
+    background: #EAF4FF;
+}
+
+.student-subjects-table td {
+    padding: 10px 6px;
+}
+
+.student-subjects-table td.subject-name {
+    color: #4F4F4F;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.student-subjects-table td.center {
+    text-align: center;
+}
+
+/* Status Badges */
+.student-status-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.student-status-badge.present {
+    background: rgba(15, 157, 88, 0.15);
+    color: #0F9D58;
+}
+
+.student-status-badge.late {
+    background: rgba(244, 180, 0, 0.15);
+    color: #F4B400;
+}
+
+.student-status-badge.absent {
+    background: rgba(219, 68, 55, 0.15);
+    color: #DB4437;
+}
+
+/* Progress Bar */
+.student-progress-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.student-progress-bar {
+    width: 50px;
+    height: 5px;
+    background: #F2F2F2;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.student-progress-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.student-progress-fill.good {
+    background: #0F9D58;
+}
+
+.student-progress-fill.warning {
+    background: #F4B400;
+}
+
+.student-progress-fill.danger {
+    background: #DB4437;
+}
+
+.student-progress-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1F2F57;
+}
