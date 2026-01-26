@@ -3,7 +3,7 @@
 import SamsTemplate from "@/app/components/SamsTemplate";
 import { ThickArrowRightIcon, MagnifyingGlassIcon, PersonIcon, DownloadIcon, ExclamationTriangleIcon, BackpackIcon } from "@radix-ui/react-icons";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from "recharts";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import './styles.css';
 
 // Mock attendance data
@@ -71,12 +71,108 @@ export default function Teacher() {
     const [selectedQuarter, setSelectedQuarter] = useState("current");
     const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "records">("overview");
     const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("weekly");
+    const [totalStudents, setTotalStudents] = useState<number>(0);
+    const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+    const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0 });
+    const [attendanceRecords, setAttendanceRecords] = useState<Array<{
+        id: string;
+        name: string;
+        email: string;
+        course: string;
+        status: string;
+        time: string;
+        confidence: string;
+    }>>([]);
+    const [isLoadingRecords, setIsLoadingRecords] = useState(true);
+    const [courses, setCourses] = useState<Array<{ id: string; name: string }>>([]);
+    const [selectedCourse, setSelectedCourse] = useState("");
 
-    // Calculate totals
-    const totalStudents = 34;
-    const studentsWithWarnings = 4;
-    const classSemesterAttendance = 85; // percentage
-    const todayPresent = 29;
+    // Fetch total students count from database
+    useEffect(() => {
+        const fetchStudentCount = async () => {
+            try {
+                const response = await fetch('/api/teacher/students/count');
+                const result = await response.json();
+                if (result.success) {
+                    setTotalStudents(result.data.count);
+                }
+            } catch (error) {
+                console.error('Error fetching student count:', error);
+            } finally {
+                setIsLoadingStudents(false);
+            }
+        };
+        
+        fetchStudentCount();
+    }, []);
+
+    // Fetch today's attendance data
+    useEffect(() => {
+        const fetchTodayAttendance = async () => {
+            try {
+                const response = await fetch('/api/teacher/attendance/today');
+                const result = await response.json();
+                if (result.success) {
+                    setTodayAttendance(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching today\'s attendance:', error);
+            }
+        };
+        
+        fetchTodayAttendance();
+    }, []);
+
+    // Fetch attendance records
+    useEffect(() => {
+        const fetchAttendanceRecords = async () => {
+            if (!selectedCourse) {
+                setIsLoadingRecords(false);
+                return;
+            }
+            
+            setIsLoadingRecords(true);
+            try {
+                const url = `/api/teacher/attendance/records?course=${selectedCourse}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                if (result.success) {
+                    setAttendanceRecords(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching attendance records:', error);
+            } finally {
+                setIsLoadingRecords(false);
+            }
+        };
+        
+        fetchAttendanceRecords();
+    }, [selectedCourse]);
+
+    // Fetch teacher's courses
+    useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                const response = await fetch('/api/teacher/courses');
+                const result = await response.json();
+                if (result.success) {
+                    setCourses(result.data);
+                    // Auto-select first course if not already selected
+                    if (result.data.length > 0 && !selectedCourse) {
+                        setSelectedCourse(result.data[0].id);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching courses:', error);
+            }
+        };
+        
+        fetchCourses();
+    }, []);
+
+    // Calculate other totals
+    const studentsWithWarnings = 4; // TODO: Calculate from database
+    const classSemesterAttendance = 85; // TODO: Calculate from database
 
 
     const handleExport = () => {
@@ -96,7 +192,9 @@ export default function Teacher() {
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Number of Students</div>
                             <div className="teacher-panel-value-group">
-                                <div className="teacher-panel-value">{totalStudents}</div>
+                                <div className="teacher-panel-value">
+                                    {isLoadingStudents ? "..." : totalStudents}
+                                </div>
                             </div>
                         </div>
                     </div>,
@@ -163,35 +261,35 @@ export default function Teacher() {
                                     {/* Today's Present */}
                                     <div className="teacher-stat-card blue">
                                         <div className="teacher-stat-label">Today's Present</div>
-                                        <div className="teacher-stat-value">{todayPresent}/{totalStudents}</div>
-                                        <div className="teacher-stat-sublabel">{((todayPresent/totalStudents)*100).toFixed(1)}% attendance</div>
+                                        <div className="teacher-stat-value">{todayAttendance.present}/{todayAttendance.total}</div>
+                                        <div className="teacher-stat-sublabel">{todayAttendance.total > 0 ? ((todayAttendance.present/todayAttendance.total)*100).toFixed(1) : '0.0'}% attendance</div>
                                     </div>
 
                                     {/* Late Students */}
                                     <div className="teacher-stat-card yellow">
                                         <div className="teacher-stat-label">Late Today</div>
-                                        <div className="teacher-stat-value">{recentStudents.filter(s => s.status === "Late").length}</div>
+                                        <div className="teacher-stat-value">{todayAttendance.late}</div>
                                         <div className="teacher-stat-sublabel">Students tardy</div>
                                     </div>
 
                                     {/* Absent Students */}
                                     <div className="teacher-stat-card red">
                                         <div className="teacher-stat-label">Absent Today</div>
-                                        <div className="teacher-stat-value">{recentStudents.filter(s => s.status === "Absent").length}</div>
+                                        <div className="teacher-stat-value">{todayAttendance.absent}</div>
                                         <div className="teacher-stat-sublabel">Students missing</div>
                                     </div>
                                     {/* Perfect Attendance */}
                                     <div className="teacher-stat-card purple">
                                         <div className="teacher-stat-label">Perfect Attendance</div>
-                                        <div className="teacher-stat-value">{recentStudents.filter(s => s.status === "Present").length - recentStudents.filter(s => s.status === "Late").length}</div>
+                                        <div className="teacher-stat-value">{todayAttendance.present}</div>
                                         <div className="teacher-stat-sublabel">On time today</div>
                                     </div>
 
-                                    {/* Total Classes This Week */}
+                                    {/* Total Number of Subjects Handled */}
                                     <div className="teacher-stat-card orange">
-                                        <div className="teacher-stat-label">Classes This Week</div>
-                                        <div className="teacher-stat-value">5</div>
-                                        <div className="teacher-stat-sublabel">Days conducted</div>
+                                        <div className="teacher-stat-label">Total Number of Subjects Handled</div>
+                                        <div className="teacher-stat-value">{courses.length}</div>
+                                        <div className="teacher-stat-sublabel">Courses assigned</div>
                                     </div>                                </div>
                             </div>
                         )}
@@ -207,9 +305,9 @@ export default function Teacher() {
                                             onChange={(e) => setSelectedSubject(e.target.value)}
                                             className="teacher-select">
                                             <option value="all">All Subjects</option>
-                                            <option value="math">Mathematics</option>
-                                            <option value="science">Science</option>
-                                            <option value="english">English</option>
+                                            {courses.map(course => (
+                                                <option key={course.id} value={course.id}>{course.name}</option>
+                                            ))}
                                         </select>
 
                                         <select value={selectedGradeLevel}
@@ -383,7 +481,7 @@ export default function Teacher() {
                         {activeTab === "records" && (
                             <div>
                                 {/* Search Bar */}
-                                <div className="teacher-search-container">
+                                <div className="teacher-search-container" style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
 
                                 <div className="teacher-search-wrapper">
                                     <MagnifyingGlassIcon className="teacher-search-icon" />
@@ -395,6 +493,18 @@ export default function Teacher() {
                                         className="teacher-search-input"
                                     />
                                 </div>
+
+                                <select 
+                                    value={selectedCourse}
+                                    onChange={(e) => {
+                                        setSelectedCourse(e.target.value);
+                                        setIsLoadingRecords(true);
+                                    }}
+                                    className="teacher-select">
+                                    {courses.map(course => (
+                                        <option key={course.id} value={course.id}>{course.name}</option>
+                                    ))}
+                                </select>
                                 </div>
                                 
                                 {/* Recent Attendance Table */}
@@ -414,22 +524,38 @@ export default function Teacher() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {recentStudents.filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase())).map((student) => (
-                                            <tr key={student.id}>
-                                                <td>{student.name}</td>
-                                                <td>
-                                                    <span className={`status-badge ${student.status.toLowerCase()}`}>
-                                                        {student.status}
-                                                    </span>
-                                                </td>
-                                                <td className="time-cell">
-                                                    {student.time}
-                                                </td>
-                                                <td className={`confidence-cell ${student.confidence === "No Detection" ? "not-detected" : "detected"}`}>
-                                                    {student.confidence}
+                                        {isLoadingRecords ? (
+                                            <tr>
+                                                <td colSpan={4} style={{ textAlign: 'center', padding: '20px' }}>
+                                                    Loading attendance records...
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : attendanceRecords.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} style={{ textAlign: 'center', padding: '20px' }}>
+                                                    No students enrolled in this course
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            attendanceRecords
+                                                .filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                                .map((student) => (
+                                                    <tr key={student.id}>
+                                                        <td>{student.name}</td>
+                                                        <td>
+                                                            <span className={`status-badge ${student.status.toLowerCase()}`}>
+                                                                {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                                                            </span>
+                                                        </td>
+                                                        <td className="time-cell">
+                                                            {student.time}
+                                                        </td>
+                                                        <td className={`confidence-cell ${student.confidence === "No Detection" ? "not-detected" : "detected"}`}>
+                                                            {student.confidence}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
