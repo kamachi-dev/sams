@@ -749,7 +749,7 @@
   border-left-color: var(--foreground1);
 }
 
-.notification-item:hover {
+.notification-item:hover:not(.active) {
   background: #EAF4FF;
 }
 
