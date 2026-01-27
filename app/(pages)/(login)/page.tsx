@@ -12,14 +12,14 @@ import { useRouter } from "next/navigation";
 
 export default function Login() {
     const { signOut, openSignIn } = useClerk();
-    const { isSignedIn } = useAuth();
+    const { isLoaded, isSignedIn } = useAuth();
     const { user } = useUser();
     const router = useRouter();
     const isSigningIn = useRef(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const directLogIn = useCallback(() => {
-        if (isLoading) return;
+        if (isLoading || !isLoaded) return;
         isSigningIn.current = false;
         setIsLoading(true);
         fetch('/api/auth/callback')
@@ -31,7 +31,7 @@ export default function Login() {
                     setIsLoading(false);
                 }
             });
-    }, [isLoading, router]);
+    }, [isLoaded, isLoading, router]);
 
     async function logIn() {
         isSigningIn.current = true;
@@ -40,8 +40,8 @@ export default function Login() {
     }
 
     useEffect(() => {
-        if (isSigningIn.current && isSignedIn && !isLoading) queueMicrotask(() => directLogIn());
-    }, [isSignedIn, isLoading, directLogIn]);
+        if (isSigningIn.current && isLoaded && isSignedIn && !isLoading) queueMicrotask(() => directLogIn());
+    }, [isLoaded, isSignedIn, isLoading, directLogIn]);
     return (
         <>
             <CarouselClient />
