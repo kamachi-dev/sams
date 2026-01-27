@@ -406,7 +406,7 @@ export default function Student() {
                     <div className="student-panel-label">Total Number of Days Being Present</div>
                     <div className="student-panel-value">{presentDays}</div>
                     <div className="student-panel-sub">
-                    {((presentDays / totalDays) * 100).toFixed(1)}% present in {totalDays} days
+                    {((presentDays / totalDays) * 100).toFixed(1)}% absent in {totalDays} days
                     </div>
                 </div>
                 </div>,

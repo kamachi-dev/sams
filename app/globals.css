@@ -11,6 +11,7 @@ html {
     --present: #17A1FA;
     --late: #FFAC01;
     --absent: #F92600;
+    --lightgrey: #cdcdcd;
 
     width: 100%;
     height: 100%;

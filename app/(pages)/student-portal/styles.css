@@ -43,6 +43,7 @@
 
 .student-panel-card.warnings {
     background: var(--absent);
+    color: var(--foreground1);
 }
 
 .student-panel-icon {
@@ -723,6 +724,14 @@
   margin-bottom: 3px;
   gap: 1rem;
   container-type: inline-size;
+}
+
+.notification-item.active {
+  background: var(--lightgrey);
+}
+
+.notification-type.active {
+    color: black;
 }
 
 /* LATE */
