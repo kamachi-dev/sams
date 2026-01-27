@@ -51,7 +51,7 @@ async function getUserData() {
 }
 
 export default function SamsTemplate({ links }: Props) {
-    const { isSignedIn } = useAuth();
+    const { isLoaded, isSignedIn } = useAuth();
     const defaultTab = links && links.length > 0 ? links[0].label : undefined;
     const pathname = usePathname() ?? '';
     const title = React.useMemo(() => formatPathname(pathname), [pathname]);
@@ -70,11 +70,11 @@ export default function SamsTemplate({ links }: Props) {
     }, []);
 
     useEffect(() => {
-        if (!isSignedIn) {
+        if (isLoaded && !isSignedIn) {
             Error('You have been signed out. Redirecting to login page.');
             router.replace('/');
         }
-    }, [isSignedIn]);
+    }, [isLoaded, isSignedIn, router]);
 
     return (
         <Tabs.Root defaultValue={defaultTab} className="sams">
