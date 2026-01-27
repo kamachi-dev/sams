@@ -23,7 +23,7 @@ export default function Admin() {
     };
 
     const [archive, setArchive] = useState<ArchiveResponse | null>(null);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [selectedYear, setSelectedYear] = useState<string | null>(null);
     const [importStatus, setImportStatus] = useState<string | null>(null);
 
     const [studentCount, setStudentCount] = useState<number | null>(null);
@@ -67,8 +67,9 @@ export default function Admin() {
         (async () => {
             const res: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
             setArchive(res);
-            if (res?.data?.length) {
-                setSelectedId(res.data[0].id);
+            const years = res?.data ? Array.from(new Set(res.data.map(d => d.school_year))) : [];
+            if (years.length) {
+                setSelectedYear(years[0]);
             }
             const studentCountRes = await fetch('/api/students/count').then(res => res.json());
             if (studentCountRes?.success) {
@@ -157,12 +158,12 @@ export default function Admin() {
                         <ToggleGroup.Root
                             type="single"
                             className="archive-group"
-                            value={selectedId ?? ''}
-                            onValueChange={(val) => setSelectedId(val || null)}
+                            value={selectedYear ?? ''}
+                            onValueChange={(val) => setSelectedYear(val || null)}
                         >
-                            {archive?.data.map((item) => (
-                                <ToggleGroup.Item key={item.id} value={item.id} className="archive-group-item">
-                                    {item.school_year}
+                            {Array.from(new Set(archive?.data.map(d => d.school_year))).map((year) => (
+                                <ToggleGroup.Item key={year} value={year} className="archive-group-item">
+                                    {year}
                                 </ToggleGroup.Item>
                             ))}
                         </ToggleGroup.Root>
@@ -170,9 +171,11 @@ export default function Admin() {
                     <section>
                         <div className="archive">
                             {(() => {
-                                const selected = archive?.data.find(d => d.id === selectedId);
-                                if (!selected) return null;
-                                return (
+                                const selectedArchives = archive?.data
+                                    .filter(d => d.school_year === selectedYear)
+                                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                                if (!selectedArchives?.length) return null;
+                                return selectedArchives.map((selected) => (
                                     <div key={selected.id} className="archive-item">
                                         <div className="archive-item-header">
                                             <div className="flex flex-col items-start">
@@ -184,7 +187,7 @@ export default function Admin() {
                                             {selected.notes}
                                         </div>
                                     </div>
-                                );
+                                ));
                             })()}
                         </div>
                     </section>
