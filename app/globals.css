@@ -6,7 +6,11 @@ html {
     --foreground1: #000000;
     --foreground2: #919191;
     --foreground3: #C1C1C1;
+    --foreground4: #8F8F8F;
     --accent1: #172852;
+    --present: #17A1FA;
+    --late: #FFAC01;
+    --absent: #F92600;
 
     width: 100%;
     height: 100%;
@@ -75,18 +79,21 @@ a {
 .sams {
     background-color: var(--background2);
     margin: 6px;
-    border: 2px solid var(--foreground2);
+    /* border: 2px solid var(--foreground2); */
     display: flex;
-    width: calc(100dvw - 14px);
-    height: calc(100dvh - 14px);
+    width: calc(100dvw - 25px);
+    height: calc(100dvh - 25px);
 }
 
 .sams-content {
     width: 80%;
     /* fix height to viewport minus borders/margins and allow internal scrolling */
-    height: calc(100dvh - 16px);
+    /* height: calc(100dvh - 16px); */
+    height: 100%;
+    display: flex;
     overflow-y: auto;
     overflow-x: hidden;
+    flex-direction: column;
 }
 
 /* Hide scrollbar for the main content area (still scrollable) */
@@ -99,8 +106,8 @@ a {
 }
 
 .sams-content-header {
-    height: auto;
-    min-height: 200px;
+    height: 180px;
+    margin-bottom: 70px;
     padding-bottom: 20px;
     background-color: var(--accent1);
     color: var(--background1);
@@ -137,6 +144,12 @@ a {
     z-index: 2;
 }
 
+.sams-content-body{
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .sams-content-panel {
     height: auto;
     min-height: 120px;
@@ -154,16 +167,20 @@ a {
     display: flex;
     flex-direction: column;
     background-color: var(--background1);
-    border-right: 2px solid var(--foreground3);
+    /* border-right: 2px solid var(--foreground3); */
     padding: 10px;
     height: 100%;
     align-items: center;
     width: 20%;
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
+    gap: 10px;
 }
 
 .sams-nav-header {
     display: flex;
     align-items: center;
+    width: 100%;
+    justify-content: space-around;
 }
 
 .sams-nav-header-logo {
@@ -195,13 +212,13 @@ a {
 
 .sams-nav-username {
     margin-top: 10px;
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     font-weight: bold;
     color: var(--foreground1);
 }
 
 .sams-nav-email {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--accent1);
 }
 
@@ -260,17 +277,31 @@ a {
     display: flex;
     flex-direction: column;
     margin: 5px 0;
+    font-size: 20px;
 }
+
+.sams-nav-icon {
+  width: auto;
+  height: 30px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
 
 .sams-nav-link {
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 8px;
+    border-radius: 15px;
     margin: 5px 0;
-    padding: 5px;
+    padding: 5px 30px;
     min-width: 100px;
     gap: 15px;
+}
+
+.sams-nav-link:hover {
+    background-color: black;
+    cursor: pointer;
 }
 
 .sams-nav-link[data-state="active"] {

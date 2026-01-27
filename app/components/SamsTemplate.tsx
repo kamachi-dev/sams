@@ -104,7 +104,8 @@ export default function SamsTemplate({ links }: Props) {
                 <Tabs.List className="sams-nav-links">
                     {links.map(({ label, Icon }) => (
                         <Tabs.Trigger key={label} value={label} className="sams-nav-link">
-                            <Icon /> {label}
+                            <Icon className="sams-nav-icon" />
+                            <span>{label}</span>
                         </Tabs.Trigger>
                     ))}
                 </Tabs.List>
