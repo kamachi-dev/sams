@@ -22,8 +22,10 @@ export default function Admin() {
         error: unknown | null;
     };
 
+    const groupSize = 6;
+
     const [archive, setArchive] = useState<ArchiveResponse | null>(null);
-    const [selectedYear, setSelectedYear] = useState<string | null>(null);
+    const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
     const [importStatus, setImportStatus] = useState<string | null>(null);
 
     const [studentCount, setStudentCount] = useState<number | null>(null);
@@ -67,9 +69,9 @@ export default function Admin() {
         (async () => {
             const res: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
             setArchive(res);
-            const years = res?.data ? Array.from(new Set(res.data.map(d => d.school_year))) : [];
-            if (years.length) {
-                setSelectedYear(years[0]);
+            // Set first group as selected
+            if (res?.data?.length) {
+                setSelectedGroup(0);
             }
             const studentCountRes = await fetch('/api/students/count').then(res => res.json());
             if (studentCountRes?.success) {
@@ -158,23 +160,39 @@ export default function Admin() {
                         <ToggleGroup.Root
                             type="single"
                             className="archive-group"
-                            value={selectedYear ?? ''}
-                            onValueChange={(val) => setSelectedYear(val || null)}
+                            value={selectedGroup?.toString() ?? ''}
+                            onValueChange={(val) => setSelectedGroup(val ? parseInt(val) : null)}
                         >
-                            {Array.from(new Set(archive?.data.map(d => d.school_year))).map((year) => (
-                                <ToggleGroup.Item key={year} value={year} className="archive-group-item">
-                                    {year}
-                                </ToggleGroup.Item>
-                            ))}
+                            {(() => {
+                                const totalArchives = archive?.data?.length ?? 0;
+                                const numGroups = Math.ceil(totalArchives / 6);
+                                return Array.from({ length: numGroups }, (_, i) => (
+                                    <ToggleGroup.Item key={i} value={i.toString()} className="archive-group-item">
+                                        {i + 1}
+                                    </ToggleGroup.Item>
+                                ));
+                            })()}
                         </ToggleGroup.Root>
                     </section>
                     <section>
                         <div className="archive">
                             {(() => {
-                                const selectedArchives = archive?.data
-                                    .filter(d => d.school_year === selectedYear)
-                                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                                if (!selectedArchives?.length) return null;
+                                const allArchives = archive?.data
+                                    ?.sort((a, b) => {
+                                        // First sort by school year (descending)
+                                        if (a.school_year !== b.school_year) {
+                                            return parseInt(b.school_year) - parseInt(a.school_year);
+                                        }
+                                        // Then sort by creation date (descending)
+                                        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                                    });
+                                if (!allArchives?.length || selectedGroup === null) return null;
+
+                                // Divide archives into groups of 6
+                                const startIdx = selectedGroup * groupSize;
+                                const endIdx = startIdx + groupSize;
+                                const selectedArchives = allArchives.slice(startIdx, endIdx);
+
                                 return selectedArchives.map((selected) => (
                                     <div key={selected.id} className="archive-item">
                                         <div className="archive-item-header">
