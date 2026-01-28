@@ -140,11 +140,8 @@ export default function Admin() {
             // Refresh archive list
             const archiveRes: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
             setArchive(archiveRes);
-            if (archiveRes?.data?.length) {
-                setSelectedGroup(Math.max(0, (selectedGroup ?? 0) - 1));
-            } else {
-                setSelectedGroup(null);
-            }
+            if (archiveRes?.data?.length) setSelectedGroup(Math.max(0, (selectedGroup ?? 0) - 1));
+            else setSelectedGroup(null);
         } catch (err: unknown) {
             let message = 'Unknown error';
             if (err instanceof Error) {
@@ -164,17 +161,11 @@ export default function Admin() {
                 setSelectedGroup(0);
             }
             const studentCountRes = await fetch('/api/students/count').then(res => res.json());
-            if (studentCountRes?.success) {
-                setStudentCount(Number(studentCountRes.data.count));
-            }
+            if (studentCountRes?.success) setStudentCount(Number(studentCountRes.data.count));
             const teacherCountRes = await fetch('/api/teachers/count').then(res => res.json());
-            if (teacherCountRes?.success) {
-                setTeacherCount(Number(teacherCountRes.data.count));
-            }
+            if (teacherCountRes?.success) setTeacherCount(Number(teacherCountRes.data.count));
             const classCountRes = await fetch('/api/classes/count').then(res => res.json());
-            if (classCountRes?.success) {
-                setClassCount(Number(classCountRes.data.count));
-            }
+            if (classCountRes?.success) setClassCount(Number(classCountRes.data.count));
         })();
     }, []);
     return (
