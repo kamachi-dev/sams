@@ -183,32 +183,32 @@ export default function Admin() {
                 label: "SAMS+ Dataset",
                 Icon: () => <Image src="/icons/sheet.svg" alt="" width={20} height={20} />,
                 panels: [
-                    <div key={1} className="flex justify-center items-center gap-4 h-full">
+                    <div key={1} className="stats-card">
                         <Image src="/icons/people.svg" alt="" width={40} height={40} />
-                        <div className="flex flex-col items-center">
+                        <div className="stats-icon-group">
                             <Label.Root className="font-bold">Total Num of Students</Label.Root>
                             <span>{studentCount ?? 'Loading...'}</span>
                         </div>
                     </div>,
-                    <div key={2} className="flex justify-center items-center gap-4 h-full">
+                    <div key={2} className="stats-card">
                         <Image src="/icons/people.svg" alt="" width={40} height={40} />
-                        <div className="flex flex-col items-center">
+                        <div className="stats-icon-group">
                             <Label.Root className="font-bold">Total Num of Teachers</Label.Root>
                             <span>{teacherCount ?? 'Loading...'}</span>
                         </div>
                     </div>,
-                    <div key={3} className="flex justify-center items-center gap-4 h-full">
+                    <div key={3} className="stats-card">
                         <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
-                        <div className="flex flex-col items-center">
+                        <div className="stats-icon-group">
                             <Label.Root className="font-bold">Total Num of Classes</Label.Root>
                             <span>{classCount ?? 'Loading...'}</span>
                         </div>
                     </div>
                 ],
                 content: <>
-                    <section className="justify-center items-center flex flex-col gap-4">
-                        <div className="flex justify-center items-center mt-1.5">
-                            <Label.Root className="font-bold text-2xl">Import</Label.Root>
+                    <section className="import-section">
+                        <div className="import-header">
+                            <Label.Root className="import-section-title">Import</Label.Root>
                             <button className="import-button" onClick={() => studentFileRef.current?.click()}>
                                 <Label.Root>Students</Label.Root>
                             </button>
@@ -242,38 +242,38 @@ export default function Admin() {
                             />
                         </div>
                         {importStatus && (
-                            <div className="text-sm opacity-80 mt-2">{importStatus}</div>
+                            <div className="import-status">{importStatus}</div>
                         )}
                         <Separator.Root orientation="horizontal" className="sams-separator" />
                     </section>
-                    <div className="flex flex-col md:flex-row gap-6">
-                        <div className="flex p-8 items-center flex-col gap-3 w-full max-w-md">
-                            <Label.Root className="font-bold text-2xl">Create Archive</Label.Root>
-                            <div className="flex flex-col gap-2 w-full">
-                                <div className="flex flex-col gap-1">
-                                    <Label.Root className="text-sm">School Year</Label.Root>
+                    <div className="admin-content">
+                        <div className="archive-form">
+                            <Label.Root className="archive-form-title">Create Archive</Label.Root>
+                            <div className="archive-form-container w-full">
+                                <div className="form-field-group">
+                                    <Label.Root className="form-field-label">School Year</Label.Root>
                                     <input
                                         type="text"
                                         placeholder="e.g., 2024"
                                         value={schoolYear}
                                         onChange={(e) => setSchoolYear(e.target.value)}
-                                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="school-year-input"
                                     />
                                 </div>
-                                <div className="flex flex-col gap-1">
-                                    <Label.Root className="text-sm">Notes</Label.Root>
+                                <div className="form-field-group">
+                                    <Label.Root className="form-field-label">Notes</Label.Root>
                                     <textarea
                                         placeholder="Add notes about this archive..."
                                         value={archiveNotes}
                                         onChange={(e) => setArchiveNotes(e.target.value)}
-                                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                        className="archive-notes-textarea"
                                         rows={3}
                                     />
                                 </div>
                                 <button
                                     onClick={handleCreateArchive}
                                     disabled={archiveLoading}
-                                    className="import-button mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="import-button" style={{ marginTop: '0.5rem' }}
                                 >
                                     <Label.Root>{archiveLoading ? 'Creating...' : 'Create Archive'}</Label.Root>
                                 </button>
@@ -320,13 +320,13 @@ export default function Admin() {
                                         return selectedArchives.map((selected) => (
                                             <div key={selected.id} className="archive-item">
                                                 <div className="archive-item-header">
-                                                    <div className="flex flex-col items-start">
-                                                        <span className="font-bold">School Year: {selected.school_year} - {parseInt(selected.school_year) + 1}</span>
-                                                        <span className="text-sm opacity-70">Created: {new Date(selected.created_at).toLocaleString()}</span>
+                                                    <div className="archive-metadata">
+                                                        <span className="archive-year-info">School Year: {selected.school_year} - {parseInt(selected.school_year) + 1}</span>
+                                                        <span className="archive-created-info">Created: {new Date(selected.created_at).toLocaleString()}</span>
                                                     </div>
                                                     <button
                                                         onClick={() => handleDeleteArchive(selected.id)}
-                                                        className="h-6 px-1 py-1 bg-red-500 text-white rounded-md text-sm hover:bg-red-600 transition-colors"
+                                                        className="archive-delete-button"
                                                     >
                                                         <TrashIcon />
                                                     </button>
