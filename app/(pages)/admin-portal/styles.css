@@ -30,7 +30,6 @@
 
 .archive {
     margin-top: 1rem;
-    justify-content: center;
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
