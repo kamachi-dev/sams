@@ -43,6 +43,7 @@
 }
 
 .archive-item-header {
+    display: flex;
     background-color: var(--accent1);
     color: var(--background1);
     font-weight: bold;
