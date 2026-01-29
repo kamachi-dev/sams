@@ -2,7 +2,7 @@
 
 import SamsTemplate from "@/app/components/SamsTemplate";
 import Image from "next/image";
-import { Label, Separator, ToggleGroup } from "radix-ui";
+import { Label, Separator, ToggleGroup, Dialog } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import './styles.css';
 import { Error } from "@/app/components/SamsError";
@@ -36,6 +36,9 @@ export default function Admin() {
     const [schoolYear, setSchoolYear] = useState<string>('');
     const [archiveNotes, setArchiveNotes] = useState<string>('');
     const [archiveLoading, setArchiveLoading] = useState<boolean>(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+    const [archiveToDelete, setArchiveToDelete] = useState<string | null>(null);
+    const [deleteConfirmText, setDeleteConfirmText] = useState<string>('');
 
     const studentFileRef = useRef<HTMLInputElement | null>(null);
     const teacherFileRef = useRef<HTMLInputElement | null>(null);
@@ -117,10 +120,26 @@ export default function Admin() {
         }
     }
 
-    async function handleDeleteArchive(archiveId: string) {
+    function openDeleteDialog(archiveId: string) {
+        setArchiveToDelete(archiveId);
+        setDeleteConfirmText('');
+        setDeleteDialogOpen(true);
+    }
+
+    function closeDeleteDialog() {
+        setDeleteDialogOpen(false);
+        setArchiveToDelete(null);
+        setDeleteConfirmText('');
+    }
+
+    async function handleDeleteArchive() {
+        if (!archiveToDelete || deleteConfirmText !== 'delete') {
+            return;
+        }
+
         try {
             const form = new FormData();
-            form.append('id', archiveId);
+            form.append('id', archiveToDelete);
 
             const res = await fetch('/api/archive', {
                 method: 'DELETE',
@@ -131,6 +150,7 @@ export default function Admin() {
             if (!res.ok || json?.success === false) {
                 setImportStatus(`Archive deletion failed: ${json?.error ?? res.statusText}`);
                 setTimeout(() => setImportStatus(null), 5000);
+                closeDeleteDialog();
                 return;
             }
 
@@ -142,6 +162,8 @@ export default function Admin() {
             setArchive(archiveRes);
             if (archiveRes?.data?.length) setSelectedGroup(Math.max(0, (selectedGroup ?? 0) - 1));
             else setSelectedGroup(null);
+
+            closeDeleteDialog();
         } catch (err: unknown) {
             let message = 'Unknown error';
             if (err instanceof Error) {
@@ -150,6 +172,7 @@ export default function Admin() {
             }
             setImportStatus(`Archive deletion error: ${message}`);
             setTimeout(() => setImportStatus(null), 5000);
+            closeDeleteDialog();
         }
     }
     useEffect(() => {
@@ -169,171 +192,220 @@ export default function Admin() {
         })();
     }, []);
     return (
-        <SamsTemplate links={[
-            {
-                label: "SAMS+ Dataset",
-                Icon: () => <Image src="/icons/sheet.svg" alt="" width={20} height={20} />,
-                panels: [
-                    <div key={1} className="stats-card">
-                        <Image src="/icons/people.svg" alt="" width={40} height={40} />
-                        <div className="stats-icon-group">
-                            <Label.Root className="font-bold">Total Num of Students</Label.Root>
-                            <span>{studentCount ?? 'Loading...'}</span>
-                        </div>
-                    </div>,
-                    <div key={2} className="stats-card">
-                        <Image src="/icons/people.svg" alt="" width={40} height={40} />
-                        <div className="stats-icon-group">
-                            <Label.Root className="font-bold">Total Num of Teachers</Label.Root>
-                            <span>{teacherCount ?? 'Loading...'}</span>
-                        </div>
-                    </div>,
-                    <div key={3} className="stats-card">
-                        <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
-                        <div className="stats-icon-group">
-                            <Label.Root className="font-bold">Total Num of Classes</Label.Root>
-                            <span>{classCount ?? 'Loading...'}</span>
-                        </div>
-                    </div>
-                ],
-                content: <>
-                    <section className="import-section">
-                        <div className="import-header">
-                            <Label.Root className="import-section-title">Import</Label.Root>
-                            <button className="import-button" onClick={() => studentFileRef.current?.click()}>
-                                <Label.Root>Students</Label.Root>
-                            </button>
-                            <button className="import-button" onClick={() => teacherFileRef.current?.click()}>
-                                <Label.Root>Teachers</Label.Root>
-                            </button>
-                            <button className="import-button">
-                                <Label.Root>Schedule</Label.Root>
-                            </button>
-                            <input
-                                ref={studentFileRef}
-                                type="file"
-                                accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                className="hidden"
-                                onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) handleCsvUpload(f, '/api/students');
-                                    e.currentTarget.value = '';
-                                }}
-                            />
-                            <input
-                                ref={teacherFileRef}
-                                type="file"
-                                accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                className="hidden"
-                                onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) handleCsvUpload(f, '/api/teachers');
-                                    e.currentTarget.value = '';
-                                }}
-                            />
-                        </div>
-                        {importStatus && (
-                            <div className="import-status">{importStatus}</div>
-                        )}
-                        <Separator.Root orientation="horizontal" className="sams-separator" />
-                    </section>
-                    <div className="admin-content">
-                        <div className="archive-form">
-                            <Label.Root className="archive-form-title">Create Archive</Label.Root>
-                            <div className="archive-form-container w-full">
-                                <div className="form-field-group">
-                                    <Label.Root className="form-field-label">School Year</Label.Root>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g., 2024"
-                                        value={schoolYear}
-                                        onChange={(e) => setSchoolYear(e.target.value)}
-                                        className="school-year-input"
-                                    />
-                                </div>
-                                <div className="form-field-group">
-                                    <Label.Root className="form-field-label">Notes</Label.Root>
-                                    <textarea
-                                        placeholder="Add notes about this archive..."
-                                        value={archiveNotes}
-                                        onChange={(e) => setArchiveNotes(e.target.value)}
-                                        className="archive-notes-textarea"
-                                        rows={3}
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleCreateArchive}
-                                    disabled={archiveLoading}
-                                    className="import-button" style={{ marginTop: '0.5rem' }}
-                                >
-                                    <Label.Root>{archiveLoading ? 'Creating...' : 'Create Archive'}</Label.Root>
-                                </button>
+        <>
+            <SamsTemplate links={[
+                {
+                    label: "SAMS+ Dataset",
+                    Icon: () => <Image src="/icons/sheet.svg" alt="" width={20} height={20} />,
+                    panels: [
+                        <div key={1} className="stats-card">
+                            <Image src="/icons/people.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Students</Label.Root>
+                                <span>{studentCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>,
+                        <div key={2} className="stats-card">
+                            <Image src="/icons/people.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Teachers</Label.Root>
+                                <span>{teacherCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>,
+                        <div key={3} className="stats-card">
+                            <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Classes</Label.Root>
+                                <span>{classCount ?? 'Loading...'}</span>
                             </div>
                         </div>
-                        <div>
-                            <section>
-                                <ToggleGroup.Root
-                                    type="single"
-                                    className="archive-group"
-                                    value={selectedGroup?.toString() ?? ''}
-                                    onValueChange={(val) => setSelectedGroup(val ? parseInt(val) : null)}
-                                >
-                                    {(() => {
-                                        const totalArchives = archive?.data?.length ?? 0;
-                                        const numGroups = Math.ceil(totalArchives / 6);
-                                        return Array.from({ length: numGroups }, (_, i) => (
-                                            <ToggleGroup.Item key={i} value={i.toString()} className="archive-group-item">
-                                                {i + 1}
-                                            </ToggleGroup.Item>
-                                        ));
-                                    })()}
-                                </ToggleGroup.Root>
-                            </section>
-                            <section>
-                                <div className="archive">
-                                    {(() => {
-                                        const allArchives = archive?.data
-                                            ?.sort((a, b) => {
-                                                // First sort by school year (descending)
-                                                if (a.school_year !== b.school_year) {
-                                                    return parseInt(b.school_year) - parseInt(a.school_year);
-                                                }
-                                                // Then sort by creation date (descending)
-                                                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                                            });
-                                        if (!allArchives?.length || selectedGroup === null) return null;
-
-                                        // Divide archives into groups of 6
-                                        const startIdx = selectedGroup * groupSize;
-                                        const endIdx = startIdx + groupSize;
-                                        const selectedArchives = allArchives.slice(startIdx, endIdx);
-
-                                        return selectedArchives.map((selected) => (
-                                            <div key={selected.id} className="archive-item">
-                                                <div className="archive-item-header">
-                                                    <div className="archive-metadata">
-                                                        <span className="archive-year-info">School Year: {selected.school_year} - {parseInt(selected.school_year) + 1}</span>
-                                                        <span className="archive-created-info">Created: {new Date(selected.created_at).toLocaleString()}</span>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleDeleteArchive(selected.id)}
-                                                        className="archive-delete-button"
-                                                    >
-                                                        <TrashIcon />
-                                                    </button>
-                                                </div>
-                                                <div className="archive-item-content">
-                                                    {selected.notes}
-                                                </div>
-                                            </div>
-                                        ));
-                                    })()}
+                    ],
+                    content: <>
+                        <section className="import-section">
+                            <div className="import-header">
+                                <Label.Root className="import-section-title">Import</Label.Root>
+                                <button className="import-button" onClick={() => studentFileRef.current?.click()}>
+                                    <Label.Root>Students</Label.Root>
+                                </button>
+                                <button className="import-button" onClick={() => teacherFileRef.current?.click()}>
+                                    <Label.Root>Teachers</Label.Root>
+                                </button>
+                                <button className="import-button">
+                                    <Label.Root>Schedule</Label.Root>
+                                </button>
+                                <input
+                                    ref={studentFileRef}
+                                    type="file"
+                                    accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) handleCsvUpload(f, '/api/students');
+                                        e.currentTarget.value = '';
+                                    }}
+                                />
+                                <input
+                                    ref={teacherFileRef}
+                                    type="file"
+                                    accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) handleCsvUpload(f, '/api/teachers');
+                                        e.currentTarget.value = '';
+                                    }}
+                                />
+                            </div>
+                            {importStatus && (
+                                <div className="import-status">{importStatus}</div>
+                            )}
+                            <Separator.Root orientation="horizontal" className="sams-separator" />
+                        </section>
+                        <div className="admin-content">
+                            <div className="archive-form">
+                                <Label.Root className="archive-form-title">Create Archive</Label.Root>
+                                <div className="archive-form-container w-full">
+                                    <div className="form-field-group">
+                                        <Label.Root className="form-field-label">School Year</Label.Root>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g., 2024"
+                                            value={schoolYear}
+                                            onChange={(e) => setSchoolYear(e.target.value)}
+                                            className="school-year-input"
+                                        />
+                                    </div>
+                                    <div className="form-field-group">
+                                        <Label.Root className="form-field-label">Notes</Label.Root>
+                                        <textarea
+                                            placeholder="Add notes about this archive..."
+                                            value={archiveNotes}
+                                            onChange={(e) => setArchiveNotes(e.target.value)}
+                                            className="archive-notes-textarea"
+                                            rows={3}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleCreateArchive}
+                                        disabled={archiveLoading}
+                                        className="import-button" style={{ marginTop: '0.5rem' }}
+                                    >
+                                        <Label.Root>{archiveLoading ? 'Creating...' : 'Create Archive'}</Label.Root>
+                                    </button>
                                 </div>
-                            </section>
+                            </div>
+                            <div>
+                                <section>
+                                    <ToggleGroup.Root
+                                        type="single"
+                                        className="archive-group"
+                                        value={selectedGroup?.toString() ?? ''}
+                                        onValueChange={(val) => setSelectedGroup(val ? parseInt(val) : null)}
+                                    >
+                                        {(() => {
+                                            const totalArchives = archive?.data?.length ?? 0;
+                                            const numGroups = Math.ceil(totalArchives / 6);
+                                            return Array.from({ length: numGroups }, (_, i) => (
+                                                <ToggleGroup.Item key={i} value={i.toString()} className="archive-group-item">
+                                                    {i + 1}
+                                                </ToggleGroup.Item>
+                                            ));
+                                        })()}
+                                    </ToggleGroup.Root>
+                                </section>
+                                <section>
+                                    <div className="archive">
+                                        {(() => {
+                                            const allArchives = archive?.data
+                                                ?.sort((a, b) => {
+                                                    // First sort by school year (descending)
+                                                    if (a.school_year !== b.school_year) {
+                                                        return parseInt(b.school_year) - parseInt(a.school_year);
+                                                    }
+                                                    // Then sort by creation date (descending)
+                                                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                                                });
+                                            if (!allArchives?.length || selectedGroup === null) return null;
+
+                                            // Divide archives into groups of 6
+                                            const startIdx = selectedGroup * groupSize;
+                                            const endIdx = startIdx + groupSize;
+                                            const selectedArchives = allArchives.slice(startIdx, endIdx);
+
+                                            return selectedArchives.map((selected) => (
+                                                <div key={selected.id} className="archive-item">
+                                                    <div className="archive-item-header">
+                                                        <div className="archive-metadata">
+                                                            <span className="archive-year-info">School Year: {selected.school_year} - {parseInt(selected.school_year) + 1}</span>
+                                                            <span className="archive-created-info">Created: {new Date(selected.created_at).toLocaleString()}</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => openDeleteDialog(selected.id)}
+                                                            className="archive-delete-button"
+                                                        >
+                                                            <TrashIcon />
+                                                        </button>
+                                                    </div>
+                                                    <div className="archive-item-content">
+                                                        {selected.notes}
+                                                    </div>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                </section>
+                            </div>
                         </div>
-                    </div>
-                </>
-            }
-        ]} />
+                    </>
+                }
+            ]} />
+            <Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="dialog-overlay" />
+                    <Dialog.Content className="dialog-content">
+                        <Dialog.Title className="dialog-title">Confirm Archive Deletion</Dialog.Title>
+                        <Dialog.Description className="dialog-description">
+                            This action cannot be undone. Type <strong>delete</strong> to confirm.
+                        </Dialog.Description>
+                        <div className="form-field-group" style={{ marginTop: '1rem' }}>
+                            <Label.Root className="form-field-label">Type &apos;delete&apos; to confirm</Label.Root>
+                            <input
+                                type="text"
+                                value={deleteConfirmText}
+                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                className="school-year-input"
+                                placeholder="delete"
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={closeDeleteDialog}
+                                className="import-button"
+                                style={{ backgroundColor: '#6b7280' }}
+                            >
+                                <Label.Root>Cancel</Label.Root>
+                            </button>
+                            <button
+                                onClick={handleDeleteArchive}
+                                disabled={deleteConfirmText !== 'delete'}
+                                className="import-button"
+                                style={{
+                                    backgroundColor: deleteConfirmText === 'delete' ? '#ef4444' : '#9ca3af',
+                                    opacity: deleteConfirmText === 'delete' ? 1 : 0.5,
+                                    cursor: deleteConfirmText === 'delete' ? 'pointer' : 'not-allowed'
+                                }}
+                            >
+                                <Label.Root>Delete Archive</Label.Root>
+                            </button>
+                        </div>
+                        <Dialog.Close asChild>
+                            <button className="dialog-close" aria-label="Close">
+                                ×
+                            </button>
+                        </Dialog.Close>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+        </>
     );
 }
