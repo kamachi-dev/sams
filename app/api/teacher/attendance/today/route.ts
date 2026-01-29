@@ -55,13 +55,21 @@ export async function GET() {
         const late = parseInt(data.late_count || '0')
         const absent = parseInt(data.absent_count || '0')
 
+        // New attendance rate calculation:
+        // Present = 1 (100%), Late = 0.5 (50%), Absent = 0 (0%)
+        // Example: 1 present + 1 late = (1 + 0.5) / 2 = 75%
+        const attendanceRate = total > 0 
+            ? (((present * 1) + (late * 0.5) + (absent * 0)) / total * 100).toFixed(1)
+            : '0.0'
+
         return NextResponse.json({ 
             success: true, 
             data: {
                 present: present,
                 late: late,
                 absent: absent,
-                total: total
+                total: total,
+                attendanceRate: parseFloat(attendanceRate)
             }
         })
     } catch (error) {

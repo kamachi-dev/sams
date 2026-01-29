@@ -73,7 +73,7 @@ export default function Teacher() {
     const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("weekly");
     const [totalStudents, setTotalStudents] = useState<number>(0);
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
-    const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0 });
+    const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
     const [attendanceRecords, setAttendanceRecords] = useState<Array<{
         id: string;
         name: string;
@@ -86,6 +86,7 @@ export default function Teacher() {
     const [isLoadingRecords, setIsLoadingRecords] = useState(true);
     const [courses, setCourses] = useState<Array<{ id: string; name: string }>>([]);
     const [selectedCourse, setSelectedCourse] = useState("");
+    const [semesterAttendance, setSemesterAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
 
     // Fetch total students count from database
     useEffect(() => {
@@ -121,6 +122,23 @@ export default function Teacher() {
         };
         
         fetchTodayAttendance();
+    }, []);
+
+    // Fetch semester-wide attendance summary (for average attendance rate)
+    useEffect(() => {
+        const fetchSemesterAttendance = async () => {
+            try {
+                const response = await fetch('/api/teacher/attendance/summary');
+                const result = await response.json();
+                if (result.success) {
+                    setSemesterAttendance(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching semester attendance:', error);
+            }
+        };
+        
+        fetchSemesterAttendance();
     }, []);
 
     // Fetch attendance records
@@ -172,7 +190,6 @@ export default function Teacher() {
 
     // Calculate other totals
     const studentsWithWarnings = 4; // TODO: Calculate from database
-    const classSemesterAttendance = 85; // TODO: Calculate from database
 
 
     const handleExport = () => {
@@ -216,7 +233,7 @@ export default function Teacher() {
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Class Semester Attendance</div>
                             <div className="teacher-panel-value-group">
-                                <div className="teacher-panel-value">{classSemesterAttendance}%</div>
+                                <div className="teacher-panel-value">{semesterAttendance.attendanceRate}%</div>
                             </div>
                         </div>
                     </div>
@@ -254,7 +271,7 @@ export default function Teacher() {
                                     {/* Average Attendance Rate */}
                                     <div className="teacher-stat-card green">
                                         <div className="teacher-stat-label">Avg. Attendance Rate</div>
-                                        <div className="teacher-stat-value">{classSemesterAttendance}%</div>
+                                        <div className="teacher-stat-value">{semesterAttendance.attendanceRate}%</div>
                                         <div className="teacher-stat-sublabel">This semester</div>
                                     </div>
 

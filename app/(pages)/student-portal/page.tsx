@@ -11,7 +11,7 @@ import {
   BellIcon,
   EnvelopeClosedIcon,
 } from "@radix-ui/react-icons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -34,23 +34,9 @@ import {
   weeklyTrend,
   monthlyData,
   quarterlyData,
-  subjectAttendance,
   notifications,
 } from "./constants";
 
-
-const totalDays = 40;
-const presentDays = 37;
-const lateDays = 2;
-const absentDays = 1;
-const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
-const totalSubjects = subjectAttendance.length;
-
-const pieData = [
-  { name: "Present", value: presentDays, color: "var(--present)" },
-  { name: "Late", value: lateDays, color: "var(--late)" },
-  { name: "Absent", value: absentDays, color: "var(--absent)" },
-];
 
 export default function Student() {
   const [selectedView, setSelectedView] = useState<
@@ -63,11 +49,82 @@ export default function Student() {
     "overview" | "analytics" | "subjects"
   >("overview");
 
-    // 👉 notifications specific
-    const [activeSemester, setActiveSemester] = useState<"first" | "second">("first");
+  // 👉 notifications specific
+  const [activeSemester, setActiveSemester] = useState<"first" | "second">("first");
 
-    const [selectedNotification, setSelectedNotification] =
+  const [selectedNotification, setSelectedNotification] =
     useState<(typeof notifications)[number] | null>(null);
+
+  // Real data from database
+  const [studentData, setStudentData] = useState<{
+    username: string;
+    grade_level: string;
+    section: string;
+  } | null>(null);
+  
+  const [attendanceSummary, setAttendanceSummary] = useState({
+    presentDays: 0,
+    lateDays: 0,
+    absentDays: 0,
+    totalDays: 0,
+    attendanceRate: 0,
+    totalSubjects: 0
+  });
+
+  const [subjectAttendance, setSubjectAttendance] = useState<Array<{
+    subject: string;
+    present: number;
+    late: number;
+    absent: number;
+    percentage: number;
+  }>>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch student data
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      try {
+        const [infoRes, summaryRes, subjectsRes] = await Promise.all([
+          fetch('/api/student/info'),
+          fetch('/api/student/attendance/summary'),
+          fetch('/api/student/attendance/subjects')
+        ]);
+
+        const [infoData, summaryData, subjectsData] = await Promise.all([
+          infoRes.json(),
+          summaryRes.json(),
+          subjectsRes.json()
+        ]);
+
+        if (infoData.success) {
+          setStudentData(infoData.data);
+        }
+
+        if (summaryData.success) {
+          setAttendanceSummary(summaryData.data);
+        }
+
+        if (subjectsData.success) {
+          setSubjectAttendance(subjectsData.data);
+        }
+      } catch (error) {
+        console.error('Error fetching student data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStudentData();
+  }, []);
+
+  const { presentDays, lateDays, absentDays, totalDays, attendanceRate, totalSubjects } = attendanceSummary;
+
+  const pieData = [
+    { name: "Present", value: presentDays, color: "var(--present)" },
+    { name: "Late", value: lateDays, color: "var(--late)" },
+    { name: "Absent", value: absentDays, color: "var(--absent)" },
+  ];
 
 
   const handleExport = () => {
@@ -134,7 +191,9 @@ export default function Student() {
                     <div className="student-info-grid">
                       <div>
                         <div className="student-info-field-label">Student Name</div>
-                        <div className="student-info-field-value">{studentInfo.name}</div>
+                        <div className="student-info-field-value">
+                          {isLoading ? "Loading..." : (studentData?.username || studentInfo.name)}
+                        </div>
                       </div>
                       <div>
                         <div className="student-info-field-label">Student ID</div>
@@ -142,11 +201,15 @@ export default function Student() {
                       </div>
                       <div>
                         <div className="student-info-field-label">Grade Level</div>
-                        <div className="student-info-field-value">{studentInfo.grade}</div>
+                        <div className="student-info-field-value">
+                          {isLoading ? "Loading..." : (studentData?.grade_level || studentInfo.grade)}
+                        </div>
                       </div>
                       <div>
                         <div className="student-info-field-label">Section</div>
-                        <div className="student-info-field-value">{studentInfo.section}</div>
+                        <div className="student-info-field-value">
+                          {isLoading ? "Loading..." : (studentData?.section || "N/A")}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -232,11 +295,9 @@ export default function Student() {
                         className="student-select"
                       >
                         <option value="all">All Subjects</option>
-                        <option value="mathematics">Mathematics</option>
-                        <option value="science">Science</option>
-                        <option value="english">English</option>
-                        <option value="filipino">Filipino</option>
-                        <option value="social">Social Studies</option>
+                        {subjectAttendance.map((subject, index) => (
+                          <option key={index} value={subject.subject}>{subject.subject}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -336,39 +397,53 @@ export default function Student() {
                         </tr>
                       </thead>
                       <tbody>
-                        {subjectAttendance.map((subject, index) => (
-                          <tr key={index}>
-                            <td className="subject-name">{subject.subject}</td>
-                            <td className="center">
-                              <span className="student-status-badge present">{subject.present}</span>
-                            </td>
-                            <td className="center">
-                              <span className="student-status-badge late">{subject.late}</span>
-                            </td>
-                            <td className="center">
-                              <span className="student-status-badge absent">{subject.absent}</span>
-                            </td>
-                            <td className="center">
-                              <div className="student-progress-container">
-                                <div className="student-progress-bar">
-                                  <div
-                                    className={`student-progress-fill ${
-                                      subject.percentage >= 95
-                                        ? "good"
-                                        : subject.percentage >= 85
-                                        ? "warning"
-                                        : "danger"
-                                    }`}
-                                    style={{ width: `${subject.percentage}%` }}
-                                  ></div>
-                                </div>
-                                <span className="student-progress-text">
-                                  {subject.percentage}%
-                                </span>
-                              </div>
+                        {isLoading ? (
+                          <tr>
+                            <td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>
+                              Loading subjects...
                             </td>
                           </tr>
-                        ))}
+                        ) : subjectAttendance.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>
+                              No enrolled subjects found
+                            </td>
+                          </tr>
+                        ) : (
+                          subjectAttendance.map((subject, index) => (
+                            <tr key={index}>
+                              <td className="subject-name">{subject.subject}</td>
+                              <td className="center">
+                                <span className="student-status-badge present">{subject.present}</span>
+                              </td>
+                              <td className="center">
+                                <span className="student-status-badge late">{subject.late}</span>
+                              </td>
+                              <td className="center">
+                                <span className="student-status-badge absent">{subject.absent}</span>
+                              </td>
+                              <td className="center">
+                                <div className="student-progress-container">
+                                  <div className="student-progress-bar">
+                                    <div
+                                      className={`student-progress-fill ${
+                                        subject.percentage >= 95
+                                          ? "good"
+                                          : subject.percentage >= 85
+                                          ? "warning"
+                                          : "danger"
+                                      }`}
+                                      style={{ width: `${subject.percentage}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="student-progress-text">
+                                    {subject.percentage}%
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
