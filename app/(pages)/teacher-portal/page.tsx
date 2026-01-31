@@ -77,6 +77,7 @@ export default function Teacher() {
     const [isLoadingRecords, setIsLoadingRecords] = useState(true);
     const [courses, setCourses] = useState<Array<{ id: string; name: string }>>([]);
     const [selectedCourse, setSelectedCourse] = useState("");
+    const [selectedChartCourse, setSelectedChartCourse] = useState("all");
     const [semesterAttendance, setSemesterAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
 
     // Fetch total students count from database
@@ -342,8 +343,8 @@ export default function Teacher() {
                                         </select>
 
                                         <select
-                                            value={selectedCourse}
-                                            onChange={(e) => setSelectedCourse(e.target.value)}
+                                            value={selectedChartCourse}
+                                            onChange={(e) => setSelectedChartCourse(e.target.value)}
                                             className="teacher-select"
                                         >
                                             <option value="all">All Subjects</option>
