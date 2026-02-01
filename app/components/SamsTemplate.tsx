@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Popover, Separator, Tabs, Switch } from "radix-ui";
-import { GearIcon, ExitIcon, Half2Icon } from "@radix-ui/react-icons";
+import { GearIcon, ExitIcon, Half2Icon, HamburgerMenuIcon, Cross2Icon } from "@radix-ui/react-icons";
 import { useAuth, SignOutButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { usePathname } from 'next/navigation';
 import { Error } from "@/app/components/SamsError";
@@ -56,6 +56,8 @@ export default function SamsTemplate({ links }: Props) {
     const pathname = usePathname() ?? '';
     const title = React.useMemo(() => formatPathname(pathname), [pathname]);
     const [user, setUser] = React.useState<Account | null>(null);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -76,10 +78,33 @@ export default function SamsTemplate({ links }: Props) {
         }
     }, [isLoaded, isSignedIn, router]);
 
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const closeMobileMenu = () => {
+        setIsMobileMenuOpen(false);
+    };
+
     return (
-        <Tabs.Root defaultValue={defaultTab} className="sams">
-            <nav className="sams-nav">
+        <Tabs.Root defaultValue={defaultTab} className={`sams ${isMobile ? 'sams-mobile' : ''}`}>
+            <nav className={`sams-nav ${isMobileMenuOpen ? 'sams-nav-mobile-open' : ''}`}>
                 <div className="sams-nav-header">
+                    {isMobile && (
+                        <button
+                            className="sams-mobile-menu-toggle"
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            aria-label="Toggle menu"
+                        >
+                            {isMobileMenuOpen ? <Cross2Icon /> : <HamburgerMenuIcon />}
+                        </button>
+                    )}
                     <div className="sams-nav-header-logo">
                         <Image
                             src="/images/mmcl-logo-extended.png"
@@ -88,7 +113,7 @@ export default function SamsTemplate({ links }: Props) {
                             height={40}
                         />
                     </div>
-                    <h1 className="sams-nav-header-title">{title}</h1>
+                    {!isMobile && <h1 className="sams-nav-header-title">{title}</h1>}
                 </div>
                 <div className="sams-nav-pfp flex items-center justify-center">
                     <SignedIn>
@@ -103,7 +128,12 @@ export default function SamsTemplate({ links }: Props) {
                 <Separator.Root className="sams-separator" decorative style={{ margin: "0 15px" }} />
                 <Tabs.List className="sams-nav-links">
                     {links.map(({ label, Icon }) => (
-                        <Tabs.Trigger key={label} value={label} className="sams-nav-link">
+                        <Tabs.Trigger
+                            key={label}
+                            value={label}
+                            className="sams-nav-link"
+                            onClick={closeMobileMenu}
+                        >
                             <Icon className="sams-nav-icon" />
                             <span>{label}</span>
                         </Tabs.Trigger>
@@ -111,7 +141,7 @@ export default function SamsTemplate({ links }: Props) {
                 </Tabs.List>
                 <Popover.Root>
                     <Popover.Trigger className="sams-nav-settings">
-                        <GearIcon /> Settings
+                        <GearIcon /> {!isMobile && 'Settings'}
                     </Popover.Trigger>
                     <Popover.Portal>
                         <Popover.Content className="sams-nav-settings-content">

@@ -418,3 +418,245 @@ a {
         transform: translateX(calc(100% + var(--viewport-padding)));
     }
 }
+
+/* ==================== MOBILE RESPONSIVE STYLES ==================== */
+
+/* Tablet and smaller (768px and below) */
+@media (max-width: 767px) {
+    .sams {
+        flex-direction: column;
+        width: calc(100dvw - 12.5px);
+        height: calc(100dvh - 12.5px);
+        margin: 6px;
+    }
+
+    .sams-nav {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        padding: 10px;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+        position: relative;
+    }
+
+    .sams-nav-header {
+        display: flex;
+        align-items: center;
+        width: auto;
+        justify-content: flex-start;
+        gap: 10px;
+        flex: 1;
+    }
+
+    .sams-nav-header-logo {
+        width: 100px;
+        height: 35px;
+    }
+
+    .sams-nav-header-title {
+        display: none;
+    }
+
+    .sams-mobile-menu-toggle {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--foreground1);
+        font-size: 1.5rem;
+    }
+
+    .sams-nav-pfp {
+        display: none;
+    }
+
+    .sams-nav-username,
+    .sams-nav-email {
+        display: none;
+    }
+
+    .sams-separator {
+        display: none;
+    }
+
+    .sams-nav-links {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background-color: var(--background1);
+        padding: 10px;
+        gap: 5px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        width: 100%;
+        margin: 0;
+        max-height: calc(100dvh - 70px);
+        overflow-y: auto;
+    }
+
+    .sams-nav-mobile-open .sams-nav-links {
+        display: flex;
+    }
+
+    .sams-nav-link {
+        padding: 12px 15px;
+        justify-content: flex-start;
+        min-width: unset;
+        width: 100%;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+
+    .sams-nav-link span {
+        display: inline;
+    }
+
+    .sams-nav-settings {
+        margin-left: auto;
+        margin-top: 0;
+        padding: 8px;
+        align-self: center;
+    }
+
+    .sams-content {
+        width: 100%;
+        height: calc(100dvh - 70px);
+        overflow-y: auto;
+        flex-direction: column;
+    }
+
+    .sams-content-header {
+        height: auto;
+        padding: 15px;
+        margin-bottom: 0;
+    }
+
+    .sams-content-title {
+        font-size: 1.2rem;
+        margin-left: 0;
+        padding-top: 0;
+        margin-bottom: 10px;
+    }
+
+    .sams-content-subtitle {
+        font-size: 0.85rem;
+        margin-left: 0;
+        margin-bottom: 15px;
+    }
+
+    .sams-content-panels {
+        flex-wrap: wrap;
+        gap: 15px;
+        padding: 0;
+        margin: 0;
+        justify-content: flex-start;
+    }
+
+    .sams-content-panel {
+        flex: 1;
+        min-width: calc(50% - 7.5px);
+        max-width: unset;
+        height: 100px;
+        min-height: 100px;
+        padding: 15px;
+        box-sizing: border-box;
+    }
+
+    .sams-content-body {
+        padding: 15px;
+        overflow-y: auto;
+    }
+
+    .sams-error-toast-viewport {
+        --viewport-padding: 15px;
+        width: calc(100vw - 30px);
+    }
+}
+
+/* Small phones (480px and below) */
+@media (max-width: 480px) {
+    .sams {
+        margin: 4px;
+        width: calc(100dvw - 8px);
+        height: calc(100dvh - 8px);
+    }
+
+    .sams-nav {
+        padding: 8px;
+        height: 60px;
+    }
+
+    .sams-nav-header-logo {
+        width: 80px;
+        height: 28px;
+    }
+
+    .sams-content {
+        height: calc(100dvh - 68px);
+    }
+
+    .sams-content-header {
+        padding: 12px;
+    }
+
+    .sams-content-title {
+        font-size: 1rem;
+    }
+
+    .sams-content-subtitle {
+        font-size: 0.75rem;
+        display: none;
+    }
+
+    .sams-content-panels {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .sams-content-panel {
+        min-width: 100%;
+        height: 90px;
+        min-height: 90px;
+        padding: 12px;
+    }
+
+    .sams-content-body {
+        padding: 12px;
+    }
+
+    .sams-mobile-menu-toggle {
+        padding: 6px;
+    }
+
+    .sams-error-toast {
+        padding: 12px;
+        font-size: 0.9rem;
+    }
+
+    .sams-error-toast-viewport {
+        --viewport-padding: 10px;
+        width: calc(100vw - 20px);
+    }
+}
+
+/* Large screens (1200px and above) - optional tweaks */
+@media (min-width: 1200px) {
+    .sams-nav {
+        width: 20%;
+    }
+
+    .sams-content {
+        width: 80%;
+    }
+
+    .sams-content-panel {
+        max-width: 32%;
+    }
+}
