@@ -23,7 +23,7 @@ export default function Admin() {
         error: unknown | null;
     };
 
-    const groupSize = 6;
+    const groupSize = 4;
 
     const [archive, setArchive] = useState<ArchiveResponse | null>(null);
     const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
@@ -39,6 +39,10 @@ export default function Admin() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
     const [archiveToDelete, setArchiveToDelete] = useState<string | null>(null);
     const [deleteConfirmText, setDeleteConfirmText] = useState<string>('');
+    const [activateDialogOpen, setActivateDialogOpen] = useState<boolean>(false);
+    const [archiveToActivate, setArchiveToActivate] = useState<string | null>(null);
+    const [activateConfirmText, setActivateConfirmText] = useState<string>('');
+    const [activeArchiveId, setActiveArchiveId] = useState<string | null>(null);
 
     const studentFileRef = useRef<HTMLInputElement | null>(null);
     const teacherFileRef = useRef<HTMLInputElement | null>(null);
@@ -126,6 +130,12 @@ export default function Admin() {
         setDeleteDialogOpen(true);
     }
 
+    function openActivateDialog(archiveId: string) {
+        setArchiveToActivate(archiveId);
+        setActivateConfirmText('');
+        setActivateDialogOpen(true);
+    }
+
     function closeDeleteDialog() {
         setDeleteDialogOpen(false);
         setArchiveToDelete(null);
@@ -157,6 +167,7 @@ export default function Admin() {
             setImportStatus('Archive deleted successfully');
             setTimeout(() => setImportStatus(null), 5000);
 
+            if (archiveToDelete === activeArchiveId) setActiveArchiveId(null);
             // Refresh archive list
             const archiveRes: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
             setArchive(archiveRes);
@@ -175,6 +186,49 @@ export default function Admin() {
             closeDeleteDialog();
         }
     }
+
+    async function handleSetActiveArchive() {
+        if (!archiveToActivate || activateConfirmText !== 'activate') {
+            return;
+        }
+
+        try {
+            const form = new FormData();
+            form.append('id', archiveToActivate);
+
+            const res = await fetch('/api/archive/active', {
+                method: 'POST',
+                body: form
+            });
+            const json = await res.json();
+
+            if (!res.ok || json?.success === false) {
+                setImportStatus(`Set active failed: ${json?.error ?? res.statusText}`);
+                setTimeout(() => setImportStatus(null), 5000);
+                setActivateDialogOpen(false);
+                return;
+            }
+
+            setImportStatus('Active archive set successfully');
+            setActiveArchiveId(archiveToActivate);
+            setTimeout(() => setImportStatus(null), 5000);
+
+            // Refresh archive list
+            const archiveRes: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
+            setArchive(archiveRes);
+
+            setActivateDialogOpen(false);
+        } catch (err: unknown) {
+            let message = 'Unknown error';
+            if (err instanceof Error) {
+                const error = err as Error;
+                message = error.message;
+            }
+            setImportStatus(`Set active error: ${message}`);
+            setTimeout(() => setImportStatus(null), 5000);
+            setActivateDialogOpen(false);
+        }
+    }
     useEffect(() => {
         (async () => {
             const res: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
@@ -189,6 +243,14 @@ export default function Admin() {
             if (teacherCountRes?.success) setTeacherCount(Number(teacherCountRes.data.count));
             const classCountRes = await fetch('/api/classes/count').then(res => res.json());
             if (classCountRes?.success) setClassCount(Number(classCountRes.data.count));
+            try {
+                const activeRes = await fetch('/api/archive/active').then(res => res.json());
+                if (activeRes?.success && Array.isArray(activeRes.data) && activeRes.data[0]) {
+                    setActiveArchiveId(String(activeRes.data[0].active_archive));
+                }
+            } catch {
+                // ignore
+            }
         })();
     }, []);
     return (
@@ -333,18 +395,39 @@ export default function Admin() {
                                             const selectedArchives = allArchives.slice(startIdx, endIdx);
 
                                             return selectedArchives.map((selected) => (
-                                                <div key={selected.id} className="archive-item">
+                                                <div
+                                                    key={selected.id}
+                                                    className="archive-item"
+                                                    style={{
+                                                        border: selected.id === activeArchiveId ? '2px solid #059669' : undefined,
+                                                        backgroundColor: selected.id === activeArchiveId ? '#ecfdf5' : undefined
+                                                    }}
+                                                >
                                                     <div className="archive-item-header">
                                                         <div className="archive-metadata">
                                                             <span className="archive-year-info">School Year: {selected.school_year} - {parseInt(selected.school_year) + 1}</span>
                                                             <span className="archive-created-info">Created: {new Date(selected.created_at).toLocaleString()}</span>
                                                         </div>
-                                                        <button
-                                                            onClick={() => openDeleteDialog(selected.id)}
-                                                            className="archive-delete-button"
-                                                        >
-                                                            <TrashIcon />
-                                                        </button>
+                                                        <div className="archive-item-actions">
+                                                            {selected.id === activeArchiveId ? (
+                                                                <button className="archive-active-indicator import-button" disabled style={{ backgroundColor: '#059669' }}>
+                                                                    <Label.Root>Active</Label.Root>
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => openActivateDialog(selected.id)}
+                                                                    className="archive-activate-button"
+                                                                >
+                                                                    <Label.Root>Inactive</Label.Root>
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => openDeleteDialog(selected.id)}
+                                                                className="archive-delete-button"
+                                                            >
+                                                                <TrashIcon />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                     <div className="archive-item-content">
                                                         {selected.notes}
@@ -396,6 +479,53 @@ export default function Admin() {
                                 }}
                             >
                                 <Label.Root>Delete Archive</Label.Root>
+                            </button>
+                        </div>
+                        <Dialog.Close asChild>
+                            <button className="dialog-close" aria-label="Close">
+                                ×
+                            </button>
+                        </Dialog.Close>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+            <Dialog.Root open={activateDialogOpen} onOpenChange={setActivateDialogOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="dialog-overlay" />
+                    <Dialog.Content className="dialog-content">
+                        <Dialog.Title className="dialog-title">Confirm Set Active Archive</Dialog.Title>
+                        <Dialog.Description className="dialog-description">
+                            This will mark the selected archive as the active archive. Type <strong>activate</strong> to confirm.
+                        </Dialog.Description>
+                        <div className="form-field-group" style={{ marginTop: '1rem' }}>
+                            <Label.Root className="form-field-label">Type &apos;activate&apos; to confirm</Label.Root>
+                            <input
+                                type="text"
+                                value={activateConfirmText}
+                                onChange={(e) => setActivateConfirmText(e.target.value)}
+                                className="school-year-input"
+                                placeholder="activate"
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => setActivateDialogOpen(false)}
+                                className="import-button"
+                                style={{ backgroundColor: '#6b7280' }}
+                            >
+                                <Label.Root>Cancel</Label.Root>
+                            </button>
+                            <button
+                                onClick={handleSetActiveArchive}
+                                disabled={activateConfirmText !== 'activate'}
+                                className="import-button"
+                                style={{
+                                    backgroundColor: activateConfirmText === 'activate' ? '#059669' : '#9ca3af',
+                                    opacity: activateConfirmText === 'activate' ? 1 : 0.5,
+                                    cursor: activateConfirmText === 'activate' ? 'pointer' : 'not-allowed'
+                                }}
+                            >
+                                <Label.Root>Set Active</Label.Root>
                             </button>
                         </div>
                         <Dialog.Close asChild>

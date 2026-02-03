@@ -44,7 +44,7 @@
 
 .archive-item {
     background-color: var(--background1);
-    width: 15dvw;
+    width: 23dvw;
     height: 10dvw;
     font-size: 0.6rem;
 }
@@ -318,4 +318,44 @@
 .dialog-close:focus {
     outline: none;
     box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.archive-item-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.archive-activate-button {
+    height: 1.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    background-color: #ef4444;
+    color: var(--background1);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.archive-activate-button:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.archive-active-indicator {
+    height: 1.5rem;
+    padding: 0 0.5rem;
+    background-color: #059669;
+    color: white;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+}
+
+.archive-item {
+    transition: border-color 150ms, background-color 150ms;
+    border-radius: 0.375rem;
+    padding: 0.25rem;
 }
