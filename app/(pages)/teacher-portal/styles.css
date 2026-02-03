@@ -448,3 +448,491 @@
 .teacher-section-text {
     color: #4F4F4F;
 }
+
+/* ============================================
+   LOW ATTENDANCE SECTION STYLES
+   ============================================ */
+
+.teacher-panel-card.low-attendance-alert {
+    background: linear-gradient(135deg, #DB4437 0%, #C53929 100%);
+}
+
+.low-attendance-section {
+    padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.low-attendance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.low-attendance-title {
+    color: #1F2F57;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.low-attendance-title-icon {
+    width: 22px;
+    height: 22px;
+    color: #DB4437;
+}
+
+.low-attendance-controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.threshold-control,
+.course-filter-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.threshold-control label,
+.course-filter-control label {
+    font-size: 13px;
+    color: #4F4F4F;
+    font-weight: 500;
+}
+
+.low-attendance-table-container {
+    background: var(--background1);
+    border-radius: 8px;
+    border: 1px solid #F2F2F2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    overflow: auto;
+    flex: 1;
+}
+
+.low-attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.low-attendance-table thead tr {
+    background: #F8F9FA;
+    border-bottom: 2px solid #E0E0E0;
+}
+
+.low-attendance-table th {
+    text-align: left;
+    padding: 14px 12px;
+    color: #1F2F57;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.low-attendance-table th.center {
+    text-align: center;
+}
+
+.low-attendance-table tbody tr {
+    border-bottom: 1px solid #F2F2F2;
+    transition: background 0.2s ease;
+}
+
+.low-attendance-table tbody tr:hover {
+    background: #FFF5F5;
+}
+
+.low-attendance-row td {
+    padding: 14px 12px;
+    font-size: 13px;
+    color: #4F4F4F;
+}
+
+.low-attendance-row .student-name {
+    font-weight: 600;
+    color: #1F2F57;
+}
+
+.low-attendance-row .student-email {
+    color: #828282;
+    font-size: 12px;
+}
+
+.low-attendance-row .course-name {
+    font-weight: 500;
+}
+
+.low-attendance-row .present-cell {
+    color: #0F9D58;
+    font-weight: 600;
+}
+
+.low-attendance-row .late-cell {
+    color: #F4B400;
+    font-weight: 600;
+}
+
+.low-attendance-row .absent-cell {
+    color: #DB4437;
+    font-weight: 600;
+}
+
+.attendance-rate-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.attendance-rate-badge.critical {
+    background: rgba(219, 68, 55, 0.15);
+    color: #DB4437;
+}
+
+.attendance-rate-badge.warning {
+    background: rgba(244, 180, 0, 0.15);
+    color: #B8860B;
+}
+
+.no-low-attendance {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #0F9D58;
+}
+
+.no-low-attendance .success-icon {
+    font-size: 36px;
+    color: #0F9D58;
+}
+
+.no-low-attendance p {
+    font-size: 14px;
+    color: #4F4F4F;
+    margin: 0;
+}
+
+/* ============================================
+   COMPARATIVE ANALYTICS SECTION STYLES
+   ============================================ */
+
+.comparative-analytics-section {
+    padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.comparative-header {
+    margin-bottom: 20px;
+}
+
+.comparative-title {
+    color: #1F2F57;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.comparative-title-icon {
+    width: 22px;
+    height: 22px;
+    color: #1DA1F2;
+}
+
+.comparative-subtitle {
+    color: #828282;
+    font-size: 13px;
+    margin: 0;
+}
+
+.comparative-controls {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 200px;
+}
+
+.control-group label {
+    font-size: 12px;
+    color: #4F4F4F;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.control-group select {
+    min-width: 220px;
+}
+
+.comparison-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px;
+    color: #828282;
+    font-size: 14px;
+}
+
+.comparison-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    background: #F8F9FA;
+    border-radius: 12px;
+    border: 2px dashed #E0E0E0;
+}
+
+.comparison-placeholder .placeholder-icon {
+    width: 48px;
+    height: 48px;
+    color: #BDBDBD;
+    margin-bottom: 16px;
+}
+
+.comparison-placeholder p {
+    color: #828282;
+    font-size: 14px;
+    margin: 0;
+}
+
+.comparison-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.comparison-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 1024px) {
+    .comparison-summary-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.comparison-card {
+    background: var(--background1);
+    border-radius: 12px;
+    border: 1px solid #E0E0E0;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.comparison-card-header {
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #F2F2F2;
+}
+
+.comparison-card.student-card .comparison-card-header {
+    background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+}
+
+.comparison-card.class-card .comparison-card-header {
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+}
+
+.comparison-card.difference-card .comparison-card-header {
+    background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+}
+
+.comparison-card.difference-card.above .comparison-card-header {
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+}
+
+.comparison-card.difference-card.below .comparison-card-header {
+    background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+}
+
+.comparison-card-icon {
+    width: 16px;
+    height: 16px;
+    color: #1F2F57;
+}
+
+.comparison-card-header h4 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1F2F57;
+}
+
+.comparison-card-body {
+    padding: 10px;
+}
+
+.comparison-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1F2F57;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.comparison-rate {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px;
+}
+
+.comparison-rate .rate-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1F2F57;
+}
+
+.comparison-rate .rate-label {
+    font-size: 11px;
+    color: #828282;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.comparison-breakdown {
+    display: flex;
+    gap: 12px;
+}
+
+.breakdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    padding: 5px;
+    border-radius: 6px;
+}
+
+.breakdown-item.present {
+    background: rgba(15, 157, 88, 0.1);
+}
+
+.breakdown-item.late {
+    background: rgba(244, 180, 0, 0.1);
+}
+
+.breakdown-item.absent {
+    background: rgba(219, 68, 55, 0.1);
+}
+
+.breakdown-item .breakdown-value {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.breakdown-item.present .breakdown-value {
+    color: #0F9D58;
+}
+
+.breakdown-item.late .breakdown-value {
+    color: #F4B400;
+}
+
+.breakdown-item.absent .breakdown-value {
+    color: #DB4437;
+}
+
+.breakdown-item .breakdown-label {
+    font-size: 10px;
+    color: #828282;
+    text-transform: uppercase;
+}
+
+.difference-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.difference-value {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.difference-value.above {
+    color: #0F9D58;
+}
+
+.difference-value.below {
+    color: #DB4437;
+}
+
+.difference-label {
+    font-size: 12px;
+    color: #4F4F4F;
+    font-weight: 500;
+}
+
+.total-students-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    background: #F8F9FA;
+    border-radius: 6px;
+}
+
+.total-students-info .info-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1F2F57;
+}
+
+.total-students-info .info-label {
+    font-size: 11px;
+    color: #828282;
+}
+
+.comparison-chart-section {
+    background: var(--background1);
+    border-radius: 12px;
+    border: 1px solid #E0E0E0;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.chart-section-title {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1F2F57;
+}
+
+.comparison-chart-container {
+    width: 100%;
+    height: 220px;
+}
