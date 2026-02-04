@@ -85,41 +85,10 @@ interface ComparisonData {
     };
 }
 
-// Mock chart data
-const weeklyTrend = [
-    { week: "Week 1", present: 85, late: 10, absent: 5 },
-    { week: "Week 2", present: 88, late: 8, absent: 4 },
-    { week: "Week 3", present: 82, late: 12, absent: 6 },
-    { week: "Week 4", present: 90, late: 7, absent: 3 }
-];
-
-const monthlyData = [
-    { month: "Aug", percentage: 87 },
-    { month: "Sep", percentage: 90 },
-    { month: "Oct", percentage: 85 },
-    { month: "Nov", percentage: 92 },
-    { month: "Dec", percentage: 88 }
-];
-
-const quarterlyData = [
-    { name: "Q1", present: 88, late: 8, absent: 4 },
-    { name: "Q2", present: 85, late: 10, absent: 5 },
-    { name: "Q3", present: 90, late: 7, absent: 3 },
-    { name: "Q4", present: 87, late: 9, absent: 4 }
-];
-
-const dailyAttendance = [
-    { date: "Mon", status: "Present" },
-    { date: "Tue", status: "Present" },
-    { date: "Wed", status: "Late" },
-    { date: "Thu", status: "Present" },
-    { date: "Fri", status: "Present" }
-];
-
 export default function Teacher() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isExporting, setIsExporting] = useState(false);
-    const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("weekly");
+    const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("daily");
     const [totalStudents, setTotalStudents] = useState<number>(0);
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
     const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
@@ -174,7 +143,8 @@ export default function Teacher() {
     useEffect(() => {
         const fetchTodayAttendance = async () => {
             try {
-                const response = await fetch('/api/teacher/attendance/today');
+                const courseParam = selectedChartCourse !== "all" ? `?course=${selectedChartCourse}` : '';
+                const response = await fetch(`/api/teacher/attendance/today${courseParam}`);
                 const result = await response.json();
                 if (result.success) {
                     setTodayAttendance(result.data);
@@ -185,13 +155,14 @@ export default function Teacher() {
         };
         
         fetchTodayAttendance();
-    }, []);
+    }, [selectedChartCourse]);
 
     // Fetch semester-wide attendance summary (for average attendance rate)
     useEffect(() => {
         const fetchSemesterAttendance = async () => {
             try {
-                const response = await fetch('/api/teacher/attendance/summary');
+                const courseParam = selectedChartCourse !== "all" ? `?course=${selectedChartCourse}` : '';
+                const response = await fetch(`/api/teacher/attendance/summary${courseParam}`);
                 const result = await response.json();
                 if (result.success) {
                     setSemesterAttendance(result.data);
@@ -202,7 +173,7 @@ export default function Teacher() {
         };
         
         fetchSemesterAttendance();
-    }, []);
+    }, [selectedChartCourse]);
 
     // Fetch attendance records
     useEffect(() => {
@@ -511,36 +482,28 @@ export default function Teacher() {
                                 <div className="teacher-chart-container">
                                     <div className="teacher-chart-card">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            {selectedView === "weekly" && (
-                                                <BarChart data={weeklyTrend}>
+                                            {selectedView === "daily" && (
+                                                <BarChart data={[
+                                                    { category: "Present", count: todayAttendance.present },
+                                                    { category: "Late", count: todayAttendance.late },
+                                                    { category: "Absent", count: todayAttendance.absent }
+                                                ]}>
                                                     <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis dataKey="week" />
+                                                    <XAxis dataKey="category" />
                                                     <YAxis />
                                                     <Tooltip />
-                                                    <Legend />
-                                                    <Bar dataKey="present" fill="var(--present)" />
-                                                    <Bar dataKey="late" fill="var(--late)" />
-                                                    <Bar dataKey="absent" fill="var(--absent)" />
+                                                    <Bar dataKey="count">
+                                                        <Cell fill="var(--present)" />
+                                                        <Cell fill="var(--late)" />
+                                                        <Cell fill="var(--absent)" />
+                                                    </Bar>
                                                 </BarChart>
                                             )}
 
-                                            {selectedView === "monthly" && (
-                                                <LineChart data={monthlyData}>
-                                                    <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis dataKey="month" />
-                                                    <YAxis domain={[80, 100]} />
-                                                    <Tooltip />
-                                                    <Line
-                                                        type="monotone"
-                                                        dataKey="percentage"
-                                                        stroke="var(--present)"
-                                                        strokeWidth={3}
-                                                    />
-                                                </LineChart>
-                                            )}
-
-                                            {selectedView === "quarterly" && (
-                                                <BarChart data={quarterlyData}>
+                                            {selectedView === "weekly" && (
+                                                <BarChart data={[
+                                                    { name: "This Week", present: Math.floor(semesterAttendance.present / 4), late: Math.floor(semesterAttendance.late / 4), absent: Math.floor(semesterAttendance.absent / 4) }
+                                                ]}>
                                                     <CartesianGrid strokeDasharray="3 3" />
                                                     <XAxis dataKey="name" />
                                                     <YAxis />
@@ -552,26 +515,35 @@ export default function Teacher() {
                                                 </BarChart>
                                             )}
 
-                                            {selectedView === "daily" && (
-                                                <BarChart data={dailyAttendance}>
+                                            {selectedView === "monthly" && (
+                                                <LineChart data={[
+                                                    { month: "Semester", percentage: semesterAttendance.attendanceRate }
+                                                ]}>
                                                     <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis dataKey="date" />
+                                                    <XAxis dataKey="month" />
+                                                    <YAxis domain={[0, 100]} />
+                                                    <Tooltip />
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="percentage"
+                                                        stroke="var(--present)"
+                                                        strokeWidth={3}
+                                                    />
+                                                </LineChart>
+                                            )}
+
+                                            {selectedView === "quarterly" && (
+                                                <BarChart data={[
+                                                    { name: "Semester Total", present: semesterAttendance.present, late: semesterAttendance.late, absent: semesterAttendance.absent }
+                                                ]}>
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis dataKey="name" />
                                                     <YAxis />
                                                     <Tooltip />
-                                                    <Bar dataKey={() => 1}>
-                                                        {dailyAttendance.map((entry, i) => (
-                                                            <Cell
-                                                                key={i}
-                                                                fill={
-                                                                    entry.status === "Present"
-                                                                        ? "var(--present)"
-                                                                        : entry.status === "Late"
-                                                                        ? "var(--late)"
-                                                                        : "var(--absent)"
-                                                                }
-                                                            />
-                                                        ))}
-                                                    </Bar>
+                                                    <Legend />
+                                                    <Bar dataKey="present" fill="var(--present)" />
+                                                    <Bar dataKey="late" fill="var(--late)" />
+                                                    <Bar dataKey="absent" fill="var(--absent)" />
                                                 </BarChart>
                                             )}
                                         </ResponsiveContainer>

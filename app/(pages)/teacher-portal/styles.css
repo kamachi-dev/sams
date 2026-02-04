@@ -540,6 +540,38 @@
     letter-spacing: 0.5px;
 }
 
+.low-attendance-table th:nth-child(1) { /* Student Name */
+    width: 18%;
+    min-width: 150px;
+}
+
+.low-attendance-table th:nth-child(2) { /* Email */
+    width: 22%;
+    min-width: 180px;
+}
+
+.low-attendance-table th:nth-child(3) { /* Course */
+    width: 20%;
+    min-width: 150px;
+}
+
+.low-attendance-table th:nth-child(4),
+.low-attendance-table th:nth-child(5),
+.low-attendance-table th:nth-child(6) { /* Present, Late, Absent */
+    width: 8%;
+    min-width: 80px;
+}
+
+.low-attendance-table th:nth-child(7) { /* Total Records */
+    width: 12%;
+    min-width: 100px;
+}
+
+.low-attendance-table th:nth-child(8) { /* Attendance Rate */
+    width: 12%;
+    min-width: 120px;
+}
+
 .low-attendance-table th.center {
     text-align: center;
 }
@@ -557,6 +589,38 @@
     padding: 14px 12px;
     font-size: 13px;
     color: #4F4F4F;
+}
+
+.low-attendance-row td:nth-child(1) { /* Student Name */
+    width: 18%;
+    min-width: 150px;
+}
+
+.low-attendance-row td:nth-child(2) { /* Email */
+    width: 22%;
+    min-width: 180px;
+}
+
+.low-attendance-row td:nth-child(3) { /* Course */
+    width: 20%;
+    min-width: 150px;
+}
+
+.low-attendance-row td:nth-child(4),
+.low-attendance-row td:nth-child(5),
+.low-attendance-row td:nth-child(6) { /* Present, Late, Absent */
+    width: 8%;
+    min-width: 80px;
+}
+
+.low-attendance-row td:nth-child(7) { /* Total Records */
+    width: 12%;
+    min-width: 100px;
+}
+
+.low-attendance-row td:nth-child(8) { /* Attendance Rate */
+    width: 12%;
+    min-width: 120px;
 }
 
 .low-attendance-row .student-name {
