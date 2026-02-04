@@ -267,23 +267,50 @@
 
 /* Chart Container */
 .teacher-chart-container {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
     flex: 1;
     min-height: 0;
 }
 
+.teacher-chart-header {
+    background: var(--background1);
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid #F2F2F2;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.teacher-chart-date-display {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chart-date-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.chart-date-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1F2F57;
+}
+
 .teacher-chart-card {
     background: var(--background1);
     padding: 8px;
-    height: 100%;
+    flex: 1;
     display: flex;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     min-width: 0;
     max-width: 100%;
+    min-height: 200px;
 }
 
 /* Records Section */
@@ -573,6 +600,10 @@
 }
 
 .low-attendance-table th.center {
+    text-align: center;
+}
+
+.low-attendance-table td.center {
     text-align: center;
 }
 
