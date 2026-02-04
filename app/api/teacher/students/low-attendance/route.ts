@@ -7,7 +7,10 @@ export async function GET(req: Request) {
     try {
         const user = await currentUser()
         
+        console.log('Low Attendance API - User:', user ? { id: user.id, email: user.emailAddresses?.[0]?.emailAddress } : 'NULL')
+        
         if (!user) {
+            console.error('Low Attendance API - Authentication failed: No user found')
             return NextResponse.json({ 
                 success: false, 
                 error: 'Not authenticated' 
@@ -58,8 +61,7 @@ export async function GET(req: Request) {
                     ELSE 0
                 END as attendance_rate
             FROM student_attendance
-            WHERE total_records > 0
-            HAVING CASE 
+            WHERE CASE 
                 WHEN total_records > 0 THEN 
                     ((present_count * 1.0 + late_count * 0.5) / total_records * 100)
                 ELSE 0
@@ -71,7 +73,13 @@ export async function GET(req: Request) {
             ? [user.id, courseFilter, threshold]
             : [user.id, threshold]
 
+        console.log('Low Attendance Query Params:', { userId: user.id, courseFilter, threshold, params })
+        console.log('SQL Query:', query)
+        
         const result = await db.query(query, params)
+        
+        console.log('Query Results:', result.rows.length, 'students found')
+        console.log('Raw data:', result.rows)
 
         const students = result.rows.map(row => ({
             id: row.student_id,
