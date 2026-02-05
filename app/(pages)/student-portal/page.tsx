@@ -10,6 +10,7 @@ import {
   DashboardIcon,
   BellIcon,
   EnvelopeClosedIcon,
+  ExclamationTriangleIcon
 } from "@radix-ui/react-icons";
 import { useState, useEffect } from "react";
 import {
@@ -35,8 +36,18 @@ import {
   monthlyData,
   quarterlyData,
   notifications,
+  subjectAttendance,
+  chartColors,
 } from "./constants";
 
+const totalDays = 40;
+const presentDays = 37;
+const lateDays = 2;
+const absentDays = 1;
+const warnings = 4;
+const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
+const attendanceAlerts = (presentDays + lateDays);
+const totalSubjects = subjectAttendance.length;
 
 export default function Student() {
   const [selectedView, setSelectedView] = useState<
@@ -126,6 +137,15 @@ export default function Student() {
     { name: "Absent", value: absentDays, color: "var(--absent)" },
   ];
 
+    // ==========================
+    // COLOR LOGIC
+    // ==========================
+    const getAttendanceStatus = (rate: number) => {
+      if (rate >= 80) return "present";
+      if (rate >= 50) return "late";
+      return "absent";
+    };
+    const overallStatus = getAttendanceStatus(Number(attendanceRate));
 
   const handleExport = () => {
     setIsExporting(true);
@@ -152,7 +172,13 @@ export default function Student() {
               </div>
             </div>,
 
-            <div key="attendance-rate" className="student-panel-card attendance">
+            <div
+              key="attendance-rate"
+              className="student-panel-card attendance"
+              style={{ background: chartColors[overallStatus],
+                ...(attendanceRate < 50 && { color: "black" })
+               }}
+            >
               <CalendarIcon className="student-panel-icon" />
               <div className="student-panel-content">
                 <div className="student-panel-label">Overall Attendance Rate</div>
@@ -163,7 +189,13 @@ export default function Student() {
               </div>
             </div>,
 
-            <div key="present-days" className="student-panel-card present">
+            <div
+              key="present-days"
+              className="student-panel-card present"
+              style={{ background: chartColors[overallStatus],
+                ...(attendanceRate < 50 && { color: "black" })
+               }}
+            >
               <PersonIcon className="student-panel-icon" />
               <div className="student-panel-content">
                 <div className="student-panel-label">Total Number of Days Being Present</div>
@@ -467,22 +499,20 @@ export default function Student() {
                 </div>,
 
                 <div key="attendance-rate" className="student-panel-card alerts">
-                <CalendarIcon className="student-panel-icon" />
+                <ExclamationTriangleIcon className="student-panel-icon" />
                 <div className="student-panel-content">
                     <div className="student-panel-label">Attendance Alerts</div>
-                    <div className="student-panel-value">{attendanceRate}</div>
+                    <div className="student-panel-value">{attendanceAlerts}</div>
                     <div className="student-panel-sub">Recorded late and absence incidents</div>
                 </div>
                 </div>,
 
                 <div key="present-days" className="student-panel-card warnings">
-                <PersonIcon className="student-panel-icon" />
+                <ExclamationTriangleIcon className="student-panel-icon" />
                 <div className="student-panel-content">
-                    <div className="student-panel-label">Total Number of Days Being Present</div>
-                    <div className="student-panel-value">{presentDays}</div>
-                    <div className="student-panel-sub">
-                    {((presentDays / totalDays) * 100).toFixed(1)}% absent in {totalDays} days
-                    </div>
+                    <div className="student-panel-label">Warnings Messages Recieved</div>
+                    <div className="student-panel-value">{warnings}</div>
+                    <div className="student-panel-sub">Messages regarding attendance issues</div>
                 </div>
                 </div>,
             ],
