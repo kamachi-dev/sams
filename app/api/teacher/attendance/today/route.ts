@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         const user = await currentUser()
         
@@ -14,23 +14,49 @@ export async function GET() {
             }, { status: 401 })
         }
 
+        const { searchParams } = new URL(req.url)
+        const courseFilter = searchParams.get('course')
+
         // Get today's date in YYYY-MM-DD format
         const today = new Date().toISOString().split('T')[0]
 
         // Get total enrolled students
-        const totalResult = await db.query(`
-            SELECT COUNT(DISTINCT e.student) as total_students
-            FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
-            WHERE c.teacher = $1
-        `, [user.id])
+        const totalQuery = courseFilter
+            ? `SELECT COUNT(DISTINCT e.student) as total_students
+               FROM enrollment_data e
+               INNER JOIN course c ON e.course = c.id
+               WHERE c.teacher = $1 AND c.id = $2`
+            : `SELECT COUNT(DISTINCT e.student) as total_students
+               FROM enrollment_data e
+               INNER JOIN course c ON e.course = c.id
+               WHERE c.teacher = $1`
+        
+        const totalParams = courseFilter ? [user.id, courseFilter] : [user.id]
+        const totalResult = await db.query(totalQuery, totalParams)
 
         // Get today's attendance for students in this teacher's courses
         // For students enrolled in multiple courses, pick their BEST attendance status:
         // present (1) > late (2) > absent (0)
         // Note: attendance column is smallint (1=present, 2=late, 0/NULL=absent)
-        const result = await db.query(`
-            WITH student_best_attendance AS (
+        const attendanceQuery = courseFilter
+            ? `WITH student_best_attendance AS (
+                SELECT 
+                    e.student,
+                    MIN(COALESCE(r.attendance, 0)) as best_attendance
+                FROM enrollment_data e
+                INNER JOIN course c ON e.course = c.id
+                LEFT JOIN record r ON r.student = e.student 
+                    AND DATE(r.time) = $1
+                    AND r.course = c.id
+                WHERE c.teacher = $2 AND c.id = $3
+                GROUP BY e.student
+            )
+            SELECT 
+                COUNT(CASE WHEN best_attendance = 1 THEN 1 END) as present_count,
+                COUNT(CASE WHEN best_attendance = 2 THEN 1 END) as late_count,
+                COUNT(CASE WHEN best_attendance = 0 THEN 1 END) as absent_count
+            FROM student_best_attendance`
+            : `WITH student_best_attendance AS (
                 SELECT 
                     e.student,
                     MIN(COALESCE(r.attendance, 0)) as best_attendance
@@ -46,8 +72,10 @@ export async function GET() {
                 COUNT(CASE WHEN best_attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN best_attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN best_attendance = 0 THEN 1 END) as absent_count
-            FROM student_best_attendance
-        `, [today, user.id])
+            FROM student_best_attendance`
+        
+        const attendanceParams = courseFilter ? [today, user.id, courseFilter] : [today, user.id]
+        const result = await db.query(attendanceQuery, attendanceParams)
 
         const data = result.rows[0]
         const total = parseInt(totalResult.rows[0]?.total_students || '0')

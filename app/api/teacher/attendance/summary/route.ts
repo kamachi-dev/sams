@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         const user = await currentUser()
         
@@ -14,19 +14,32 @@ export async function GET() {
             }, { status: 401 })
         }
 
-        // Get overall attendance summary for ALL students in this teacher's courses
+        const { searchParams } = new URL(req.url)
+        const courseFilter = searchParams.get('course')
+
+        // Get overall attendance summary for students in this teacher's courses
         // This is for the semester-wide "Average Attendance Rate"
         // attendance: 1=present, 2=late, 0=absent
-        const result = await db.query(`
-            SELECT 
+        const query = courseFilter
+            ? `SELECT 
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count,
                 COUNT(*) as total_records
             FROM record r
             INNER JOIN course c ON r.course = c.id
-            WHERE c.teacher = $1
-        `, [user.id])
+            WHERE c.teacher = $1 AND c.id = $2`
+            : `SELECT 
+                COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
+                COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
+                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count,
+                COUNT(*) as total_records
+            FROM record r
+            INNER JOIN course c ON r.course = c.id
+            WHERE c.teacher = $1`
+        
+        const params = courseFilter ? [user.id, courseFilter] : [user.id]
+        const result = await db.query(query, params)
 
         const data = result.rows[0]
         const present = parseInt(data.present_count || '0')
