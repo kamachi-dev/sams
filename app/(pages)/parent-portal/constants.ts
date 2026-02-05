@@ -8,6 +8,8 @@ export const studentInfo = {
   section: "STEM-A",
 };
 
+
+
 // ==========================
 // ATTENDANCE DATA
 // ==========================
@@ -272,6 +274,146 @@ export const notifications = [
     message:
       "You have been recorded as late for your Social Sciences class. Continued tardiness may result in penalties or affect your overall attendance record."
   }
+];
+
+
+export const children = [
+  {
+    id: 1,
+    name: "Arvin Miguel B. Antonio",
+    status: "present",
+    present: 10,
+    late: 0,
+    absent: 0,
+    percentage: 100,
+
+    today: {
+      statusLabel: "PRESENT",
+      classTime: "10:15 AM",
+      teacher: "Ms. Mornika",
+      subject: "Computer Science",
+      lastChecked: "10:35 AM",
+    },
+  },
+  {
+    id: 2,
+    name: "Ryan Gosling B. Antonio",
+    status: "late",
+    present: 8,
+    late: 1,
+    absent: 1,
+    percentage: 85,
+
+    today: {
+      statusLabel: "LATE",
+      classTime: "10:15 AM",
+      teacher: "Mr. Rizal",
+      subject: "Philippine History",
+      lastChecked: "10:35 AM",
+    },
+  },
+  {
+    id: 3,
+    name: "Michael Reeves B. Antonio",
+    status: "absent",
+    present: 7,
+    late: 0,
+    absent: 3,
+    percentage: 70,
+
+    today: {
+      statusLabel: "ABSENT",
+      classTime: "10:15 AM",
+      teacher: "Ms. Mornika",
+      subject: "Computer Science",
+      lastChecked: "10:35 AM",
+    },
+  },
+  {
+    id: 4,
+    name: "Sofia Marie B. Antonio",
+    status: "checking",
+    present: 9,
+    late: 0,
+    absent: 1,
+    percentage: 90,
+
+    today: {
+      statusLabel: "⚠",
+      classTime: "9:00 AM",
+      teacher: "Ms. Dela Cruz",
+      subject: "Mathematics",
+      lastChecked: "9:20 AM",
+    },
+  },
+  {
+    id: 5,
+    name: "Lucas John B. Antonio",
+    status: "late",
+    present: 7,
+    late: 2,
+    absent: 1,
+    percentage: 80,
+
+    today: {
+      statusLabel: "LATE",
+      classTime: "1:30 PM",
+      teacher: "Mr. Santos",
+      subject: "English",
+      lastChecked: "1:50 PM",
+    },
+  },
+  {
+    id: 6,
+    name: "Ella Rose B. Antonio",
+    status: "present",
+    present: 8,
+    late: 0,
+    absent: 2,
+    percentage: 85,
+
+    today: {
+      statusLabel: "PRESENT",
+      classTime: "3:00 PM",
+      teacher: "Ms. Navarro",
+      subject: "Science",
+      lastChecked: "3:15 PM",
+    },
+  },
+  {
+  id: 7,
+  name: "Daniel James B. Antonio",
+  status: "present",
+  present: 9,
+  late: 1,
+  absent: 0,
+  percentage: 95,
+
+  today: {
+    statusLabel: "PRESENT",
+    classTime: "8:00 AM",
+    teacher: "Mr. Villanueva",
+    subject: "Physics",
+    lastChecked: "8:20 AM",
+  },
+  },
+  {
+    id: 8,
+    name: "Ava Nicole B. Antonio",
+    status: "checking",
+    present: 6,
+    late: 1,
+    absent: 3,
+    percentage: 75,
+
+    today: {
+      statusLabel: "⚠",
+      classTime: "11:45 AM",
+      teacher: "Ms. Ramirez",
+      subject: "Arts",
+      lastChecked: "12:05 PM",
+    },
+  },
 ];
 
 export const chartColors = {
