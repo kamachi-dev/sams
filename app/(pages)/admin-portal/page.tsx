@@ -5,7 +5,6 @@ import Image from "next/image";
 import { Label, Separator, ToggleGroup, Dialog, Tabs } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import './styles.css';
-import { Error } from "@/app/components/SamsError";
 import { PersonIcon, TrashIcon } from "@radix-ui/react-icons";
 
 export default function Admin() {
@@ -49,6 +48,10 @@ export default function Admin() {
     const [students, setStudents] = useState<{ id: string; username?: string; email?: string; pfp?: string }[]>([]);
     const [teachers, setTeachers] = useState<{ id: string; username?: string; email?: string; pfp?: string }[]>([]);
     const [usersLoading, setUsersLoading] = useState<boolean>(false);
+    const [userDeleteDialogOpen, setUserDeleteDialogOpen] = useState<boolean>(false);
+    const [userToDeleteId, setUserToDeleteId] = useState<string | null>(null);
+    const [userToDeleteType, setUserToDeleteType] = useState<'student' | 'teacher' | null>(null);
+    const [userDeleteConfirmText, setUserDeleteConfirmText] = useState<string>('');
 
     async function handleCsvUpload(file: File, endpoint: string) {
         try {
@@ -143,6 +146,54 @@ export default function Admin() {
         setDeleteDialogOpen(false);
         setArchiveToDelete(null);
         setDeleteConfirmText('');
+    }
+
+    function closeUserDeleteDialog() {
+        setUserDeleteDialogOpen(false);
+        setUserToDeleteId(null);
+        setUserToDeleteType(null);
+        setUserDeleteConfirmText('');
+    }
+
+    async function handleDeleteUser() {
+        if (!userToDeleteId || userDeleteConfirmText !== 'delete' || !userToDeleteType) {
+            return;
+        }
+
+        try {
+            const form = new FormData();
+            form.append('id', userToDeleteId);
+
+            const endpoint = userToDeleteType === 'student' ? '/api/students' : '/api/teachers';
+            const res = await fetch(endpoint, { method: 'DELETE', body: form });
+            const json = await res.json();
+
+            if (!res.ok || json?.success === false) {
+                setImportStatus(`Delete failed: ${json?.error ?? res.statusText}`);
+                setTimeout(() => setImportStatus(null), 4000);
+                closeUserDeleteDialog();
+                return;
+            }
+
+            if (userToDeleteType === 'student') {
+                setStudents(prev => prev.filter(p => p.id !== userToDeleteId));
+                setStudentCount((c) => (c ? c - 1 : null));
+            } else {
+                setTeachers(prev => prev.filter(p => p.id !== userToDeleteId));
+                setTeacherCount((c) => (c ? c - 1 : null));
+            }
+
+            setImportStatus('User deleted successfully');
+            setTimeout(() => setImportStatus(null), 4000);
+            closeUserDeleteDialog();
+        } catch (err: unknown) {
+            console.error(err);
+            let message = 'Unknown error';
+            if (err instanceof Error) message = err.message;
+            setImportStatus(`Delete error: ${message}`);
+            setTimeout(() => setImportStatus(null), 4000);
+            closeUserDeleteDialog();
+        }
     }
 
     async function handleDeleteArchive() {
@@ -509,25 +560,11 @@ export default function Admin() {
                                                 </div>
                                                 <button
                                                     className="user-delete-button"
-                                                    onClick={async () => {
-                                                        if (!confirm('Delete this student?')) return;
-                                                        try {
-                                                            const form = new FormData();
-                                                            form.append('id', s.id);
-                                                            const res = await fetch('/api/students', { method: 'DELETE', body: form });
-                                                            const json = await res.json();
-                                                            if (!res.ok || json?.success === false) {
-                                                                setImportStatus(`Delete failed: ${json?.error ?? res.statusText}`);
-                                                                setTimeout(() => setImportStatus(null), 4000);
-                                                                return;
-                                                            }
-                                                            setStudents(prev => prev.filter(p => p.id !== s.id));
-                                                            setStudentCount((c) => (c ? c - 1 : null));
-                                                        } catch (err) {
-                                                            console.error(err);
-                                                            setImportStatus('Delete error');
-                                                            setTimeout(() => setImportStatus(null), 4000);
-                                                        }
+                                                    onClick={() => {
+                                                        setUserToDeleteId(s.id);
+                                                        setUserToDeleteType('student');
+                                                        setUserDeleteConfirmText('');
+                                                        setUserDeleteDialogOpen(true);
                                                     }}
                                                 >
                                                     <TrashIcon />
@@ -558,25 +595,11 @@ export default function Admin() {
                                                 </div>
                                                 <button
                                                     className="user-delete-button"
-                                                    onClick={async () => {
-                                                        if (!confirm('Delete this teacher?')) return;
-                                                        try {
-                                                            const form = new FormData();
-                                                            form.append('id', t.id);
-                                                            const res = await fetch('/api/teachers', { method: 'DELETE', body: form });
-                                                            const json = await res.json();
-                                                            if (!res.ok || json?.success === false) {
-                                                                setImportStatus(`Delete failed: ${json?.error ?? res.statusText}`);
-                                                                setTimeout(() => setImportStatus(null), 4000);
-                                                                return;
-                                                            }
-                                                            setTeachers(prev => prev.filter(p => p.id !== t.id));
-                                                            setTeacherCount((c) => (c ? c - 1 : null));
-                                                        } catch (err) {
-                                                            console.error(err);
-                                                            setImportStatus('Delete error');
-                                                            setTimeout(() => setImportStatus(null), 4000);
-                                                        }
+                                                    onClick={() => {
+                                                        setUserToDeleteId(t.id);
+                                                        setUserToDeleteType('teacher');
+                                                        setUserDeleteConfirmText('');
+                                                        setUserDeleteDialogOpen(true);
                                                     }}
                                                 >
                                                     <TrashIcon />
@@ -629,6 +652,53 @@ export default function Admin() {
                                 }}
                             >
                                 <Label.Root>Delete Archive</Label.Root>
+                            </button>
+                        </div>
+                        <Dialog.Close asChild>
+                            <button className="dialog-close" aria-label="Close">
+                                ×
+                            </button>
+                        </Dialog.Close>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+            <Dialog.Root open={userDeleteDialogOpen} onOpenChange={setUserDeleteDialogOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="dialog-overlay" />
+                    <Dialog.Content className="dialog-content">
+                        <Dialog.Title className="dialog-title">Confirm User Deletion</Dialog.Title>
+                        <Dialog.Description className="dialog-description">
+                            This action cannot be undone. Type <strong>delete</strong> to confirm deleting the selected user.
+                        </Dialog.Description>
+                        <div className="form-field-group" style={{ marginTop: '1rem' }}>
+                            <Label.Root className="form-field-label">Type &apos;delete&apos; to confirm</Label.Root>
+                            <input
+                                type="text"
+                                value={userDeleteConfirmText}
+                                onChange={(e) => setUserDeleteConfirmText(e.target.value)}
+                                className="school-year-input"
+                                placeholder="delete"
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={closeUserDeleteDialog}
+                                className="import-button"
+                                style={{ backgroundColor: '#6b7280' }}
+                            >
+                                <Label.Root>Cancel</Label.Root>
+                            </button>
+                            <button
+                                onClick={handleDeleteUser}
+                                disabled={userDeleteConfirmText !== 'delete'}
+                                className="import-button"
+                                style={{
+                                    backgroundColor: userDeleteConfirmText === 'delete' ? '#ef4444' : '#9ca3af',
+                                    opacity: userDeleteConfirmText === 'delete' ? 1 : 0.5,
+                                    cursor: userDeleteConfirmText === 'delete' ? 'pointer' : 'not-allowed'
+                                }}
+                            >
+                                <Label.Root>Delete User</Label.Root>
                             </button>
                         </div>
                         <Dialog.Close asChild>
