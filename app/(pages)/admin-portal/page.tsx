@@ -2,11 +2,11 @@
 
 import SamsTemplate from "@/app/components/SamsTemplate";
 import Image from "next/image";
-import { Label, Separator, ToggleGroup, Dialog } from "radix-ui";
+import { Label, Separator, ToggleGroup, Dialog, Tabs } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import './styles.css';
 import { Error } from "@/app/components/SamsError";
-import { TrashIcon } from "@radix-ui/react-icons";
+import { PersonIcon, TrashIcon } from "@radix-ui/react-icons";
 
 export default function Admin() {
     type ArchiveItem = {
@@ -46,6 +46,9 @@ export default function Admin() {
 
     const studentFileRef = useRef<HTMLInputElement | null>(null);
     const teacherFileRef = useRef<HTMLInputElement | null>(null);
+    const [students, setStudents] = useState<{ id: string; username?: string; email?: string; pfp?: string }[]>([]);
+    const [teachers, setTeachers] = useState<{ id: string; username?: string; email?: string; pfp?: string }[]>([]);
+    const [usersLoading, setUsersLoading] = useState<boolean>(false);
 
     async function handleCsvUpload(file: File, endpoint: string) {
         try {
@@ -251,13 +254,25 @@ export default function Admin() {
             } catch {
                 // ignore
             }
+            // fetch initial user lists for import section
+            try {
+                setUsersLoading(true);
+                const [sRes, tRes] = await Promise.all([
+                    fetch('/api/students').then(r => r.json()).catch(() => null),
+                    fetch('/api/teachers').then(r => r.json()).catch(() => null),
+                ]);
+                if (sRes?.success && Array.isArray(sRes.data)) setStudents(sRes.data);
+                if (tRes?.success && Array.isArray(tRes.data)) setTeachers(tRes.data);
+            } finally {
+                setUsersLoading(false);
+            }
         })();
     }, []);
     return (
         <>
             <SamsTemplate links={[
                 {
-                    label: "SAMS+ Dataset",
+                    label: "Archives",
                     Icon: () => <Image src="/icons/sheet.svg" alt="" width={20} height={20} />,
                     panels: [
                         <div key={1} className="stats-card">
@@ -283,46 +298,6 @@ export default function Admin() {
                         </div>
                     ],
                     content: <>
-                        <section className="import-section">
-                            <div className="import-header">
-                                <Label.Root className="import-section-title">Import</Label.Root>
-                                <button className="import-button" onClick={() => studentFileRef.current?.click()}>
-                                    <Label.Root>Students</Label.Root>
-                                </button>
-                                <button className="import-button" onClick={() => teacherFileRef.current?.click()}>
-                                    <Label.Root>Teachers</Label.Root>
-                                </button>
-                                <button className="import-button">
-                                    <Label.Root>Schedule</Label.Root>
-                                </button>
-                                <input
-                                    ref={studentFileRef}
-                                    type="file"
-                                    accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const f = e.target.files?.[0];
-                                        if (f) handleCsvUpload(f, '/api/students');
-                                        e.currentTarget.value = '';
-                                    }}
-                                />
-                                <input
-                                    ref={teacherFileRef}
-                                    type="file"
-                                    accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const f = e.target.files?.[0];
-                                        if (f) handleCsvUpload(f, '/api/teachers');
-                                        e.currentTarget.value = '';
-                                    }}
-                                />
-                            </div>
-                            {importStatus && (
-                                <div className="import-status">{importStatus}</div>
-                            )}
-                            <Separator.Root orientation="horizontal" className="sams-separator" />
-                        </section>
                         <div className="admin-content">
                             <div className="archive-form">
                                 <Label.Root className="archive-form-title">Create Archive</Label.Root>
@@ -440,6 +415,181 @@ export default function Admin() {
                             </div>
                         </div>
                     </>
+                },
+                {
+                    label: "User Management",
+                    Icon: () => <PersonIcon width={20} height={20} />,
+                    panels: [
+                        <div key={1} className="stats-card">
+                            <Image src="/icons/people.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Students</Label.Root>
+                                <span>{studentCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>,
+                        <div key={2} className="stats-card">
+                            <Image src="/icons/people.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Teachers</Label.Root>
+                                <span>{teacherCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>,
+                        <div key={3} className="stats-card">
+                            <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Classes</Label.Root>
+                                <span>{classCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>
+                    ],
+                    content: <section className="import-section">
+                        <div className="import-header">
+                            <Label.Root className="import-section-title">Import</Label.Root>
+                            <div className="import-actions">
+                                <button className="import-button" onClick={() => studentFileRef.current?.click()}>
+                                    <Label.Root>Students</Label.Root>
+                                </button>
+                                <button className="import-button" onClick={() => teacherFileRef.current?.click()}>
+                                    <Label.Root>Teachers</Label.Root>
+                                </button>
+                                <button className="import-button">
+                                    <Label.Root>Schedule</Label.Root>
+                                </button>
+                            </div>
+                            <input
+                                ref={studentFileRef}
+                                type="file"
+                                accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) handleCsvUpload(f, '/api/students');
+                                    e.currentTarget.value = '';
+                                }}
+                            />
+                            <input
+                                ref={teacherFileRef}
+                                type="file"
+                                accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) handleCsvUpload(f, '/api/teachers');
+                                    e.currentTarget.value = '';
+                                }}
+                            />
+                        </div>
+                        {importStatus && (
+                            <div className="import-status">{importStatus}</div>
+                        )}
+
+                        <Tabs.Root defaultValue="students" className="user-tabs">
+                            <Tabs.List className="tab-list" aria-label="User tabs">
+                                <Tabs.Trigger value="students" className="tab-trigger">Students</Tabs.Trigger>
+                                <Tabs.Trigger value="teachers" className="tab-trigger">Teachers</Tabs.Trigger>
+                            </Tabs.List>
+
+                            <Tabs.Content value="students" className="tab-content">
+                                <div className="user-list">
+                                    {usersLoading ? <div>Loading...</div> : (
+                                        students.length ? students.map((s) => (
+                                            <div key={s.id} className="user-item">
+                                                <div className="user-left">
+                                                    {((s.pfp ?? '/icons/placeholder-pfp.png').startsWith('http')) ? (
+                                                        // external host - use native img to avoid next/image host config
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img src={s.pfp ?? '/icons/placeholder-pfp.png'} alt="" width={40} height={40} className="user-avatar" />
+                                                    ) : (
+                                                        <Image src={s.pfp ?? '/icons/placeholder-pfp.png'} alt="" width={40} height={40} className="user-avatar" />
+                                                    )}
+                                                    <div className="user-meta">
+                                                        <div className="user-name">{s.username ?? s.email}</div>
+                                                        <div className="user-email">{s.email}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    className="user-delete-button"
+                                                    onClick={async () => {
+                                                        if (!confirm('Delete this student?')) return;
+                                                        try {
+                                                            const form = new FormData();
+                                                            form.append('id', s.id);
+                                                            const res = await fetch('/api/students', { method: 'DELETE', body: form });
+                                                            const json = await res.json();
+                                                            if (!res.ok || json?.success === false) {
+                                                                setImportStatus(`Delete failed: ${json?.error ?? res.statusText}`);
+                                                                setTimeout(() => setImportStatus(null), 4000);
+                                                                return;
+                                                            }
+                                                            setStudents(prev => prev.filter(p => p.id !== s.id));
+                                                            setStudentCount((c) => (c ? c - 1 : null));
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            setImportStatus('Delete error');
+                                                            setTimeout(() => setImportStatus(null), 4000);
+                                                        }
+                                                    }}
+                                                >
+                                                    <TrashIcon />
+                                                </button>
+                                            </div>
+                                        )) : <div className="user-empty">No students</div>
+                                    )}
+                                </div>
+                            </Tabs.Content>
+
+                            <Tabs.Content value="teachers" className="tab-content">
+                                <div className="user-list">
+                                    {usersLoading ? <div>Loading...</div> : (
+                                        teachers.length ? teachers.map((t) => (
+                                            <div key={t.id} className="user-item">
+                                                <div className="user-left">
+                                                    {((t.pfp ?? '/icons/placeholder-pfp.png').startsWith('http')) ? (
+                                                        // external host - use native img to avoid next/image host config
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img src={t.pfp ?? '/icons/placeholder-pfp.png'} alt="" width={40} height={40} className="user-avatar" />
+                                                    ) : (
+                                                        <Image src={t.pfp ?? '/icons/placeholder-pfp.png'} alt="" width={40} height={40} className="user-avatar" />
+                                                    )}
+                                                    <div className="user-meta">
+                                                        <div className="user-name">{t.username ?? t.email}</div>
+                                                        <div className="user-email">{t.email}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    className="user-delete-button"
+                                                    onClick={async () => {
+                                                        if (!confirm('Delete this teacher?')) return;
+                                                        try {
+                                                            const form = new FormData();
+                                                            form.append('id', t.id);
+                                                            const res = await fetch('/api/teachers', { method: 'DELETE', body: form });
+                                                            const json = await res.json();
+                                                            if (!res.ok || json?.success === false) {
+                                                                setImportStatus(`Delete failed: ${json?.error ?? res.statusText}`);
+                                                                setTimeout(() => setImportStatus(null), 4000);
+                                                                return;
+                                                            }
+                                                            setTeachers(prev => prev.filter(p => p.id !== t.id));
+                                                            setTeacherCount((c) => (c ? c - 1 : null));
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            setImportStatus('Delete error');
+                                                            setTimeout(() => setImportStatus(null), 4000);
+                                                        }
+                                                    }}
+                                                >
+                                                    <TrashIcon />
+                                                </button>
+                                            </div>
+                                        )) : <div className="user-empty">No teachers</div>
+                                    )}
+                                </div>
+                            </Tabs.Content>
+                        </Tabs.Root>
+
+                        <Separator.Root orientation="horizontal" className="sams-separator" />
+                    </section>
                 }
             ]} />
             <Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

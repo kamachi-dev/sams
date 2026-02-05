@@ -38,3 +38,33 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, status: 500, data: { message: error }, error: 'Students import failed' })
     }
 }
+
+export async function GET() {
+    try {
+        const data = (await db.query(
+            `SELECT * FROM account WHERE role = 3`
+        )).rows
+        return NextResponse.json({ success: true, status: 200, data, error: null })
+    } catch (error) {
+        return NextResponse.json({ success: false, status: 500, data: { message: error }, error: 'Students fetch failed' })
+    }
+}
+
+export async function DELETE(req: Request) {
+    try {
+        const formData = await req.formData();
+        const id = formData.get('id');
+
+        if (!id) {
+            return NextResponse.json({ success: false, status: 400, data: null, error: 'No id provided' }, { status: 400 })
+        }
+
+        const data = (await db.query(
+            `DELETE FROM account WHERE id='${String(id)}' RETURNING *`
+        )).rows
+
+        return NextResponse.json({ success: true, status: 200, data, error: null })
+    } catch (error) {
+        return NextResponse.json({ success: false, status: 500, data: { message: String(error) }, error: 'Students delete failed' })
+    }
+}
