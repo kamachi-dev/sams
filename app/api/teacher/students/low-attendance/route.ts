@@ -25,25 +25,37 @@ export async function GET(req: Request) {
         // Query to get students with attendance rate below threshold
         // Attendance calculation: Present = 100%, Late = 50%, Absent = 0%
         // Only include students enrolled in courses taught by this teacher
+        // Absent count = (expected records) - (present + late)
         let query = `
-            WITH student_attendance AS (
+            WITH course_school_days AS (
+                -- Get the number of distinct school days per course (days with any attendance records)
+                SELECT 
+                    c.id as course_id,
+                    COUNT(DISTINCT DATE(r.created_at)) as school_days
+                FROM course c
+                LEFT JOIN record r ON r.course = c.id AND r.created_at IS NOT NULL
+                WHERE c.teacher = $1
+                ${courseFilter ? 'AND c.id = $2' : ''}
+                GROUP BY c.id
+            ),
+            student_attendance AS (
                 SELECT 
                     a.id as student_id,
                     a.username as student_name,
                     a.email as student_email,
                     c.id as course_id,
                     c.name as course_name,
-                    COUNT(r.id) as total_records,
+                    csd.school_days,
                     COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
-                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                    COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
+                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count
                 FROM enrollment_data e
                 INNER JOIN course c ON e.course = c.id
                 INNER JOIN account a ON e.student = a.id
-                LEFT JOIN record r ON r.student = a.id AND r.course = c.id
+                LEFT JOIN course_school_days csd ON csd.course_id = c.id
+                LEFT JOIN record r ON r.student = a.id AND r.course = c.id AND r.created_at IS NOT NULL
                 WHERE c.teacher = $1
                 ${courseFilter ? 'AND c.id = $2' : ''}
-                GROUP BY a.id, a.username, a.email, c.id, c.name
+                GROUP BY a.id, a.username, a.email, c.id, c.name, csd.school_days
             )
             SELECT 
                 student_id,
@@ -51,19 +63,20 @@ export async function GET(req: Request) {
                 student_email,
                 course_id,
                 course_name,
-                total_records,
+                school_days as total_records,
                 present_count,
                 late_count,
-                absent_count,
+                GREATEST(0, school_days - present_count - late_count) as absent_count,
                 CASE 
-                    WHEN total_records > 0 THEN 
-                        ROUND(((present_count * 1.0 + late_count * 0.5) / total_records * 100)::numeric, 1)
+                    WHEN school_days > 0 THEN 
+                        ROUND(((present_count * 1.0 + late_count * 0.5) / school_days * 100)::numeric, 1)
                     ELSE 0
                 END as attendance_rate
             FROM student_attendance
-            WHERE CASE 
-                WHEN total_records > 0 THEN 
-                    ((present_count * 1.0 + late_count * 0.5) / total_records * 100)
+            WHERE school_days > 0
+              AND CASE 
+                WHEN school_days > 0 THEN 
+                    ((present_count * 1.0 + late_count * 0.5) / school_days * 100)
                 ELSE 0
             END < $${courseFilter ? '3' : '2'}
             ORDER BY attendance_rate ASC, student_name ASC

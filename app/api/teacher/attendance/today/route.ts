@@ -19,6 +19,11 @@ export async function GET(req: Request) {
 
         // Get today's date in YYYY-MM-DD format
         const today = new Date().toISOString().split('T')[0]
+        
+        console.log('=== TODAY API DEBUG ===')
+        console.log('Today:', today)
+        console.log('Course:', courseFilter)
+        console.log('UserId:', user.id)
 
         // Get total enrolled students
         const totalQuery = courseFilter
@@ -39,34 +44,53 @@ export async function GET(req: Request) {
         // present (1) > late (2) > absent (0)
         // Note: attendance column is smallint (1=present, 2=late, 0/NULL=absent)
         const attendanceQuery = courseFilter
-            ? `WITH student_best_attendance AS (
-                SELECT 
-                    e.student,
-                    MIN(COALESCE(r.attendance, 0)) as best_attendance
+            ? `WITH student_courses AS (
+                -- Get all distinct students enrolled in the filtered course
+                SELECT DISTINCT e.student
                 FROM enrollment_data e
                 INNER JOIN course c ON e.course = c.id
-                LEFT JOIN record r ON r.student = e.student 
-                    AND DATE(r.time) = $1
-                    AND r.course = c.id
                 WHERE c.teacher = $2 AND c.id = $3
-                GROUP BY e.student
+            ),
+            student_best_attendance AS (
+                -- For each student, get their BEST attendance for THIS SPECIFIC COURSE today
+                -- Use MIN since present(1) < late(2), so MIN gives best status
+                SELECT 
+                    sc.student,
+                    MIN(COALESCE(r.attendance, 0)) as best_attendance
+                FROM student_courses sc
+                LEFT JOIN record r ON r.student = sc.student 
+                    AND r.created_at IS NOT NULL
+                    AND DATE(r.created_at) = $1
+                    AND r.course = $3
+                GROUP BY sc.student
             )
             SELECT 
                 COUNT(CASE WHEN best_attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN best_attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN best_attendance = 0 THEN 1 END) as absent_count
             FROM student_best_attendance`
-            : `WITH student_best_attendance AS (
-                SELECT 
-                    e.student,
-                    MIN(COALESCE(r.attendance, 0)) as best_attendance
+            : `WITH student_courses AS (
+                -- Get all distinct students enrolled in any of this teacher's courses
+                SELECT DISTINCT e.student
                 FROM enrollment_data e
                 INNER JOIN course c ON e.course = c.id
-                LEFT JOIN record r ON r.student = e.student 
-                    AND DATE(r.time) = $1
-                    AND r.course = c.id
                 WHERE c.teacher = $2
-                GROUP BY e.student
+            ),
+            teacher_courses AS (
+                -- Get all course IDs taught by this teacher
+                SELECT id FROM course WHERE teacher = $2
+            ),
+            student_best_attendance AS (
+                -- For each student, get their BEST attendance across all courses today
+                SELECT 
+                    sc.student,
+                    MIN(COALESCE(r.attendance, 0)) as best_attendance
+                FROM student_courses sc
+                LEFT JOIN record r ON r.student = sc.student 
+                    AND r.created_at IS NOT NULL
+                    AND DATE(r.created_at) = $1
+                    AND r.course IN (SELECT id FROM teacher_courses)
+                GROUP BY sc.student
             )
             SELECT 
                 COUNT(CASE WHEN best_attendance = 1 THEN 1 END) as present_count,
@@ -76,6 +100,9 @@ export async function GET(req: Request) {
         
         const attendanceParams = courseFilter ? [today, user.id, courseFilter] : [today, user.id]
         const result = await db.query(attendanceQuery, attendanceParams)
+        
+        console.log('Query params:', attendanceParams)
+        console.log('Result:', result.rows[0])
 
         const data = result.rows[0]
         const total = parseInt(totalResult.rows[0]?.total_students || '0')

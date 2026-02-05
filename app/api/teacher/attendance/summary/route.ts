@@ -19,33 +19,69 @@ export async function GET(req: Request) {
 
         // Get overall attendance summary for students in this teacher's courses
         // This is for the semester-wide "Average Attendance Rate"
-        // attendance: 1=present, 2=late, 0=absent
-        const query = courseFilter
+        // We need to count all attendance including absences for students without records
+        
+        // First, get the count of present and late records
+        const attendanceQuery = courseFilter
             ? `SELECT 
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count,
-                COUNT(*) as total_records
+                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as explicit_absent_count
             FROM record r
             INNER JOIN course c ON r.course = c.id
             WHERE c.teacher = $1 AND c.id = $2`
             : `SELECT 
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count,
-                COUNT(*) as total_records
+                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as explicit_absent_count
             FROM record r
             INNER JOIN course c ON r.course = c.id
             WHERE c.teacher = $1`
         
+        // Get total enrolled students and count of school days with records
+        const totalQuery = courseFilter
+            ? `SELECT 
+                COUNT(DISTINCT e.student) as enrolled_count,
+                COUNT(DISTINCT DATE(r.created_at)) as school_days
+            FROM enrollment_data e
+            INNER JOIN course c ON e.course = c.id
+            LEFT JOIN record r ON r.course = c.id 
+                AND r.created_at IS NOT NULL
+            WHERE c.teacher = $1 AND c.id = $2`
+            : `SELECT 
+                COUNT(DISTINCT e.student) as enrolled_count,
+                COUNT(DISTINCT DATE(r.created_at)) as school_days
+            FROM enrollment_data e
+            INNER JOIN course c ON e.course = c.id
+            LEFT JOIN record r ON r.course = c.id
+                AND r.created_at IS NOT NULL
+            WHERE c.teacher = $1`
+        
         const params = courseFilter ? [user.id, courseFilter] : [user.id]
-        const result = await db.query(query, params)
+        
+        const [attendanceResult, totalResult] = await Promise.all([
+            db.query(attendanceQuery, params),
+            db.query(totalQuery, params)
+        ])
 
-        const data = result.rows[0]
-        const present = parseInt(data.present_count || '0')
-        const late = parseInt(data.late_count || '0')
-        const absent = parseInt(data.absent_count || '0')
-        const total = parseInt(data.total_records || '0')
+        const attendanceData = attendanceResult.rows[0]
+        const totalData = totalResult.rows[0]
+        
+        const present = parseInt(attendanceData.present_count || '0')
+        const late = parseInt(attendanceData.late_count || '0')
+        const explicitAbsent = parseInt(attendanceData.explicit_absent_count || '0')
+        const enrolledCount = parseInt(totalData.enrolled_count || '0')
+        const schoolDays = parseInt(totalData.school_days || '0')
+        
+        // Calculate total expected attendance records
+        // Expected = enrolled students × number of school days with records
+        const expectedTotal = enrolledCount * schoolDays
+        
+        // Calculate absent count
+        // Absent = expected total - present - late
+        // This includes both explicit absent records (attendance=0) and missing records
+        const absent = Math.max(0, expectedTotal - present - late)
+        const total = expectedTotal
 
         // New attendance rate calculation:
         // Present = 1 (100%), Late = 0.5 (50%), Absent = 0 (0%)

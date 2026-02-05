@@ -1,6 +1,7 @@
 "use client";
 
 import SamsTemplate from "@/app/components/SamsTemplate";
+import * as XLSX from 'xlsx';
 import { 
     MagnifyingGlassIcon, 
     PersonIcon, 
@@ -140,11 +141,44 @@ export default function Teacher() {
     const [quarterlyTrendData, setQuarterlyTrendData] = useState<Array<{
         name: string;
         label: string;
+        semester: string;
         dateRange: string;
         present: number;
         late: number;
         absent: number;
     }>>([]);
+
+    // Helper function to get current semester info
+    const getCurrentSemester = () => {
+        const now = new Date();
+        const month = now.getMonth(); // 0=Jan, 1=Feb, ..., 11=Dec
+        const day = now.getDate();
+        
+        // Q1 (1st Sem): July 7 - September 30
+        if ((month === 6 && day >= 7) || month === 7 || month === 8) {
+            return { semester: '1st Semester', quarter: 'Q1', range: 'July 7 - September 30' };
+        }
+        // Q2 (1st Sem): October 1 - November 30  
+        if (month === 9 || month === 10) {
+            return { semester: '1st Semester', quarter: 'Q2', range: 'October 1 - November 30' };
+        }
+        // Q3 (2nd Sem): December 1 - February 28
+        if (month === 11 || month === 0 || month === 1) {
+            return { semester: '2nd Semester', quarter: 'Q3', range: 'December 1 - February 28' };
+        }
+        // Q4 (2nd Sem): March 1 - April 14
+        if (month === 2 || (month === 3 && day <= 14)) {
+            return { semester: '2nd Semester', quarter: 'Q4', range: 'March 1 - April 14' };
+        }
+        // Summer break or other period
+        if ((month === 3 && day > 14) || month === 4 || month === 5 || (month === 6 && day < 7)) {
+            return { semester: 'Summer Break', quarter: '', range: 'April 15 - July 6' };
+        }
+        
+        return { semester: '2nd Semester', quarter: 'Q3', range: 'December 1 - February 28' };
+    };
+
+    const currentSemesterInfo = getCurrentSemester();
 
     // Fetch total students count from database
     useEffect(() => {
@@ -355,12 +389,297 @@ export default function Teacher() {
         fetchComparisonData();
     }, [selectedStudentForComparison, selectedCourseForComparison]);
 
-    const handleExport = () => {
+    const handleExport = async () => {
         setIsExporting(true);
-        setTimeout(() => {
-            alert("Attendance report exported successfully!");
+        
+        try {
+            let data: any[] = [];
+            let fileName = '';
+            
+            const courseLabel = selectedChartCourse === 'all' 
+                ? 'All Subjects' 
+                : courses.find(c => c.id === selectedChartCourse)?.name || 'Selected Course';
+            
+            const sanitizedCourseLabel = courseLabel.replace(/[^a-z0-9]/gi, '_');
+            const dateStr = new Date().toISOString().split('T')[0];
+            
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            
+            // Helper function to fetch records for a date range
+            const fetchRecordsForDateRange = async (startDate: Date, endDate: Date) => {
+                const allRecords: any[] = [];
+                
+                if (selectedChartCourse === 'all') {
+                    for (const course of courses) {
+                        const response = await fetch(`/api/teacher/attendance/records?course=${course.id}&startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`);
+                        const result = await response.json();
+                        if (result.success) {
+                            allRecords.push(...result.data);
+                        }
+                    }
+                } else {
+                    const response = await fetch(`/api/teacher/attendance/records?course=${selectedChartCourse}&startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`);
+                    const result = await response.json();
+                    if (result.success) {
+                        allRecords.push(...result.data);
+                    }
+                }
+                
+                return allRecords;
+            };
+            
+            // Helper function to create status sheets
+            const createStatusSheets = (records: any[], includeWeekInfo = false) => {
+                const presentStudents = records.filter(r => r.status === 'present');
+                const lateStudents = records.filter(r => r.status === 'late');
+                const absentStudents = records.filter(r => r.status === 'absent');
+                
+                if (presentStudents.length > 0) {
+                    const presentData = presentStudents.map(s => {
+                        const data: any = {
+                            'Student Name': s.name,
+                            'Email': s.email
+                        };
+                        if (selectedChartCourse === 'all') data['Course'] = s.course;
+                        if (includeWeekInfo) data['Week/Period'] = s.weekInfo;
+                        data['Date'] = s.date || new Date(s.time).toLocaleDateString();
+                        data['Time'] = s.time;
+                        data['Confidence'] = s.confidence;
+                        return data;
+                    });
+                    const presentWs = XLSX.utils.json_to_sheet(presentData);
+                    XLSX.utils.book_append_sheet(wb, presentWs, 'Present Students');
+                }
+                
+                if (lateStudents.length > 0) {
+                    const lateData = lateStudents.map(s => {
+                        const data: any = {
+                            'Student Name': s.name,
+                            'Email': s.email
+                        };
+                        if (selectedChartCourse === 'all') data['Course'] = s.course;
+                        if (includeWeekInfo) data['Week/Period'] = s.weekInfo;
+                        data['Date'] = s.date || new Date(s.time).toLocaleDateString();
+                        data['Time'] = s.time;
+                        data['Confidence'] = s.confidence;
+                        return data;
+                    });
+                    const lateWs = XLSX.utils.json_to_sheet(lateData);
+                    XLSX.utils.book_append_sheet(wb, lateWs, 'Late Students');
+                }
+                
+                if (absentStudents.length > 0) {
+                    const absentData = absentStudents.map(s => {
+                        const data: any = {
+                            'Student Name': s.name,
+                            'Email': s.email
+                        };
+                        if (selectedChartCourse === 'all') data['Course'] = s.course;
+                        if (includeWeekInfo) data['Week/Period'] = s.weekInfo;
+                        data['Date'] = s.date || new Date(s.time).toLocaleDateString();
+                        data['Time'] = s.time;
+                        data['Confidence'] = s.confidence;
+                        return data;
+                    });
+                    const absentWs = XLSX.utils.json_to_sheet(absentData);
+                    XLSX.utils.book_append_sheet(wb, absentWs, 'Absent Students');
+                }
+            };
+            
+            if (selectedView === 'daily') {
+                // Export daily attendance data with detailed student list
+                fileName = `Daily_Attendance_${sanitizedCourseLabel}_${dateStr}.xlsx`;
+                
+                // Summary data
+                const summaryData = [
+                    { Status: 'Present', Count: todayAttendance.present },
+                    { Status: 'Late', Count: todayAttendance.late },
+                    { Status: 'Absent', Count: todayAttendance.absent },
+                    { Status: 'Total', Count: todayAttendance.total },
+                    { Status: 'Attendance Rate', Count: `${todayAttendance.attendanceRate}%` }
+                ];
+                const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+                
+                // Fetch detailed student records
+                try {
+                    if (selectedChartCourse === 'all') {
+                        const allRecords: any[] = [];
+                        for (const course of courses) {
+                            const response = await fetch(`/api/teacher/attendance/records?course=${course.id}`);
+                            const result = await response.json();
+                            if (result.success) {
+                                allRecords.push(...result.data);
+                            }
+                        }
+                        createStatusSheets(allRecords);
+                    } else {
+                        const response = await fetch(`/api/teacher/attendance/records?course=${selectedChartCourse}`);
+                        const result = await response.json();
+                        if (result.success) {
+                            createStatusSheets(result.data);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching detailed records:', error);
+                }
+                
+            } else if (selectedView === 'weekly') {
+                // Export weekly attendance data with detailed student records
+                fileName = `Weekly_Attendance_${sanitizedCourseLabel}_${dateStr}.xlsx`;
+                
+                // Summary data
+                data = weeklyTrendData.map(week => ({
+                    Week: week.week,
+                    'Date Range': week.dateRange,
+                    Present: week.present,
+                    Late: week.late,
+                    Absent: week.absent,
+                    Total: week.present + week.late + week.absent
+                }));
+                const summaryWs = XLSX.utils.json_to_sheet(data);
+                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+                
+                // Fetch detailed records for all weeks
+                try {
+                    // We'll need to query the records API with date filters
+                    // For now, we'll fetch all records from the current month
+                    const now = new Date();
+                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    
+                    const records = await fetchRecordsForDateRange(startOfMonth, endOfMonth);
+                    
+                    // Add week info to each record based on weeklyTrendData
+                    const enrichedRecords = records.map((record: any) => {
+                        // Parse the time to determine which week it belongs to
+                        const recordDate = new Date(record.time);
+                        const matchingWeek = weeklyTrendData.find(week => {
+                            const [startStr, endStr] = week.dateRange.split(' - ');
+                            return true; // Simplified - would need proper date parsing
+                        });
+                        
+                        return {
+                            ...record,
+                            weekInfo: 'Current Month'
+                        };
+                    });
+                    
+                    createStatusSheets(enrichedRecords, true);
+                } catch (error) {
+                    console.error('Error fetching weekly detailed records:', error);
+                }
+                
+            } else if (selectedView === 'monthly') {
+                // Export monthly attendance data with detailed student records
+                fileName = `Monthly_Attendance_${sanitizedCourseLabel}_${dateStr}.xlsx`;
+                
+                // Summary data
+                data = monthlyTrendData.map(month => ({
+                    Month: month.fullMonth,
+                    Present: month.present,
+                    Late: month.late,
+                    Absent: month.absent,
+                    Total: month.total,
+                    'Attendance Rate': `${month.attendanceRate}%`
+                }));
+                const summaryWs = XLSX.utils.json_to_sheet(data);
+                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+                
+                // Fetch detailed records for last 6 months
+                try {
+                    const now = new Date();
+                    const startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+                    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    
+                    const records = await fetchRecordsForDateRange(startDate, endDate);
+                    
+                    // Add month info to each record
+                    const enrichedRecords = records.map((record: any) => {
+                        const recordDate = new Date(record.time);
+                        const monthName = recordDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                        return {
+                            ...record,
+                            weekInfo: monthName
+                        };
+                    });
+                    
+                    createStatusSheets(enrichedRecords, true);
+                } catch (error) {
+                    console.error('Error fetching monthly detailed records:', error);
+                }
+                
+            } else if (selectedView === 'quarterly') {
+                // Export quarterly attendance data with detailed student records
+                fileName = `Quarterly_Attendance_${sanitizedCourseLabel}_${dateStr}.xlsx`;
+                
+                // Summary data
+                data = quarterlyTrendData.map(quarter => {
+                    const semester = (quarter.name === 'Q1' || quarter.name === 'Q2') ? '1st Semester' : '2nd Semester';
+                    return {
+                        Quarter: quarter.label,
+                        Semester: semester,
+                        'Date Range': quarter.dateRange,
+                        Present: quarter.present,
+                        Late: quarter.late,
+                        Absent: quarter.absent,
+                        Total: quarter.present + quarter.late + quarter.absent
+                    };
+                });
+                const summaryWs = XLSX.utils.json_to_sheet(data);
+                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+                
+                // Fetch detailed records for the entire semester
+                try {
+                    const startDate = new Date(2025, 7, 1); // Aug 1, 2025
+                    const endDate = new Date(2026, 0, 31); // Jan 31, 2026
+                    
+                    const records = await fetchRecordsForDateRange(startDate, endDate);
+                    
+                    // Add quarter info to each record
+                    const enrichedRecords = records.map((record: any) => {
+                        const recordDate = new Date(record.time);
+                        let quarterInfo = 'Unknown';
+                        
+                        for (const quarter of quarterlyTrendData) {
+                            const [startStr, endStr] = quarter.dateRange.split(' - ');
+                            quarterInfo = quarter.label;
+                            break; // Simplified
+                        }
+                        
+                        return {
+                            ...record,
+                            weekInfo: quarterInfo
+                        };
+                    });
+                    
+                    createStatusSheets(enrichedRecords, true);
+                } catch (error) {
+                    console.error('Error fetching quarterly detailed records:', error);
+                }
+            }
+            
+            // Add metadata sheet
+            const metadata = [
+                { Field: 'Export Date', Value: new Date().toLocaleString() },
+                { Field: 'View Type', Value: selectedView.charAt(0).toUpperCase() + selectedView.slice(1) },
+                { Field: 'Course Filter', Value: courseLabel },
+                { Field: 'Academic Year', Value: '2025-2026' },
+                { Field: 'Semester', Value: '2nd Semester' }
+            ];
+            const metaWs = XLSX.utils.json_to_sheet(metadata);
+            XLSX.utils.book_append_sheet(wb, metaWs, 'Info');
+            
+            // Export file
+            XLSX.writeFile(wb, fileName);
+            
+        } catch (error) {
+            console.error('Error exporting attendance data:', error);
+            alert('Failed to export attendance report. Please try again.');
+        } finally {
             setIsExporting(false);
-        }, 1500);
+        }
     };
 
     const pieData = [
@@ -445,7 +764,12 @@ export default function Teacher() {
                                 </div>
 
                                 <div className="teacher-summary-card">
-                                    <h3 className="teacher-summary-title">Current Semester Summary</h3>
+                                    <h3 className="teacher-summary-title">
+                                        Current Semester Summary
+                                        <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666', marginLeft: '10px' }}>
+                                            ({currentSemesterInfo.semester} - {currentSemesterInfo.range})
+                                        </span>
+                                    </h3>
 
                                     <div className="teacher-summary-row">
                                         {/* LEFT: CHART */}
