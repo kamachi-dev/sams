@@ -14,17 +14,31 @@ export async function GET() {
             }, { status: 401 })
         }
 
-        // Get all courses for this teacher
+        // Get all courses for this teacher with section and student counts
         const result = await db.query(`
-            SELECT id, name, schedule
-            FROM course
-            WHERE teacher = $1
-            ORDER BY name
+            SELECT 
+                c.id, 
+                c.name, 
+                c.schedule,
+                COUNT(DISTINCT e.student) as student_count,
+                COUNT(DISTINCT COALESCE(sd.section, 'Unassigned')) as section_count
+            FROM course c
+            LEFT JOIN enrollment_data e ON e.course = c.id
+            LEFT JOIN student_data sd ON sd.student = e.student
+            WHERE c.teacher = $1
+            GROUP BY c.id, c.name, c.schedule
+            ORDER BY c.name
         `, [user.id])
 
         return NextResponse.json({ 
             success: true, 
-            data: result.rows
+            data: result.rows.map(row => ({
+                id: row.id,
+                name: row.name,
+                schedule: row.schedule,
+                studentCount: parseInt(row.student_count || '0'),
+                sectionCount: parseInt(row.section_count || '0')
+            }))
         })
     } catch (error) {
         console.error('Error fetching teacher courses:', error)

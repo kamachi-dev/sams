@@ -23,8 +23,8 @@ export async function GET(req: Request) {
         const threshold = parseFloat(searchParams.get('threshold') || '50') // Default 50%
 
         // Query to get students with attendance rate below threshold
-        // Attendance calculation: Present = 100%, Late = 50%, Absent = 0%
-        // Only include students enrolled in courses taught by this teacher
+        // Attendance rate = (present_count / school_days) * 100
+        // Only present counts toward attendance rate
         // Absent count = (expected records) - (present + late)
         let query = `
             WITH course_school_days AS (
@@ -69,14 +69,14 @@ export async function GET(req: Request) {
                 GREATEST(0, school_days - present_count - late_count) as absent_count,
                 CASE 
                     WHEN school_days > 0 THEN 
-                        ROUND(((present_count * 1.0 + late_count * 0.5) / school_days * 100)::numeric, 1)
+                        ROUND((present_count * 1.0 / school_days * 100)::numeric, 1)
                     ELSE 0
                 END as attendance_rate
             FROM student_attendance
             WHERE school_days > 0
               AND CASE 
                 WHEN school_days > 0 THEN 
-                    ((present_count * 1.0 + late_count * 0.5) / school_days * 100)
+                    (present_count * 1.0 / school_days * 100)
                 ELSE 0
             END < $${courseFilter ? '3' : '2'}
             ORDER BY attendance_rate ASC, student_name ASC

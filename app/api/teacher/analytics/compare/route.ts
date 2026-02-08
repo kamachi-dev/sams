@@ -88,10 +88,10 @@ export async function GET(req: Request) {
             ORDER BY month_num
         `, [user.id, courseId])
 
-        // Calculate attendance rates
+        // Calculate attendance rates - only present counts
         const calculateRate = (present: number, late: number, total: number) => {
             if (total === 0) return 0
-            return Math.round(((present + late * 0.5) / total) * 100 * 10) / 10
+            return Math.round((present / total) * 100 * 10) / 10
         }
 
         const studentData = studentResult.rows[0]

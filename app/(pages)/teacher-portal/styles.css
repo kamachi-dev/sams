@@ -467,6 +467,225 @@
     box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
 }
 
+/* ============================================
+   OVERVIEW DRILL-DOWN STYLES
+   ============================================ */
+
+.overview-step-container {
+    padding: 8px 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.overview-step-header {
+    margin-bottom: 16px;
+    flex-shrink: 0;
+}
+
+.overview-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1px solid #E0E0E0;
+    color: #1F2F57;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+
+.overview-back-btn:hover {
+    background: #F5F7FA;
+    border-color: #1DA1F2;
+    color: #1DA1F2;
+}
+
+.overview-step-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1F2F57;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.overview-step-icon {
+    width: 22px;
+    height: 22px;
+    color: #1DA1F2;
+}
+
+.overview-step-subtitle {
+    font-size: 14px;
+    color: #828282;
+    margin: 6px 0 0;
+}
+
+.overview-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    font-size: 15px;
+    color: #828282;
+}
+
+/* Course Cards Grid */
+.overview-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.overview-course-card {
+    background: white;
+    border: 1px solid #E8ECF0;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.overview-course-card:hover {
+    border-color: #1DA1F2;
+    box-shadow: 0 4px 16px rgba(29, 161, 242, 0.12);
+    transform: translateY(-2px);
+}
+
+.overview-course-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.overview-course-card-icon {
+    width: 28px;
+    height: 28px;
+    color: #1DA1F2;
+    background: rgba(29, 161, 242, 0.08);
+    padding: 6px;
+    border-radius: 8px;
+}
+
+.overview-course-card-arrow {
+    width: 18px;
+    height: 18px;
+    color: #BDBDBD;
+    transition: color 0.2s, transform 0.2s;
+}
+
+.overview-course-card:hover .overview-course-card-arrow {
+    color: #1DA1F2;
+    transform: translateX(3px);
+}
+
+.overview-course-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.overview-course-card-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1F2F57;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.overview-course-card-stats {
+    display: flex;
+    gap: 20px;
+}
+
+.overview-course-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.overview-course-stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1F2F57;
+}
+
+.overview-course-stat-label {
+    font-size: 12px;
+    color: #828282;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Section Cards */
+.overview-section-card {
+    background: white;
+    border: 1px solid #E8ECF0;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.overview-section-card:hover {
+    border-color: #0F9D58;
+    box-shadow: 0 4px 16px rgba(15, 157, 88, 0.12);
+    transform: translateY(-2px);
+}
+
+.overview-section-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.overview-section-card-icon {
+    width: 28px;
+    height: 28px;
+    color: #0F9D58;
+    background: rgba(15, 157, 88, 0.08);
+    padding: 6px;
+    border-radius: 8px;
+}
+
+.overview-section-card:hover .overview-course-card-arrow {
+    color: #0F9D58;
+    transform: translateX(3px);
+}
+
+.overview-section-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.overview-section-card-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1F2F57;
+    margin: 0;
+}
+
+.overview-section-card-count {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
 /* Content Section */
 .teacher-content-section {
     padding: 24px;
