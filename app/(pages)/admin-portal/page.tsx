@@ -53,6 +53,24 @@ export default function Admin() {
     const [userToDeleteType, setUserToDeleteType] = useState<'student' | 'teacher' | null>(null);
     const [userDeleteConfirmText, setUserDeleteConfirmText] = useState<string>('');
 
+    // Courses management state
+    const [courseName, setCourseName] = useState<string>('');
+    const [courseSchedule, setCourseSchedule] = useState<string>('');
+    const [selectedCourseStudents, setSelectedCourseStudents] = useState<string[]>([]);
+    const [creatingCourse, setCreatingCourse] = useState<boolean>(false);
+    const [courseStudentSearch, setCourseStudentSearch] = useState<string>('');
+
+    // Course viewer state
+    type Course = { id: string; name: string; schedule?: string; teacher?: string };
+    type EnrolledStudent = { id: string; name?: string; email?: string; section?: string };
+    const [coursesList, setCoursesList] = useState<Course[]>([]);
+    const [coursesLoading, setCoursesLoading] = useState<boolean>(false);
+    const [courseViewerSearch, setCourseViewerSearch] = useState<string>('');
+    const [selectedViewCourse, setSelectedViewCourse] = useState<Course | null>(null);
+    const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([]);
+    const [enrolledLoading, setEnrolledLoading] = useState<boolean>(false);
+    const [enrolledSearch, setEnrolledSearch] = useState<string>('');
+
     async function handleCsvUpload(file: File, endpoint: string) {
         try {
             setImportStatus("Uploading...");
@@ -196,6 +214,68 @@ export default function Admin() {
         }
     }
 
+    function toggleCourseStudent(id: string) {
+        setSelectedCourseStudents(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+    }
+
+    async function handleSelectViewCourse(course: Course) {
+        setSelectedViewCourse(course);
+        setEnrolledStudents([]);
+        setEnrolledSearch('');
+        try {
+            setEnrolledLoading(true);
+            const res = await fetch(`/api/camera/courses?courseId=${encodeURIComponent(course.id)}`).then(r => r.json()).catch(() => null);
+            if (res?.success && Array.isArray(res.data)) setEnrolledStudents(res.data);
+        } finally {
+            setEnrolledLoading(false);
+        }
+    }
+
+    async function handleCreateCourse() {
+        if (!courseName.trim()) {
+            setImportStatus('Course name is required');
+            setTimeout(() => setImportStatus(null), 4000);
+            return;
+        }
+
+        try {
+            setCreatingCourse(true);
+            const form = new FormData();
+            form.append('name', courseName.trim());
+            form.append('schedule', courseSchedule.trim());
+            if (selectedCourseStudents.length) form.append('students', selectedCourseStudents.join(','));
+
+            const res = await fetch('/api/courses', { method: 'POST', body: form });
+            const json = await res.json();
+            if (!res.ok || json?.success === false) {
+                setImportStatus(`Create course failed: ${json?.error ?? res.statusText}`);
+                setTimeout(() => setImportStatus(null), 4000);
+                return;
+            }
+
+            setImportStatus('Course created');
+            setCourseName('');
+            setCourseSchedule('');
+            setSelectedCourseStudents([]);
+            setTimeout(() => setImportStatus(null), 4000);
+
+            // refresh class count
+            try {
+                const classCountRes = await fetch('/api/classes/count').then(r => r.json()).catch(() => null);
+                if (classCountRes?.success) setClassCount(Number(classCountRes.data.count));
+            } catch {
+                // ignore
+            }
+        } catch (err: unknown) {
+            let message = 'Unknown error';
+            if (err instanceof Error) message = err.message;
+            setImportStatus(`Create course error: ${message}`);
+            setTimeout(() => setImportStatus(null), 4000);
+        } finally {
+            setCreatingCourse(false);
+        }
+    }
+
     async function handleDeleteArchive() {
         if (!archiveToDelete || deleteConfirmText !== 'delete') {
             return;
@@ -317,6 +397,14 @@ export default function Admin() {
             } finally {
                 setUsersLoading(false);
             }
+            // Fetch courses
+            try {
+                setCoursesLoading(true);
+                const cRes = await fetch('/api/courses').then(r => r.json()).catch(() => null);
+                if (cRes?.success && Array.isArray(cRes.data)) setCoursesList(cRes.data);
+            } finally {
+                setCoursesLoading(false);
+            }
         })();
     }, []);
     return (
@@ -324,7 +412,7 @@ export default function Admin() {
             <SamsTemplate links={[
                 {
                     label: "Archives",
-                    Icon: () => <Image src="/icons/sheet.svg" alt="" width={20} height={20} />,
+                    Icon: () => <Image src="/icons/sheet.svg" alt="" width={20} height={20} style={{ filter: "brightness(0)" }} />,
                     panels: [
                         <div key={1} className="stats-card">
                             <Image src="/icons/people.svg" alt="" width={40} height={40} />
@@ -392,7 +480,7 @@ export default function Admin() {
                                     >
                                         {(() => {
                                             const totalArchives = archive?.data?.length ?? 0;
-                                            const numGroups = Math.ceil(totalArchives / 6);
+                                            const numGroups = Math.ceil(totalArchives / groupSize);
                                             return Array.from({ length: numGroups }, (_, i) => (
                                                 <ToggleGroup.Item key={i} value={i.toString()} className="archive-group-item">
                                                     {i + 1}
@@ -612,6 +700,164 @@ export default function Admin() {
                         </Tabs.Root>
 
                         <Separator.Root orientation="horizontal" className="sams-separator" />
+                    </section>
+                },
+                {
+                    label: "Courses",
+                    Icon: () => <Image src="/icons/notebook.svg" alt="" width={20} height={20} style={{ filter: "brightness(0)" }} />,
+                    panels: [
+                        <div key={1} className="stats-card">
+                            <Image src="/icons/people.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Students</Label.Root>
+                                <span>{studentCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>,
+                        <div key={2} className="stats-card">
+                            <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Classes</Label.Root>
+                                <span>{classCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>
+                    ],
+                    content: <section className="import-section">
+                        {importStatus && <div className="import-status">{importStatus}</div>}
+
+                        <Tabs.Root defaultValue="view" className="user-tabs" style={{ width: '100%' }}>
+                            <Tabs.List className="tab-list" aria-label="Course tabs">
+                                <Tabs.Trigger value="view" className="tab-trigger">View Courses</Tabs.Trigger>
+                                <Tabs.Trigger value="create" className="tab-trigger">Create Course</Tabs.Trigger>
+                            </Tabs.List>
+
+                            <Tabs.Content value="view" className="tab-content">
+                                <div className="course-viewer">
+                                    <div className="course-viewer-left">
+                                        <Label.Root className="form-field-label">Search Courses</Label.Root>
+                                        <input
+                                            type="text"
+                                            value={courseViewerSearch}
+                                            onChange={(e) => setCourseViewerSearch(e.target.value)}
+                                            className="school-year-input"
+                                            placeholder="Search by name..."
+                                            style={{ marginBottom: '0.5rem', width: '100%' }}
+                                        />
+                                        <div className="course-select-list">
+                                            {coursesLoading ? <div>Loading courses...</div> : (
+                                                (() => {
+                                                    const filtered = coursesList.filter(c => c.name.toLowerCase().includes(courseViewerSearch.toLowerCase()));
+                                                    return filtered.length ? (
+                                                        filtered.map(c => (
+                                                            <button
+                                                                key={c.id}
+                                                                className={`course-select-item ${selectedViewCourse?.id === c.id ? 'selected' : ''}`}
+                                                                onClick={() => handleSelectViewCourse(c)}
+                                                            >
+                                                                <span className="course-select-name">{c.name}</span>
+                                                                {c.schedule && <span className="course-select-schedule">{typeof c.schedule === 'string' ? c.schedule : Object.keys(c.schedule).join(', ')}</span>}
+                                                            </button>
+                                                        ))
+                                                    ) : <div className="user-empty">No courses found</div>;
+                                                })()
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="course-viewer-right">
+                                        {selectedViewCourse ? (
+                                            <>
+                                                <Label.Root className="archive-form-title">{selectedViewCourse.name}</Label.Root>
+                                                {selectedViewCourse.schedule && <div className="course-schedule-info">{typeof selectedViewCourse.schedule === 'string' ? selectedViewCourse.schedule : Object.keys(selectedViewCourse.schedule).join(', ')}</div>}
+                                                <Separator.Root orientation="horizontal" className="sams-separator" style={{ margin: '0.75rem 0' }} />
+                                                <Label.Root className="form-field-label">Enrolled Students</Label.Root>
+                                                <input
+                                                    type="text"
+                                                    value={enrolledSearch}
+                                                    onChange={(e) => setEnrolledSearch(e.target.value)}
+                                                    className="school-year-input"
+                                                    placeholder="Search enrolled students..."
+                                                    style={{ marginBottom: '0.5rem', width: '100%' }}
+                                                />
+                                                <div className="enrolled-students-list">
+                                                    {enrolledLoading ? <div>Loading students...</div> : (
+                                                        (() => {
+                                                            const q = enrolledSearch.toLowerCase();
+                                                            const filtered = enrolledStudents.filter(s => (s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q)));
+                                                            return filtered.length ? (
+                                                                filtered.map(s => (
+                                                                    <div key={s.id} className="enrolled-student-item">
+                                                                        <div className="enrolled-student-name">{s.name ?? s.email}</div>
+                                                                        {s.section && <div className="enrolled-student-section">Section: {s.section}</div>}
+                                                                    </div>
+                                                                ))
+                                                            ) : <div className="user-empty">No enrolled students{enrolledStudents.length ? ' matching search' : ''}</div>;
+                                                        })()
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="user-empty" style={{ textAlign: 'center', padding: '2rem' }}>Select a course to view enrolled students</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </Tabs.Content>
+
+                            <Tabs.Content value="create" className="tab-content">
+                                <div className="archive-form" style={{ maxWidth: 640 }}>
+                                    <Label.Root className="archive-form-title">Create Course</Label.Root>
+                                    <div className="archive-form-container w-full">
+                                        <div className="form-field-group">
+                                            <Label.Root className="form-field-label">Course Name</Label.Root>
+                                            <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} className="school-year-input" placeholder="e.g., Algebra 1" />
+                                        </div>
+                                        <div className="form-field-group">
+                                            <Label.Root className="form-field-label">Schedule (optional)</Label.Root>
+                                            <input type="text" value={courseSchedule} onChange={(e) => setCourseSchedule(e.target.value)} className="school-year-input" placeholder="e.g., Mon/Wed/Fri 9:00-10:00" />
+                                        </div>
+
+                                        <div className="form-field-group">
+                                            <Label.Root className="form-field-label">Assign Students</Label.Root>
+                                            <input
+                                                type="text"
+                                                value={courseStudentSearch}
+                                                onChange={(e) => setCourseStudentSearch(e.target.value)}
+                                                className="school-year-input"
+                                                placeholder="Search students..."
+                                                style={{ marginBottom: '0.5rem' }}
+                                            />
+                                            <div className="student-checkbox-list">
+                                                {usersLoading ? <div>Loading students...</div> : (
+                                                    (() => {
+                                                        const filtered = students
+                                                            .filter(s => {
+                                                                const q = courseStudentSearch.toLowerCase();
+                                                                return (s.username?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q));
+                                                            })
+                                                            .sort((a, b) => (a.username ?? a.email ?? '').localeCompare(b.username ?? b.email ?? ''));
+                                                        return filtered.length ? (
+                                                            filtered.map(s => (
+                                                                <label key={s.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                                                    <input type="checkbox" checked={selectedCourseStudents.includes(s.id)} onChange={() => toggleCourseStudent(s.id)} />
+                                                                    <span style={{ fontSize: 14 }}>{s.username ?? s.email}</span>
+                                                                </label>
+                                                            ))
+                                                        ) : <div className="user-empty">No students found</div>;
+                                                    })()
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                            <button className="import-button" onClick={() => { setCourseName(''); setCourseSchedule(''); setSelectedCourseStudents([]); }} style={{ backgroundColor: '#6b7280' }}>
+                                                <Label.Root>Clear</Label.Root>
+                                            </button>
+                                            <button className="import-button" onClick={async () => { await handleCreateCourse(); const cRes = await fetch('/api/courses').then(r => r.json()).catch(() => null); if (cRes?.success && Array.isArray(cRes.data)) setCoursesList(cRes.data); }} disabled={creatingCourse}>
+                                                <Label.Root>{creatingCourse ? 'Creating...' : 'Create Course'}</Label.Root>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Tabs.Content>
+                        </Tabs.Root>
                     </section>
                 }
             ]} />
