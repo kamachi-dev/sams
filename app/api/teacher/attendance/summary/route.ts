@@ -16,42 +16,108 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url)
         const courseFilter = searchParams.get('course')
+        const sectionFilter = searchParams.get('section')
 
         // Get overall attendance summary for students in this teacher's courses
         // This is for the semester-wide "Average Attendance Rate"
-        // attendance: 1=present, 2=late, 0=absent
-        const query = courseFilter
-            ? `SELECT 
+        // We need to count all attendance including absences for students without records
+        
+        // Build queries based on filters
+        let attendanceQuery: string
+        let totalQuery: string
+        let params: string[]
+
+        if (courseFilter && sectionFilter) {
+            // Filter by both course and section
+            attendanceQuery = `SELECT 
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count,
-                COUNT(*) as total_records
+                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as explicit_absent_count
+            FROM record r
+            INNER JOIN course c ON r.course = c.id
+            INNER JOIN enrollment_data e ON e.student = r.student AND e.course = c.id
+            LEFT JOIN student_data sd ON sd.student = r.student
+            WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3`
+            
+            totalQuery = `SELECT 
+                COUNT(DISTINCT e.student) as enrolled_count,
+                COUNT(DISTINCT DATE(r.created_at)) as school_days
+            FROM enrollment_data e
+            INNER JOIN course c ON e.course = c.id
+            LEFT JOIN student_data sd ON sd.student = e.student
+            LEFT JOIN record r ON r.course = c.id AND r.student = e.student
+                AND r.created_at IS NOT NULL
+            WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3`
+            
+            params = [user.id, courseFilter, sectionFilter]
+        } else if (courseFilter) {
+            attendanceQuery = `SELECT 
+                COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
+                COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
+                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as explicit_absent_count
             FROM record r
             INNER JOIN course c ON r.course = c.id
             WHERE c.teacher = $1 AND c.id = $2`
-            : `SELECT 
+            
+            totalQuery = `SELECT 
+                COUNT(DISTINCT e.student) as enrolled_count,
+                COUNT(DISTINCT DATE(r.created_at)) as school_days
+            FROM enrollment_data e
+            INNER JOIN course c ON e.course = c.id
+            LEFT JOIN record r ON r.course = c.id 
+                AND r.created_at IS NOT NULL
+            WHERE c.teacher = $1 AND c.id = $2`
+            
+            params = [user.id, courseFilter]
+        } else {
+            attendanceQuery = `SELECT 
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count,
-                COUNT(*) as total_records
+                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as explicit_absent_count
             FROM record r
             INNER JOIN course c ON r.course = c.id
             WHERE c.teacher = $1`
+            
+            totalQuery = `SELECT 
+                COUNT(DISTINCT e.student) as enrolled_count,
+                COUNT(DISTINCT DATE(r.created_at)) as school_days
+            FROM enrollment_data e
+            INNER JOIN course c ON e.course = c.id
+            LEFT JOIN record r ON r.course = c.id
+                AND r.created_at IS NOT NULL
+            WHERE c.teacher = $1`
+            
+            params = [user.id]
+        }
         
-        const params = courseFilter ? [user.id, courseFilter] : [user.id]
-        const result = await db.query(query, params)
+        const [attendanceResult, totalResult] = await Promise.all([
+            db.query(attendanceQuery, params),
+            db.query(totalQuery, params)
+        ])
 
-        const data = result.rows[0]
-        const present = parseInt(data.present_count || '0')
-        const late = parseInt(data.late_count || '0')
-        const absent = parseInt(data.absent_count || '0')
-        const total = parseInt(data.total_records || '0')
+        const attendanceData = attendanceResult.rows[0]
+        const totalData = totalResult.rows[0]
+        
+        const present = parseInt(attendanceData.present_count || '0')
+        const late = parseInt(attendanceData.late_count || '0')
+        const explicitAbsent = parseInt(attendanceData.explicit_absent_count || '0')
+        const enrolledCount = parseInt(totalData.enrolled_count || '0')
+        const schoolDays = parseInt(totalData.school_days || '0')
+        
+        // Calculate total expected attendance records
+        // Expected = enrolled students × number of school days with records
+        const expectedTotal = enrolledCount * schoolDays
+        
+        // Calculate absent count
+        // Absent = expected total - present - late
+        // This includes both explicit absent records (attendance=0) and missing records
+        const absent = Math.max(0, expectedTotal - present - late)
+        const total = expectedTotal
 
-        // New attendance rate calculation:
-        // Present = 1 (100%), Late = 0.5 (50%), Absent = 0 (0%)
-        // Example: 1 present + 1 late = (1 + 0.5) / 2 = 75%
+        // Attendance rate = (present / (enrolled × school_days)) * 100
+        // Only present counts toward attendance rate
         const attendanceRate = total > 0 
-            ? (((present * 1) + (late * 0.5) + (absent * 0)) / total * 100).toFixed(1)
+            ? ((present / total) * 100).toFixed(1)
             : '0.0'
 
         return NextResponse.json({ 

@@ -23,6 +23,8 @@ export async function GET(req: Request) {
                 ORDER BY a.username ASC
             `, section ? [courseId, section] : [courseId])
 
+            console.log('Courses query result:', result.rows);
+
             const students = result.rows.map(row => ({
                 id: row.id,
                 name: row.name,
