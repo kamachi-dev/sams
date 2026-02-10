@@ -16,6 +16,7 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url)
         const courseFilter = searchParams.get('course')
+        const sectionFilter = searchParams.get('section')
 
         // Get today's date in YYYY-MM-DD format
         const today = new Date().toISOString().split('T')[0]
@@ -23,20 +24,34 @@ export async function GET(req: Request) {
         console.log('=== TODAY API DEBUG ===')
         console.log('Today:', today)
         console.log('Course:', courseFilter)
+        console.log('Section:', sectionFilter)
         console.log('UserId:', user.id)
 
         // Get total enrolled students
-        const totalQuery = courseFilter
-            ? `SELECT COUNT(DISTINCT e.student) as total_students
+        let totalQuery: string
+        let totalParams: string[]
+        
+        if (courseFilter && sectionFilter) {
+            totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
+               FROM enrollment_data e
+               INNER JOIN course c ON e.course = c.id
+               LEFT JOIN student_data sd ON sd.student = e.student
+               WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3`
+            totalParams = [user.id, courseFilter, sectionFilter]
+        } else if (courseFilter) {
+            totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
                FROM enrollment_data e
                INNER JOIN course c ON e.course = c.id
                WHERE c.teacher = $1 AND c.id = $2`
-            : `SELECT COUNT(DISTINCT e.student) as total_students
+            totalParams = [user.id, courseFilter]
+        } else {
+            totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
                FROM enrollment_data e
                INNER JOIN course c ON e.course = c.id
                WHERE c.teacher = $1`
+            totalParams = [user.id]
+        }
         
-        const totalParams = courseFilter ? [user.id, courseFilter] : [user.id]
         const totalResult = await db.query(totalQuery, totalParams)
 
         // Get today's attendance for students in this teacher's courses
@@ -49,7 +64,9 @@ export async function GET(req: Request) {
                 SELECT DISTINCT e.student
                 FROM enrollment_data e
                 INNER JOIN course c ON e.course = c.id
+                ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = e.student' : ''}
                 WHERE c.teacher = $2 AND c.id = $3
+                ${sectionFilter ? 'AND sd.section = $4' : ''}
             ),
             student_best_attendance AS (
                 -- For each student, get their BEST attendance for THIS SPECIFIC COURSE today
@@ -98,7 +115,9 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN best_attendance = 0 THEN 1 END) as absent_count
             FROM student_best_attendance`
         
-        const attendanceParams = courseFilter ? [today, user.id, courseFilter] : [today, user.id]
+        const attendanceParams = courseFilter 
+            ? (sectionFilter ? [today, user.id, courseFilter, sectionFilter] : [today, user.id, courseFilter])
+            : [today, user.id]
         const result = await db.query(attendanceQuery, attendanceParams)
         
         console.log('Query params:', attendanceParams)
@@ -110,11 +129,9 @@ export async function GET(req: Request) {
         const late = parseInt(data.late_count || '0')
         const absent = parseInt(data.absent_count || '0')
 
-        // New attendance rate calculation:
-        // Present = 1 (100%), Late = 0.5 (50%), Absent = 0 (0%)
-        // Example: 1 present + 1 late = (1 + 0.5) / 2 = 75%
+        // Attendance rate = (present / total) * 100 — only present counts
         const attendanceRate = total > 0 
-            ? (((present * 1) + (late * 0.5) + (absent * 0)) / total * 100).toFixed(1)
+            ? ((present / total) * 100).toFixed(1)
             : '0.0'
 
         return NextResponse.json({ 

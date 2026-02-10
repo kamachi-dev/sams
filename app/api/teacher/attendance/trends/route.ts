@@ -289,9 +289,9 @@ export async function GET(req: Request) {
                 const absent = Math.max(0, expectedAttendance - present - late)
                 const total = present + late + absent
                 
-                // Calculate attendance rate: Present=100%, Late=50%, Absent=0%
+                // Calculate attendance rate: only present counts
                 const attendanceRate = total > 0 
-                    ? parseFloat(((present * 1 + late * 0.5) / total * 100).toFixed(1))
+                    ? parseFloat(((present / total) * 100).toFixed(1))
                     : 0
                 
                 return {
