@@ -802,7 +802,7 @@ export default function Admin() {
                             </Tabs.Content>
 
                             <Tabs.Content value="create" className="tab-content">
-                                <div className="archive-form" style={{ maxWidth: 640 }}>
+                                <div className="archive-form full-form">
                                     <Label.Root className="archive-form-title">Create Course</Label.Root>
                                     <div className="archive-form-container w-full">
                                         <div className="form-field-group">

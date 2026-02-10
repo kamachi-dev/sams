@@ -579,3 +579,8 @@
     font-size: 0.75rem;
     opacity: 0.75;
 }
+
+.full-form {
+    width: 100%;
+    max-width: none;
+}
