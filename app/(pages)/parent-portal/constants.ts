@@ -8,8 +8,6 @@ export const studentInfo = {
   section: "STEM-A",
 };
 
-
-
 // ==========================
 // ATTENDANCE DATA
 // ==========================
@@ -68,219 +66,278 @@ export const subjectAttendance = [
 // ==========================
 export const notifications = [
   // =========================
-  // FIRST SEMESTER (10)
+  // FIRST SEMESTER 2024-2025
   // =========================
   {
+    schoolYear: "2024-2025",
     semester: "first",
+    studentName: "Arvin Miguel B. Antonio",
+    studentId: 1,
+
     type: "late",
     subject: "Computer Science",
     code: "CS105_P",
     prof: "Prof. Navarro",
     time: "Mon 7:45 AM",
-    message:
-      "You have been recorded as late for this Computer Science class session. Continued tardiness may negatively affect your attendance record and overall academic standing. Please make sure to arrive on time for future classes to avoid further penalties."
+    message: "You have been recorded as late for this Computer Science class session."
   },
   {
+    schoolYear: "2024-2025",
     semester: "first",
+    studentName: "Ryan Gosling B. Antonio",
+    studentId: 2,
+
     type: "absent",
     subject: "Mathematics",
     code: "CIS241_P",
     prof: "Prof. Rizal",
     time: "Tue 9:00 AM",
-    message:
-      "You were marked absent during today’s Mathematics class. Regular attendance is required to keep up with lessons and assessments. If this absence was unavoidable, please provide a valid excuse or coordinate directly with your instructor."
-  },
-  {
-    semester: "first",
-    type: "warning",
-    subject: "English",
-    code: "ENG101_P",
-    prof: "Prof. Santos",
-    time: "Wed 10:30 AM",
-    message:
-      "Multiple attendance issues have been detected in your English class. This serves as a formal warning that continued absences or late arrivals may result in disciplinary action or academic consequences. Immediate improvement is expected."
-  },
-  {
-    semester: "first",
-    type: "warning",
-    subject: "Physical Education",
-    code: "PE101_P",
-    prof: "Prof. Garcia",
-    time: "Thu 7:15 AM",
-    message:
-      "Late arrival has been noted for your Physical Education class. Timeliness is important to ensure full participation in activities and proper attendance tracking. Please follow the class schedule strictly moving forward."
-  },
-  {
-    semester: "first",
-    type: "warning",
-    subject: "Ethics",
-    code: "ETH201_P",
-    prof: "Prof. Morales",
-    time: "Fri 2:00 PM",
-    message:
-      "You were absent during this Ethics class session. Consistent attendance is expected as discussions and participation are essential parts of the course. Repeated absences may affect your final evaluation."
-  },
-  {
-    semester: "first",
-    type: "late",
-    subject: "Statistics",
-    code: "STAT201_P",
-    prof: "Prof. Lim",
-    time: "Mon 3:10 PM",
-    message:
-      "You arrived late to your Statistics class. Please be mindful of punctuality, as repeated late arrivals may disrupt the lesson and impact your attendance standing for this subject."
-  },
-  {
-    semester: "first",
-    type: "warning",
-    subject: "Research",
-    code: "RES301_P",
-    prof: "Prof. Villanueva",
-    time: "Tue 11:45 AM",
-    message:
-      "Your attendance pattern in Research has raised concerns. This warning is issued to encourage immediate improvement. Please coordinate with your instructor if you are experiencing difficulties that affect your attendance."
-  },
-  {
-    semester: "first",
-    type: "late",
-    subject: "Filipino",
-    code: "FIL102_P",
-    prof: "Prof. Dela Cruz",
-    time: "Wed 8:00 AM",
-    message:
-      "Late attendance has been recorded for your Filipino class. Continued tardiness may result in penalties or affect your participation grade. Kindly ensure punctual attendance in future sessions."
-  },
-  {
-    semester: "first",
-    type: "absent",
-    subject: "Entrepreneurship",
-    code: "ENT101_P",
-    prof: "Prof. Bautista",
-    time: "Thu 10:00 AM",
-    message:
-      "You were absent during this Entrepreneurship class. Important topics may have been discussed, so please review the missed material and consult your instructor if necessary."
-  },
-  {
-    semester: "first",
-    type: "late",
-    subject: "Social Sciences",
-    code: "CIS243_P",
-    prof: "Prof. Kamachi",
-    time: "Fri 12:15 PM",
-    message:
-      "You have been recorded as late for your Social Sciences class. Continued tardiness may affect your attendance standing and overall performance. Please observe proper time management moving forward."
+    message: "You were marked absent during today’s Mathematics class."
   },
 
   // =========================
-  // SECOND SEMESTER (10)
+  // SECOND SEMESTER 2024-2025
   // =========================
   {
+    schoolYear: "2024-2025",
     semester: "second",
-    type: "late",
-    subject: "English",
-    code: "ENG102_P",
-    prof: "Prof. Santos",
-    time: "Mon 10:30 AM",
-    message:
-      "Late attendance has been recorded for your English class. Arriving on time is important to avoid missing key discussions and instructions. Please ensure punctuality in future sessions."
-  },
-  {
-    semester: "second",
-    type: "absent",
-    subject: "Computer Science",
-    code: "CS205_P",
-    prof: "Prof. Navarro",
-    time: "Tue 1:15 PM",
-    message:
-      "You were absent during today’s Computer Science class. Attendance is important to fully understand technical concepts and exercises. Kindly review the missed lesson and consult your instructor if needed."
-  },
-  {
-    semester: "second",
+    studentName: "Michael Reeves B. Antonio",
+    studentId: 3,
+
     type: "warning",
     subject: "Research",
     code: "RES302_P",
     prof: "Prof. Villanueva",
     time: "Wed 11:45 AM",
-    message:
-      "Repeated attendance issues have been detected in your Research class. This serves as a formal warning that continued violations may lead to academic or disciplinary action."
+    message: "Repeated attendance issues have been detected in your Research class."
   },
+
+  // =========================
+  // FIRST SEMESTER 2025-2026
+  // =========================
   {
-    semester: "second",
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Sofia Marie B. Antonio",
+    studentId: 4,
+
     type: "late",
-    subject: "Statistics",
-    code: "STAT202_P",
-    prof: "Prof. Lim",
-    time: "Thu 3:00 PM",
-    message:
-      "You arrived late to your Statistics class. Continued tardiness may affect your academic standing and participation score. Please be mindful of class schedules."
+    subject: "English",
+    code: "ENG102_P",
+    prof: "Prof. Santos",
+    time: "Mon 10:30 AM",
+    message: "Late attendance has been recorded for your English class."
   },
+
   {
-    semester: "second",
-    type: "absent",
-    subject: "Ethics",
-    code: "ETH202_P",
-    prof: "Prof. Morales",
-    time: "Fri 2:00 PM",
-    message:
-      "You were absent during this Ethics class session. Important discussions may have been missed. Please ensure regular attendance to avoid academic issues."
-  },
-  {
-    semester: "second",
-    type: "late",
-    subject: "Filipino",
-    code: "FIL103_P",
-    prof: "Prof. Dela Cruz",
-    time: "Mon 8:00 AM",
-    message:
-      "Late arrival has been noted for your Filipino class. Please adhere to the scheduled class time to avoid repeated attendance penalties."
-  },
-  {
-    semester: "second",
-    type: "warning",
-    subject: "Entrepreneurship",
-    code: "ENT102_P",
-    prof: "Prof. Bautista",
-    time: "Tue 10:00 AM",
-    message:
-      "Your attendance record in Entrepreneurship needs improvement. Consistent participation is required to meet course expectations and learning objectives."
-  },
-  {
-    semester: "second",
-    type: "late",
-    subject: "Physical Education",
-    code: "PE102_P",
-    prof: "Prof. Garcia",
-    time: "Wed 7:30 AM",
-    message:
-      "Late attendance has been recorded for your Physical Education class. Timeliness is essential to ensure proper warm-up and safe participation in activities."
-  },
-  {
-    semester: "second",
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Lucas John B. Antonio",
+    studentId: 5,
+
     type: "absent",
     subject: "Mathematics",
     code: "CIS242_P",
     prof: "Prof. Rizal",
     time: "Thu 9:00 AM",
-    message:
-      "You were absent during this Mathematics class. Please catch up on the lesson and consult your instructor if you need clarification on missed topics."
+    message: "You were absent during this Mathematics class."
   },
-  {
-    semester: "second",
-    type: "late",
-    subject: "Social Sciences",
-    code: "CIS244_P",
-    prof: "Prof. Kamachi",
-    time: "Fri 12:30 PM",
-    message:
-      "You have been recorded as late for your Social Sciences class. Continued tardiness may result in penalties or affect your overall attendance record."
-  }
-];
 
+  // =========================
+  // SECOND SEMESTER 2025-2026
+  // =========================
+  {
+    schoolYear: "2025-2026",
+    semester: "second",
+    studentName: "Ella Rose B. Antonio",
+    studentId: 6,
+
+    type: "late",
+    subject: "Filipino",
+    code: "FIL103_P",
+    prof: "Prof. Dela Cruz",
+    time: "Mon 8:00 AM",
+    message: "Late arrival has been noted for your Filipino class."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "second",
+    studentName: "Daniel James B. Antonio",
+    studentId: 7,
+
+    type: "warning",
+    subject: "Physics",
+    code: "PHY101_P",
+    prof: "Prof. Villanueva",
+    time: "Tue 8:00 AM",
+    message: "Attendance pattern requires improvement."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "second",
+    studentName: "Ava Nicole B. Antonio",
+    studentId: 8,
+
+    type: "absent",
+    subject: "Arts",
+    code: "ART101_P",
+    prof: "Prof. Ramirez",
+    time: "Wed 11:45 AM",
+    message: "You were absent during Arts class."
+  },
+  // =========================
+  // FIRST SEMESTER 2025-2026 (ADDITIONAL 10)
+  // =========================
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Arvin Miguel B. Antonio",
+    studentId: 1,
+    type: "late",
+    subject: "Mathematics",
+    code: "MATH301_P",
+    prof: "Prof. Rizal",
+    time: "Mon 7:50 AM",
+    message:
+      "You arrived late to Mathematics class. Please ensure punctuality to avoid attendance penalties."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Ryan Gosling B. Antonio",
+    studentId: 2,
+    type: "absent",
+    subject: "English",
+    code: "ENG301_P",
+    prof: "Prof. Santos",
+    time: "Tue 10:30 AM",
+    message:
+      "You were marked absent in English class. Kindly coordinate with your instructor regarding missed lessons."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Michael Reeves B. Antonio",
+    studentId: 3,
+    type: "warning",
+    subject: "Computer Science",
+    code: "CS301_P",
+    prof: "Prof. Navarro",
+    time: "Wed 9:15 AM",
+    message:
+      "Repeated attendance irregularities have been detected in Computer Science. Immediate improvement is required."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Sofia Marie B. Antonio",
+    studentId: 4,
+    type: "late",
+    subject: "Science",
+    code: "SCI301_P",
+    prof: "Prof. Ramirez",
+    time: "Thu 8:05 AM",
+    message:
+      "You arrived late to Science class. Please follow the class schedule strictly."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Lucas John B. Antonio",
+    studentId: 5,
+    type: "absent",
+    subject: "Statistics",
+    code: "STAT301_P",
+    prof: "Prof. Lim",
+    time: "Fri 3:00 PM",
+    message:
+      "You were absent during Statistics class. Review the missed lesson and consult your instructor if needed."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Ella Rose B. Antonio",
+    studentId: 6,
+    type: "late",
+    subject: "Filipino",
+    code: "FIL301_P",
+    prof: "Prof. Dela Cruz",
+    time: "Mon 8:10 AM",
+    message:
+      "Late attendance has been recorded for Filipino class. Please arrive earlier moving forward."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Daniel James B. Antonio",
+    studentId: 7,
+    type: "warning",
+    subject: "Physics",
+    code: "PHY301_P",
+    prof: "Prof. Villanueva",
+    time: "Tue 8:00 AM",
+    message:
+      "Your attendance in Physics has raised concerns. Continued violations may affect your academic standing."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Ava Nicole B. Antonio",
+    studentId: 8,
+    type: "absent",
+    subject: "Arts",
+    code: "ART301_P",
+    prof: "Prof. Ramirez",
+    time: "Wed 11:45 AM",
+    message:
+      "You were absent during Arts class. Please review missed activities and assignments."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Arvin Miguel B. Antonio",
+    studentId: 1,
+    type: "warning",
+    subject: "Research",
+    code: "RES301_P",
+    prof: "Prof. Villanueva",
+    time: "Thu 1:00 PM",
+    message:
+      "Your attendance pattern in Research requires improvement. Please ensure consistent participation."
+  },
+
+  {
+    schoolYear: "2025-2026",
+    semester: "first",
+    studentName: "Ryan Gosling B. Antonio",
+    studentId: 2,
+    type: "late",
+    subject: "Entrepreneurship",
+    code: "ENT301_P",
+    prof: "Prof. Bautista",
+    time: "Fri 10:00 AM",
+    message:
+      "You arrived late to Entrepreneurship class. Please observe proper time management."
+  },
+
+];
 
 export const children = [
   {
     id: 1,
     name: "Arvin Miguel B. Antonio",
+    isAbsentYesterday: "no",
     status: "present",
     present: 10,
     late: 0,
@@ -298,6 +355,7 @@ export const children = [
   {
     id: 2,
     name: "Ryan Gosling B. Antonio",
+    isAbsentYesterday: "yes",
     status: "late",
     present: 8,
     late: 1,
@@ -315,6 +373,7 @@ export const children = [
   {
     id: 3,
     name: "Michael Reeves B. Antonio",
+    isAbsentYesterday: "yes",
     status: "absent",
     present: 7,
     late: 0,
@@ -332,6 +391,7 @@ export const children = [
   {
     id: 4,
     name: "Sofia Marie B. Antonio",
+    isAbsentYesterday: "no",
     status: "checking",
     present: 9,
     late: 0,
@@ -349,6 +409,7 @@ export const children = [
   {
     id: 5,
     name: "Lucas John B. Antonio",
+    isAbsentYesterday: "no",
     status: "late",
     present: 7,
     late: 2,
@@ -366,6 +427,7 @@ export const children = [
   {
     id: 6,
     name: "Ella Rose B. Antonio",
+    isAbsentYesterday: "no",
     status: "present",
     present: 8,
     late: 0,
@@ -383,6 +445,7 @@ export const children = [
   {
   id: 7,
   name: "Daniel James B. Antonio",
+  isAbsentYesterday: "yes",
   status: "present",
   present: 9,
   late: 1,
@@ -400,6 +463,7 @@ export const children = [
   {
     id: 8,
     name: "Ava Nicole B. Antonio",
+    isAbsentYesterday: "no",
     status: "checking",
     present: 6,
     late: 1,

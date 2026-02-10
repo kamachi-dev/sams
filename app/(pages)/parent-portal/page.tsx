@@ -53,7 +53,6 @@ const warnings = 4;
 const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
 const attendanceAlerts = (presentDays + lateDays);
 const totalSubjects = subjectAttendance.length;
-
 const pieData = [
   { name: "Present", value: presentDays, color: "var(--present)" },
   { name: "Late", value: lateDays, color: "var(--late)" },
@@ -62,6 +61,7 @@ const pieData = [
 
 export default function Parent() {
   const dragScroll = useDragScroll<HTMLDivElement>();
+  const [showAbsentYesterdayOnly, setShowAbsentYesterdayOnly] = useState(false);
   const [selectedView, setSelectedView] = useState<
     "daily" | "weekly" | "monthly" | "quarterly"
   >("weekly");
@@ -74,11 +74,14 @@ export default function Parent() {
     "overview" | "analytics" | "subjects"
   >("overview");
 
-    // 👉 notifications specific
-    const [activeSemester, setActiveSemester] = useState<"first" | "second">("first");
+  // 👉 notifications specific
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState("2025-2026");
+  const [activeSemester, setActiveSemester] = useState<"first" | "second">("first");
+  const [selectedStudent, setSelectedStudent] = useState("all");
+  const [showWarningOnly, setShowWarningOnly] = useState(false);
 
-    const [selectedNotification, setSelectedNotification] =
-    useState<(typeof notifications)[number] | null>(null);
+  const [selectedNotification, setSelectedNotification] =
+  useState<(typeof notifications)[number] | null>(null);
 
   // ==========================
   // ATTENDANCE CALCULATIONS
@@ -91,12 +94,15 @@ export default function Parent() {
       child.today.statusLabel === "LATE"
   ).length;
 
-
   const todayAttendanceRate =
     totalStudents > 0
       ? ((todayPresentCount / totalStudents) * 100).toFixed(1)
       : "0.0";
 
+  const absentYesterdayCount = children.filter(
+    child => child.isAbsentYesterday === "yes"
+  ).length
+  
   const overallAttendanceRate =
     totalStudents > 0
       ? (
@@ -105,16 +111,32 @@ export default function Parent() {
         ).toFixed(1)
       : "0.0";
 
-    // ==========================
-    // COLOR LOGIC
-    // ==========================
-    const getAttendanceStatus = (rate: number) => {
-      if (rate >= 80) return "present";
-      if (rate >= 50) return "late";
-      return "absent";
-    };
-    const todayStatus = getAttendanceStatus(Number(todayAttendanceRate));
-    const overallStatus = getAttendanceStatus(Number(overallAttendanceRate));
+  // ==========================
+  // COLOR LOGIC
+  // ==========================
+  const getAttendanceStatus = (rate: number) => {
+    if (rate >= 80) return "present";
+    if (rate >= 50) return "late";
+    return "absent";
+  };
+  const todayStatus =
+  absentYesterdayCount === 0
+    ? "present"
+    : absentYesterdayCount <= 1
+    ? "late"
+    : "absent";
+
+  const overallStatus = getAttendanceStatus(Number(overallAttendanceRate));
+
+  const WARNING_THRESHOLD = 50;
+  const WARNING_APPROACH = 75; // approaching warning
+
+  const approachingWarningStudents = children.filter(
+    child => child.percentage > WARNING_THRESHOLD && child.percentage <= WARNING_APPROACH
+  );
+
+  const approachingWarningCount = approachingWarningStudents.length;
+
 
   const handleExport = () => {
     setIsExporting(true);
@@ -123,6 +145,29 @@ export default function Parent() {
       setIsExporting(false);
     }, 1500);
   };
+
+  // Filters for student records
+  let filteredChildren = children;
+
+  if (showAbsentYesterdayOnly) {
+    filteredChildren = filteredChildren.filter(
+      child => child.isAbsentYesterday === "yes"
+    );
+  }
+
+  if (showWarningOnly) {
+    filteredChildren = filteredChildren.filter(
+      child => child.percentage > WARNING_THRESHOLD &&
+              child.percentage <= WARNING_APPROACH
+    );
+  }
+
+  // Filters for notifications
+  const filteredNotifications = notifications.filter(n =>
+    n.schoolYear === selectedSchoolYear &&
+    n.semester === activeSemester &&
+    (selectedStudent === "all" || n.studentName === selectedStudent)
+  );
 
   return (
   <SamsTemplate
@@ -147,40 +192,78 @@ export default function Parent() {
               </div>,
             ]
           : [
-              <div key="back" className="student-panel-card children">
+              <div
+                key="back"
+                className="student-panel-card children"
+                style={{
+                  background: view === "dashboard"
+                    ? "var(--background1)"
+                    : undefined
+                }}
+              >
                 <button
                   className="check-info-btn"
                   onClick={() => setView("records")}
+                  style={{
+                    background: view === "dashboard"
+                      ? "var(--background1)"
+                      : undefined,
+
+                    color: view === "dashboard"
+                      ? "var(--accent1)"
+                      : undefined,
+                  }}
                 >
-                  ← Return to Student Records
+                  Return to Student Records
                 </button>
-              </div>,
+              </div>
+
+
             ]),
 
-        <div key="attendance-today" 
+        <div
+          key="attendance-today"
           className="student-panel-card current"
-          style={{ background: chartColors[todayStatus] }}
-        > 
+          style={{
+            background: chartColors.absent,
+            border: showAbsentYesterdayOnly ? "3px solid var(--background1)" : "3px solid transparent",
+            cursor: "pointer"
+          }}
+          onClick={() => setShowAbsentYesterdayOnly(prev => !prev)}
+        >
           <CalendarIcon className="student-panel-icon" />
           <div className="student-panel-content">
-            <div className="student-panel-label">Today’s Average Attendance</div>
-            <div className="student-panel-value">{todayAttendanceRate}%</div>
+            <div className="student-panel-label">Absent Yesterday</div>
+            <div className="student-panel-value">{absentYesterdayCount}</div>
             <div className="student-panel-sub">
-              {todayPresentCount} out of {totalStudents} students are present
+              Students who were absent yesterday
             </div>
           </div>
         </div>,
 
-        <div key="attendance-overall"
+        <div
+          key="approaching-warning"
           className="student-panel-card overall"
-          style={{ background: chartColors[overallStatus] }}
+          style={{
+            background: chartColors.late,
+            border: showWarningOnly ? "3px solid var(--background1)" : "3px solid transparent",
+            cursor: "pointer"
+          }}
+          onClick={() => setShowWarningOnly(prev => !prev)}
         >
-          <CalendarIcon className="student-panel-icon" />
+          <ExclamationTriangleIcon className="student-panel-icon" />
+
           <div className="student-panel-content">
-            <div className="student-panel-label">Total Average Attendance</div>
-            <div className="student-panel-value">{overallAttendanceRate}%</div>
+            <div className="student-panel-label">
+              Students Approaching Warning Level
+            </div>
+
+            <div className="student-panel-value">
+              {approachingWarningCount}
+            </div>
+
             <div className="student-panel-sub">
-              Average attendance across all students
+              Attendance nearing 50% threshold
             </div>
           </div>
         </div>,
@@ -195,7 +278,7 @@ export default function Parent() {
                   onMouseLeave={dragScroll.onMouseLeave}
                   onMouseMove={dragScroll.onMouseMove}
                 >
-                {children.map((child) => (
+                {filteredChildren.map((child) => (
                   <div key={child.id} className="parent-student-card">
                     <div className="parent-avatar" />
 
@@ -625,36 +708,60 @@ export default function Parent() {
                 </div>
                 </div>,
             ],
+            
             content: (
                 // inside the Notifications link -> content:
                 <div className="notifications-container">
-                {/* LEFT LIST */}
-                <div className="notifications-list">
-                    <div className="notifications-tabs">
-                    <button
-                        className={`notif-tab ${activeSemester === "first" ? "active" : ""}`}
-                        onClick={() => setActiveSemester("first")}
-                    >
-                        1st Sem
-                    </button>
+                  {/* LEFT LIST */}
+                  <div className="notifications-list">
+                      <div className="notifications-tabs">
+                        {/* School Year */}
+                        <select
+                          className="notif-dropdown"
+                          value={selectedSchoolYear}
+                          onChange={(e) => setSelectedSchoolYear(e.target.value)}
+                        >
+                          <option value="2024-2025">2024-2025</option>
+                          <option value="2025-2026">2025-2026</option>
+                        </select>
 
-                    <button
-                        className={`notif-tab ${activeSemester === "second" ? "active" : ""}`}
-                        onClick={() => setActiveSemester("second")}
-                    >
-                        2nd Sem
-                    </button>
-                    </div>
+                        {/* Semester */}
+                        <select
+                          className="notif-dropdown"
+                          value={activeSemester}
+                          onChange={(e) =>
+                            setActiveSemester(e.target.value as "first" | "second")
+                          }
+                        >
+                          <option value="first">1st Semester</option>
+                          <option value="second">2nd Semester</option>
+                        </select>
+
+                        {/* Student */}
+                        <select
+                          className="notif-dropdown"
+                          value={selectedStudent}
+                          onChange={(e) => setSelectedStudent(e.target.value)}
+                        >
+                          <option value="all">All Students</option>
+
+                          {children.map((child) => (
+                            <option key={child.id} value={child.name}>
+                              {child.name}
+                            </option>
+                          ))}
+
+                        </select>
+
+                      </div>
 
                     <div className="notifications-scroll">
-                    {notifications.filter(n => n.semester === activeSemester).length === 0 ? (
+                    {filteredNotifications.length === 0 ? (
                         <div className="notifications-empty">
                         No notifications for this semester
                         </div>
                     ) : (
-                        notifications
-                        .filter(n => n.semester === activeSemester)
-                        .map((n, i) => (
+                        filteredNotifications.map((n, i) => (
                             <div
                             key={i}
                             className={`notification-item ${n.type} ${
@@ -723,6 +830,10 @@ export default function Parent() {
                         {selectedNotification.code} · {selectedNotification.prof}
                     </div>
 
+                    <div className="preview-student">
+                      {selectedNotification.studentName}
+                    </div>
+
                     <p className="preview-text">
                         {selectedNotification.message}
                     </p>
@@ -730,7 +841,7 @@ export default function Parent() {
                 )}
                 </div>
 
-                </div>
+              </div>
             )
         }
       ]}
