@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Label, Separator, ToggleGroup, Dialog, Tabs } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import './styles.css';
-import { PersonIcon, TrashIcon } from "@radix-ui/react-icons";
+import { PersonIcon, TrashIcon, CalendarIcon } from "@radix-ui/react-icons";
 
 export default function Admin() {
     type ArchiveItem = {
@@ -70,6 +70,24 @@ export default function Admin() {
     const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([]);
     const [enrolledLoading, setEnrolledLoading] = useState<boolean>(false);
     const [enrolledSearch, setEnrolledSearch] = useState<string>('');
+
+    // Course deletion state
+    const [courseDeleteDialogOpen, setCourseDeleteDialogOpen] = useState<boolean>(false);
+    const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
+    const [courseDeleteConfirmText, setCourseDeleteConfirmText] = useState<string>('');
+
+    // Add students to course state
+    const [addStudentsDialogOpen, setAddStudentsDialogOpen] = useState<boolean>(false);
+    const [addStudentsSearch, setAddStudentsSearch] = useState<string>('');
+    const [studentsToAdd, setStudentsToAdd] = useState<string[]>([]);
+
+    // Student schedule view state
+    type TimeSlot = { start: string; end: string };
+    type ScheduleCourse = { id: string; name: string; schedule?: Record<string, TimeSlot> | string };
+    const [scheduleDialogOpen, setScheduleDialogOpen] = useState<boolean>(false);
+    const [scheduleStudent, setScheduleStudent] = useState<{ id: string; username?: string; email?: string } | null>(null);
+    const [studentSchedule, setStudentSchedule] = useState<ScheduleCourse[]>([]);
+    const [scheduleLoading, setScheduleLoading] = useState<boolean>(false);
 
     async function handleCsvUpload(file: File, endpoint: string) {
         try {
@@ -229,6 +247,223 @@ export default function Admin() {
         } finally {
             setEnrolledLoading(false);
         }
+    }
+
+    function openCourseDeleteDialog(course: Course) {
+        setCourseToDelete(course);
+        setCourseDeleteConfirmText('');
+        setCourseDeleteDialogOpen(true);
+    }
+
+    function closeCourseDeleteDialog() {
+        setCourseDeleteDialogOpen(false);
+        setCourseToDelete(null);
+        setCourseDeleteConfirmText('');
+    }
+
+    async function handleDeleteCourse() {
+        if (!courseToDelete || courseDeleteConfirmText !== 'delete') return;
+        try {
+            const form = new FormData();
+            form.append('id', courseToDelete.id);
+            const res = await fetch('/api/courses', { method: 'DELETE', body: form });
+            const json = await res.json();
+            if (!res.ok || json?.success === false) {
+                setImportStatus(`Delete course failed: ${json?.error ?? res.statusText}`);
+                setTimeout(() => setImportStatus(null), 4000);
+                closeCourseDeleteDialog();
+                return;
+            }
+            setImportStatus('Course deleted');
+            setCoursesList(prev => prev.filter(c => c.id !== courseToDelete.id));
+            if (selectedViewCourse?.id === courseToDelete.id) {
+                setSelectedViewCourse(null);
+                setEnrolledStudents([]);
+            }
+            setClassCount(c => (c ? c - 1 : null));
+            setTimeout(() => setImportStatus(null), 4000);
+            closeCourseDeleteDialog();
+        } catch (err: unknown) {
+            let message = 'Unknown error';
+            if (err instanceof Error) message = err.message;
+            setImportStatus(`Delete course error: ${message}`);
+            setTimeout(() => setImportStatus(null), 4000);
+            closeCourseDeleteDialog();
+        }
+    }
+
+    function openAddStudentsDialog() {
+        setAddStudentsSearch('');
+        setStudentsToAdd([]);
+        setAddStudentsDialogOpen(true);
+    }
+
+    function closeAddStudentsDialog() {
+        setAddStudentsDialogOpen(false);
+        setAddStudentsSearch('');
+        setStudentsToAdd([]);
+    }
+
+    function toggleStudentToAdd(id: string) {
+        setStudentsToAdd(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+    }
+
+    async function handleAddStudentsToCourse() {
+        if (!selectedViewCourse || !studentsToAdd.length) return;
+        try {
+            const form = new FormData();
+            form.append('courseId', selectedViewCourse.id);
+            form.append('students', studentsToAdd.join(','));
+            const res = await fetch('/api/courses/enrollments', { method: 'POST', body: form });
+            const json = await res.json();
+            if (!res.ok || json?.success === false) {
+                setImportStatus(`Add students failed: ${json?.error ?? res.statusText}`);
+                setTimeout(() => setImportStatus(null), 4000);
+                closeAddStudentsDialog();
+                return;
+            }
+            setImportStatus('Students added to course');
+            setTimeout(() => setImportStatus(null), 4000);
+            closeAddStudentsDialog();
+            // Refresh enrolled students
+            handleSelectViewCourse(selectedViewCourse);
+        } catch (err: unknown) {
+            let message = 'Unknown error';
+            if (err instanceof Error) message = err.message;
+            setImportStatus(`Add students error: ${message}`);
+            setTimeout(() => setImportStatus(null), 4000);
+            closeAddStudentsDialog();
+        }
+    }
+
+    async function handleRemoveStudentFromCourse(studentId: string) {
+        if (!selectedViewCourse) return;
+        try {
+            const form = new FormData();
+            form.append('courseId', selectedViewCourse.id);
+            form.append('studentId', studentId);
+            const res = await fetch('/api/courses/enrollments', { method: 'DELETE', body: form });
+            const json = await res.json();
+            if (!res.ok || json?.success === false) {
+                setImportStatus(`Remove student failed: ${json?.error ?? res.statusText}`);
+                setTimeout(() => setImportStatus(null), 4000);
+                return;
+            }
+            setEnrolledStudents(prev => prev.filter(s => s.id !== studentId));
+            setImportStatus('Student removed from course');
+            setTimeout(() => setImportStatus(null), 4000);
+        } catch (err: unknown) {
+            let message = 'Unknown error';
+            if (err instanceof Error) message = err.message;
+            setImportStatus(`Remove student error: ${message}`);
+            setTimeout(() => setImportStatus(null), 4000);
+        }
+    }
+
+    async function openScheduleDialog(student: { id: string; username?: string; email?: string }) {
+        setScheduleStudent(student);
+        setStudentSchedule([]);
+        setScheduleDialogOpen(true);
+        try {
+            setScheduleLoading(true);
+            const res = await fetch(`/api/student/schedule?studentId=${encodeURIComponent(student.id)}`).then(r => r.json()).catch(() => null);
+            if (res?.success && Array.isArray(res.data)) {
+                setStudentSchedule(res.data);
+            }
+        } finally {
+            setScheduleLoading(false);
+        }
+    }
+
+    function closeScheduleDialog() {
+        setScheduleDialogOpen(false);
+        setScheduleStudent(null);
+        setStudentSchedule([]);
+    }
+
+    // Schedule grid constants
+    const SCHEDULE_START = 7 * 60; // 7:00 AM in minutes
+    const SCHEDULE_END = 21 * 60; // 9:00 PM in minutes
+    const TIME_SLOT_INTERVAL = 75; // 1 hour 15 minutes
+
+    // Generate time slot labels (7:00, 8:15, 9:30, etc.)
+    function getTimeSlots(): string[] {
+        const slots: string[] = [];
+        for (let t = SCHEDULE_START; t <= SCHEDULE_END; t += TIME_SLOT_INTERVAL) {
+            const hours = Math.floor(t / 60);
+            const mins = t % 60;
+            const h12 = hours > 12 ? hours - 12 : hours;
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            slots.push(`${h12}:${mins.toString().padStart(2, '0')} ${ampm}`);
+        }
+        return slots;
+    }
+
+    // Helper to parse schedule times and detect conflicts
+    function getScheduleGrid(courses: ScheduleCourse[]) {
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const grid: Record<string, { course: string; time: string; start: number; end: number; conflictsWith?: string[] }[]> = {};
+        days.forEach(d => grid[d] = []);
+
+        // Parse time string like "1:15", "2:30", "13:00", etc.
+        // If hour < 7, assume PM (school hours)
+        const parseTime = (t: string): number => {
+            const parts = t.split(':');
+            let hours = parseInt(parts[0]) || 0;
+            const mins = parseInt(parts[1]) || 0;
+            // If hour is less than 7, it's likely PM (e.g., 1:15 = 13:15)
+            if (hours < 7) {
+                hours += 12;
+            }
+            return hours * 60 + mins;
+        };
+
+        courses.forEach(c => {
+            if (!c.schedule || typeof c.schedule === 'string') return;
+            Object.entries(c.schedule).forEach(([day, slot]) => {
+                const d = day.toLowerCase();
+                if (grid[d] && slot && typeof slot === 'object' && 'start' in slot && 'end' in slot) {
+                    const timeStr = `${slot.start} - ${slot.end}`;
+                    grid[d].push({
+                        course: c.name,
+                        time: timeStr,
+                        start: parseTime(slot.start),
+                        end: parseTime(slot.end)
+                    });
+                }
+            });
+        });
+
+        // Detect conflicts (same day, overlapping times)
+        days.forEach(d => {
+            const slots = grid[d];
+            for (let i = 0; i < slots.length; i++) {
+                for (let j = i + 1; j < slots.length; j++) {
+                    if (slots[i].start < slots[j].end && slots[j].start < slots[i].end) {
+                        const ciArr = slots[i].conflictsWith ?? (slots[i].conflictsWith = []);
+                        const cjArr = slots[j].conflictsWith ?? (slots[j].conflictsWith = []);
+                        ciArr.push(slots[j].course);
+                        cjArr.push(slots[i].course);
+                    }
+                }
+            }
+        });
+
+        return grid;
+    }
+
+    // Calculate position and height for a course block
+    function getCourseStyle(start: number, end: number): React.CSSProperties {
+        const totalMinutes = SCHEDULE_END - SCHEDULE_START;
+        const topPercent = ((start - SCHEDULE_START) / totalMinutes) * 100;
+        const heightPercent = ((end - start) / totalMinutes) * 100;
+        return {
+            position: 'absolute',
+            top: `${topPercent}%`,
+            height: `${heightPercent}%`,
+            left: '2px',
+            right: '2px',
+        };
     }
 
     async function handleCreateCourse() {
@@ -646,17 +881,26 @@ export default function Admin() {
                                                         <div className="user-email">{s.email}</div>
                                                     </div>
                                                 </div>
-                                                <button
-                                                    className="user-delete-button"
-                                                    onClick={() => {
-                                                        setUserToDeleteId(s.id);
-                                                        setUserToDeleteType('student');
-                                                        setUserDeleteConfirmText('');
-                                                        setUserDeleteDialogOpen(true);
-                                                    }}
-                                                >
-                                                    <TrashIcon />
-                                                </button>
+                                                <div className="user-actions">
+                                                    <button
+                                                        className="user-schedule-button"
+                                                        onClick={() => openScheduleDialog(s)}
+                                                        title="View schedule"
+                                                    >
+                                                        <CalendarIcon />
+                                                    </button>
+                                                    <button
+                                                        className="user-delete-button"
+                                                        onClick={() => {
+                                                            setUserToDeleteId(s.id);
+                                                            setUserToDeleteType('student');
+                                                            setUserDeleteConfirmText('');
+                                                            setUserDeleteDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        <TrashIcon />
+                                                    </button>
+                                                </div>
                                             </div>
                                         )) : <div className="user-empty">No students</div>
                                     )}
@@ -765,7 +1009,12 @@ export default function Admin() {
                                     <div className="course-viewer-right">
                                         {selectedViewCourse ? (
                                             <>
-                                                <Label.Root className="archive-form-title">{selectedViewCourse.name}</Label.Root>
+                                                <div className="course-header-row">
+                                                    <Label.Root className="archive-form-title">{selectedViewCourse.name}</Label.Root>
+                                                    <button className="archive-delete-button" onClick={() => openCourseDeleteDialog(selectedViewCourse)} title="Delete course">
+                                                        <TrashIcon />
+                                                    </button>
+                                                </div>
                                                 {selectedViewCourse.schedule && <div className="course-schedule-info">{typeof selectedViewCourse.schedule === 'string' ? selectedViewCourse.schedule : Object.keys(selectedViewCourse.schedule).join(', ')}</div>}
                                                 <Separator.Root orientation="horizontal" className="sams-separator" style={{ margin: '0.75rem 0' }} />
                                                 <Label.Root className="form-field-label">Enrolled Students</Label.Root>
@@ -785,14 +1034,22 @@ export default function Admin() {
                                                             return filtered.length ? (
                                                                 filtered.map(s => (
                                                                     <div key={s.id} className="enrolled-student-item">
-                                                                        <div className="enrolled-student-name">{s.name ?? s.email}</div>
-                                                                        {s.section && <div className="enrolled-student-section">Section: {s.section}</div>}
+                                                                        <div className="enrolled-student-info">
+                                                                            <div className="enrolled-student-name">{s.name ?? s.email}</div>
+                                                                            {s.section && <div className="enrolled-student-section">Section: {s.section}</div>}
+                                                                        </div>
+                                                                        <button className="student-remove-button" onClick={() => handleRemoveStudentFromCourse(s.id)} title="Remove from course">
+                                                                            <TrashIcon />
+                                                                        </button>
                                                                     </div>
                                                                 ))
                                                             ) : <div className="user-empty">No enrolled students{enrolledStudents.length ? ' matching search' : ''}</div>;
                                                         })()
                                                     )}
                                                 </div>
+                                                <button className="import-button" onClick={openAddStudentsDialog} style={{ marginTop: '0.75rem', alignSelf: 'flex-start' }}>
+                                                    <Label.Root>Add Students</Label.Root>
+                                                </button>
                                             </>
                                         ) : (
                                             <div className="user-empty" style={{ textAlign: 'center', padding: '2rem' }}>Select a course to view enrolled students</div>
@@ -992,6 +1249,216 @@ export default function Admin() {
                                 }}
                             >
                                 <Label.Root>Set Active</Label.Root>
+                            </button>
+                        </div>
+                        <Dialog.Close asChild>
+                            <button className="dialog-close" aria-label="Close">
+                                ×
+                            </button>
+                        </Dialog.Close>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+            <Dialog.Root open={courseDeleteDialogOpen} onOpenChange={setCourseDeleteDialogOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="dialog-overlay" />
+                    <Dialog.Content className="dialog-content">
+                        <Dialog.Title className="dialog-title">Confirm Course Deletion</Dialog.Title>
+                        <Dialog.Description className="dialog-description">
+                            This will delete the course <strong>{courseToDelete?.name}</strong> and all its enrollments. Type <strong>delete</strong> to confirm.
+                        </Dialog.Description>
+                        <div className="form-field-group" style={{ marginTop: '1rem' }}>
+                            <Label.Root className="form-field-label">Type &apos;delete&apos; to confirm</Label.Root>
+                            <input
+                                type="text"
+                                value={courseDeleteConfirmText}
+                                onChange={(e) => setCourseDeleteConfirmText(e.target.value)}
+                                className="school-year-input"
+                                placeholder="delete"
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={closeCourseDeleteDialog}
+                                className="import-button"
+                                style={{ backgroundColor: '#6b7280' }}
+                            >
+                                <Label.Root>Cancel</Label.Root>
+                            </button>
+                            <button
+                                onClick={handleDeleteCourse}
+                                disabled={courseDeleteConfirmText !== 'delete'}
+                                className="import-button"
+                                style={{
+                                    backgroundColor: courseDeleteConfirmText === 'delete' ? '#ef4444' : '#9ca3af',
+                                    opacity: courseDeleteConfirmText === 'delete' ? 1 : 0.5,
+                                    cursor: courseDeleteConfirmText === 'delete' ? 'pointer' : 'not-allowed'
+                                }}
+                            >
+                                <Label.Root>Delete Course</Label.Root>
+                            </button>
+                        </div>
+                        <Dialog.Close asChild>
+                            <button className="dialog-close" aria-label="Close">
+                                ×
+                            </button>
+                        </Dialog.Close>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+            <Dialog.Root open={addStudentsDialogOpen} onOpenChange={setAddStudentsDialogOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="dialog-overlay" />
+                    <Dialog.Content className="dialog-content" style={{ maxWidth: '32rem' }}>
+                        <Dialog.Title className="dialog-title">Add Students to {selectedViewCourse?.name}</Dialog.Title>
+                        <Dialog.Description className="dialog-description">
+                            Select students to add to this course.
+                        </Dialog.Description>
+                        <div className="form-field-group" style={{ marginTop: '1rem' }}>
+                            <Label.Root className="form-field-label">Search Students</Label.Root>
+                            <input
+                                type="text"
+                                value={addStudentsSearch}
+                                onChange={(e) => setAddStudentsSearch(e.target.value)}
+                                className="school-year-input"
+                                placeholder="Search by name or email..."
+                                style={{ marginBottom: '0.5rem' }}
+                            />
+                            <div className="student-checkbox-list" style={{ maxHeight: '16rem' }}>
+                                {(() => {
+                                    const enrolledIds = new Set(enrolledStudents.map(s => s.id));
+                                    const available = students
+                                        .filter(s => !enrolledIds.has(s.id))
+                                        .filter(s => {
+                                            const q = addStudentsSearch.toLowerCase();
+                                            return (s.username?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q));
+                                        })
+                                        .sort((a, b) => (a.username ?? a.email ?? '').localeCompare(b.username ?? b.email ?? ''));
+                                    return available.length ? (
+                                        available.map(s => (
+                                            <label key={s.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                                <input type="checkbox" checked={studentsToAdd.includes(s.id)} onChange={() => toggleStudentToAdd(s.id)} />
+                                                <span style={{ fontSize: 14 }}>{s.username ?? s.email}</span>
+                                            </label>
+                                        ))
+                                    ) : <div className="user-empty">No available students</div>;
+                                })()}
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={closeAddStudentsDialog}
+                                className="import-button"
+                                style={{ backgroundColor: '#6b7280' }}
+                            >
+                                <Label.Root>Cancel</Label.Root>
+                            </button>
+                            <button
+                                onClick={handleAddStudentsToCourse}
+                                disabled={!studentsToAdd.length}
+                                className="import-button"
+                                style={{
+                                    opacity: studentsToAdd.length ? 1 : 0.5,
+                                    cursor: studentsToAdd.length ? 'pointer' : 'not-allowed'
+                                }}
+                            >
+                                <Label.Root>Add {studentsToAdd.length ? `(${studentsToAdd.length})` : ''}</Label.Root>
+                            </button>
+                        </div>
+                        <Dialog.Close asChild>
+                            <button className="dialog-close" aria-label="Close">
+                                ×
+                            </button>
+                        </Dialog.Close>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+
+            {/* Student Schedule Dialog */}
+            <Dialog.Root open={scheduleDialogOpen} onOpenChange={(open) => { if (!open) closeScheduleDialog(); }}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="dialog-overlay" />
+                    <Dialog.Content className="dialog-content schedule-dialog">
+                        <Dialog.Title className="dialog-title">
+                            Schedule for {scheduleStudent?.username ?? scheduleStudent?.email ?? 'Student'}
+                        </Dialog.Title>
+                        <Dialog.Description className="dialog-description">
+                            Weekly schedule showing all enrolled courses.
+                        </Dialog.Description>
+                        {scheduleLoading ? (
+                            <div style={{ padding: '2rem', textAlign: 'center' }}>Loading schedule...</div>
+                        ) : studentSchedule.length === 0 ? (
+                            <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                                No enrolled courses with schedules.
+                            </div>
+                        ) : (
+                            <div className="schedule-grid-container">
+                                {/* Time labels column */}
+                                <div className="schedule-time-column">
+                                    <div className="schedule-time-header"></div>
+                                    <div className="schedule-time-labels">
+                                        {getTimeSlots().map((time, idx) => {
+                                            const totalMinutes = SCHEDULE_END - SCHEDULE_START;
+                                            const slotMinutes = idx * TIME_SLOT_INTERVAL;
+                                            const topPercent = (slotMinutes / totalMinutes) * 100;
+                                            return (
+                                                <div 
+                                                    key={idx} 
+                                                    className="schedule-time-label"
+                                                    style={{ top: `${topPercent}%` }}
+                                                >
+                                                    {time}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                {/* Day columns */}
+                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, dayIdx) => {
+                                    const fullDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayIdx];
+                                    const grid = getScheduleGrid(studentSchedule);
+                                    const slots = grid[fullDay] || [];
+                                    const totalMinutes = SCHEDULE_END - SCHEDULE_START;
+                                    return (
+                                        <div key={day} className="schedule-day-column">
+                                            <div className="schedule-day-header">{day}</div>
+                                            <div className="schedule-day-body">
+                                                {/* Grid lines */}
+                                                {getTimeSlots().map((_, idx) => {
+                                                    const slotMinutes = idx * TIME_SLOT_INTERVAL;
+                                                    const topPercent = (slotMinutes / totalMinutes) * 100;
+                                                    return (
+                                                        <div 
+                                                            key={idx} 
+                                                            className="schedule-grid-line" 
+                                                            style={{ top: `${topPercent}%` }}
+                                                        />
+                                                    );
+                                                })}
+                                                {/* Course blocks */}
+                                                {slots.map((slot, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={`schedule-course-block ${slot.conflictsWith?.length ? 'schedule-conflict' : ''}`}
+                                                        style={getCourseStyle(slot.start, slot.end)}
+                                                        title={slot.conflictsWith?.length ? `Conflicts with: ${slot.conflictsWith.join(', ')}` : slot.time}
+                                                    >
+                                                        <div className="schedule-course-name">{slot.course}</div>
+                                                        <div className="schedule-course-time">{slot.time}</div>
+                                                        {slot.conflictsWith?.length ? (
+                                                            <div className="schedule-conflict-badge">⚠</div>
+                                                        ) : null}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button onClick={closeScheduleDialog} className="import-button">
+                                <Label.Root>Close</Label.Root>
                             </button>
                         </div>
                         <Dialog.Close asChild>

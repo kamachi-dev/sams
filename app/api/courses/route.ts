@@ -46,3 +46,24 @@ export async function GET() {
         return NextResponse.json({ success: false, status: 500, data: { message: String(error) }, error: 'Courses fetch failed' })
     }
 }
+
+export async function DELETE(req: Request) {
+    try {
+        const formData = await req.formData()
+        const id = String(formData.get('id') ?? '').trim()
+
+        if (!id) {
+            return NextResponse.json({ success: false, status: 400, data: null, error: 'Course id required' }, { status: 400 })
+        }
+
+        // Delete enrollments first
+        await db.query(`DELETE FROM enrollment_data WHERE course = $1`, [id])
+        // Delete course
+        const result = await db.query(`DELETE FROM course WHERE id = $1 RETURNING *`, [id])
+
+        return NextResponse.json({ success: true, status: 200, data: result.rows[0], error: null })
+    } catch (error) {
+        console.error('Error deleting course:', error)
+        return NextResponse.json({ success: false, status: 500, data: { message: String(error) }, error: 'Course deletion failed' })
+    }
+}
