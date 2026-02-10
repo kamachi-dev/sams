@@ -52,6 +52,7 @@ export default function Admin() {
     const [userToDeleteId, setUserToDeleteId] = useState<string | null>(null);
     const [userToDeleteType, setUserToDeleteType] = useState<'student' | 'teacher' | null>(null);
     const [userDeleteConfirmText, setUserDeleteConfirmText] = useState<string>('');
+    const [userSearch, setUserSearch] = useState<string>('');
 
     // Courses management state
     const [courseName, setCourseName] = useState<string>('');
@@ -863,10 +864,27 @@ export default function Admin() {
                                 <Tabs.Trigger value="teachers" className="tab-trigger">Teachers</Tabs.Trigger>
                             </Tabs.List>
 
+                            <div style={{ marginTop: '0.75rem', marginBottom: '0.5rem' }}>
+                                <input
+                                    type="text"
+                                    value={userSearch}
+                                    onChange={(e) => setUserSearch(e.target.value)}
+                                    className="school-year-input"
+                                    placeholder="Search by name or email..."
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+
                             <Tabs.Content value="students" className="tab-content">
                                 <div className="user-list">
-                                    {usersLoading ? <div>Loading...</div> : (
-                                        students.length ? students.map((s) => (
+                                    {usersLoading ? <div>Loading...</div> : (() => {
+                                        const filtered = students
+                                            .filter(s => {
+                                                const q = userSearch.toLowerCase();
+                                                return !q || (s.username?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q));
+                                            })
+                                            .sort((a, b) => (a.username ?? a.email ?? '').localeCompare(b.username ?? b.email ?? ''));
+                                        return filtered.length ? filtered.map((s) => (
                                             <div key={s.id} className="user-item">
                                                 <div className="user-left">
                                                     {((s.pfp ?? '/icons/placeholder-pfp.png').startsWith('http')) ? (
@@ -902,15 +920,21 @@ export default function Admin() {
                                                     </button>
                                                 </div>
                                             </div>
-                                        )) : <div className="user-empty">No students</div>
-                                    )}
+                                        )) : <div className="user-empty">No students found</div>;
+                                    })()}
                                 </div>
                             </Tabs.Content>
 
                             <Tabs.Content value="teachers" className="tab-content">
                                 <div className="user-list">
-                                    {usersLoading ? <div>Loading...</div> : (
-                                        teachers.length ? teachers.map((t) => (
+                                    {usersLoading ? <div>Loading...</div> : (() => {
+                                        const filtered = teachers
+                                            .filter(t => {
+                                                const q = userSearch.toLowerCase();
+                                                return !q || (t.username?.toLowerCase().includes(q) || t.email?.toLowerCase().includes(q));
+                                            })
+                                            .sort((a, b) => (a.username ?? a.email ?? '').localeCompare(b.username ?? b.email ?? ''));
+                                        return filtered.length ? filtered.map((t) => (
                                             <div key={t.id} className="user-item">
                                                 <div className="user-left">
                                                     {((t.pfp ?? '/icons/placeholder-pfp.png').startsWith('http')) ? (
@@ -937,8 +961,8 @@ export default function Admin() {
                                                     <TrashIcon />
                                                 </button>
                                             </div>
-                                        )) : <div className="user-empty">No teachers</div>
-                                    )}
+                                        )) : <div className="user-empty">No teachers found</div>;
+                                    })()}
                                 </div>
                             </Tabs.Content>
                         </Tabs.Root>
