@@ -244,7 +244,9 @@ export default function Admin() {
         try {
             setEnrolledLoading(true);
             const res = await fetch(`/api/camera/courses?courseId=${encodeURIComponent(course.id)}`).then(r => r.json()).catch(() => null);
-            if (res?.success && Array.isArray(res.data)) setEnrolledStudents(res.data);
+            if (res?.success && res.data?.enrolled_students && Array.isArray(res.data.enrolled_students)) {
+                setEnrolledStudents(res.data.enrolled_students);
+            }
         } finally {
             setEnrolledLoading(false);
         }
