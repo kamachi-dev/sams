@@ -38,6 +38,7 @@ import {
   notifications,
   subjectAttendance,
   chartColors,
+  attendanceAppeals,
 } from "./constants";
 
 const totalDays = 40;
@@ -48,6 +49,13 @@ const warnings = 4;
 const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
 const attendanceAlerts = (presentDays + lateDays);
 const totalSubjects = subjectAttendance.length;
+
+function getLateReason(record: any) {
+  if (record.status !== "LATE") return "";
+
+  return `Arrival recorded at (${record.recordedTime}), exceeding the 15 minute grace period (${record.classStart}).`;
+}
+
 
 export default function Student() {
   const [selectedView, setSelectedView] = useState<
@@ -91,6 +99,27 @@ export default function Student() {
   }>>([]);
 
   const [isLoading, setIsLoading] = useState(true);
+
+  // Student Appeal
+  const appealableRecords = dailyAttendance.filter(
+    (record) => record.status === "LATE" || record.status === "ABSENT"
+  );
+
+  // Appeal stats
+  const availableAppealsCount = appealableRecords.length;
+
+  const pendingAppealsCount = attendanceAppeals.filter(
+    appeal => appeal.status === "pending"
+  ).length;
+
+  const completedAppealsCount = attendanceAppeals.filter(
+    appeal => appeal.status === "approved" || appeal.status === "rejected"
+  ).length;
+
+  const [selectedRecord, setSelectedRecord] = useState<
+    (typeof appealableRecords)[number] | null
+  >(appealableRecords.length > 0 ? appealableRecords[0] : null);
+
 
   // Fetch student data
   useEffect(() => {
@@ -155,11 +184,11 @@ export default function Student() {
     }, 1500);
   };
 
-
   return (
     <SamsTemplate
       links={[
         {
+          // DASHBOARD
           label: "Dashboard",
           Icon: DashboardIcon,
           panels: [
@@ -485,7 +514,227 @@ export default function Student() {
             </div>
           ),
         },
+          // ATTENDANCE APPEAL
+          {
+            label: "Attendance Appeal",
+            Icon: ExclamationTriangleIcon,
+            panels: [
+            // 1. Available subjects for appeal
+            <div key="appeal-available" className="student-panel-card appeal">
+              <ExclamationTriangleIcon className="student-panel-icon" />
+              <div className="student-panel-content">
+                <div className="student-panel-label">Available Appeals</div>
+                <div className="student-panel-value">{availableAppealsCount}</div>
+                <div className="student-panel-sub">Subjects eligible for appeal</div>
+              </div>
+            </div>,
+
+            // 2. Pending appeals
+            <div key="appeal-pending" className="student-panel-card appeal-status">
+              <BookmarkIcon className="student-panel-icon" />
+              <div className="student-panel-content">
+                <div className="student-panel-label">Pending Requests</div>
+                <div className="student-panel-value">{pendingAppealsCount}</div>
+                <div className="student-panel-sub">Awaiting professor review</div>
+              </div>
+            </div>,
+
+            // 3. Completed appeals
+            <div key="appeal-completed" className="student-panel-card appeal-status">
+              <BookmarkIcon className="student-panel-icon" />
+              <div className="student-panel-content">
+                <div className="student-panel-label">Completed Appeals</div>
+                <div className="student-panel-value">{completedAppealsCount}</div>
+                <div className="student-panel-sub">Approved and rejected requests</div>
+              </div>
+            </div>,
+          ],
+          
+            content: (
+              <div className="appeal-container">
+
+                <div className="appeal-split-layout">
+
+                  {/* LEFT SIDE */}
+                  <div className="appeal-list">
+
+                    <div className="appeal-list-title">
+                      Attendance Issues
+                    </div>
+
+                    <div className="appeal-list-scroll">
+
+                      {appealableRecords.length === 0 ? (
+                        <div className="appeal-empty">
+                          No attendance issues today
+                        </div>
+                      ) : (
+                        appealableRecords.map((record, index) => (
+                          <div
+                            key={index}
+                            className={`appeal-item ${
+                              selectedRecord === record ? "active" : ""
+                            } ${record.status.toLowerCase()}`}
+                            onClick={() => setSelectedRecord(record)}
+                          >
+
+                            <div className="appeal-item-header">
+                              <div className="appeal-item-subject">
+                                {record.subject}
+                              </div>
+
+                              <div className="appeal-item-status">
+                                {record.status}
+                              </div>
+                            </div>
+
+                            <div className="appeal-item-prof">
+                              {record.prof}
+                            </div>
+
+                            <div className="appeal-item-time-range">
+                              Class: {record.classStart} – {record.classEnd}
+                            </div>
+
+                            {record.status === "LATE" && (
+                              <div className="appeal-item-reason">
+                                {getLateReason(record)}
+                              </div>
+                            )}
+
+                            {record.status === "ABSENT" && (
+                              <div className="appeal-item-reason">
+                                No face recognition detected during class session.
+                              </div>
+                            )}
+
+                          </div>
+                        ))
+                      )}
+
+                    </div>
+
+                  </div>
+
+                  {/* RIGHT SIDE */}
+                  <div className="appeal-form-container">
+                    <div className="appeal-right-layout">
+                      {/* Appeal Form */}
+                      <div className="appeal-card">
+                        <h3 className="appeal-title">
+                          Submit Attendance Appeal
+                        </h3>
+
+                        <div className="appeal-form">
+
+                          <div className="appeal-field">
+                            <label>Date and Time</label>
+                            <input
+                              type="text"
+                              value={
+                                selectedRecord
+                                  ? `${selectedRecord.date} (${selectedRecord.classStart} – ${selectedRecord.classEnd})`
+                                  : ""
+                              }
+                              readOnly
+                            />
+                          </div>
+
+                          <div className="appeal-field">
+                            <label>Subject</label>
+                            <input type="text" value={selectedRecord?.subject || ""} readOnly />
+                          </div>
+
+                          <div className="appeal-field">
+                            <label>Professor</label>
+                            <input
+                              type="text"
+                              value={selectedRecord?.prof || ""}
+                              readOnly
+                            />
+                          </div>
+
+                          <div className="appeal-field">
+                            <label>Recorded Status</label>
+                            <input type="text" value={selectedRecord?.status || ""} readOnly />
+                          </div>
+
+                          <div className="appeal-field">
+                            <label>Reason for Appeal</label>
+                            <textarea placeholder="Explain why your attendance should be corrected..." />
+                          </div>
+
+                          <button className="student-export-btn">
+                            Submit Appeal
+                          </button>
+
+                        </div>
+                      </div>
+
+                      {/* Appeal History */}
+                      <div className="appeal-history-card">
+
+                        <div className="appeal-history-title">
+                          Appeal History
+                        </div>
+
+                        <div className="appeal-history-scroll">
+
+                          {attendanceAppeals.map((appeal) => (
+
+                            <div
+                              key={appeal.id}
+                              className={`appeal-history-item ${appeal.status}`}
+                              style={{ cursor: "default" }}
+                            >
+                              <div className="appeal-history-header">
+
+                                <div className="appeal-history-subject">
+                                  {appeal.subject}
+                                </div>
+
+                                <div className="appeal-history-status">
+                                  {appeal.status.toUpperCase()}
+                                </div>
+
+                              </div>
+
+                              <div className="appeal-history-meta">
+                                {appeal.date} • {appeal.recordedStatus} → {appeal.requestedStatus}
+                              </div>
+
+                              <div className="appeal-history-reason">
+                                <strong>Your reason:</strong> {appeal.reason}
+                              </div>
+
+                              {appeal.status !== "pending" && (
+                                <div className="appeal-history-teacher-response">
+
+                                  <strong>
+                                    {appeal.reviewedBy || "System"} decision:
+                                  </strong>
+
+                                  <div>
+                                    {appeal.teacherResponse?.trim()
+                                      ? appeal.teacherResponse
+                                      : `Your attendance appeal has been ${appeal.status}.`}
+                                  </div>
+
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          },
         {
+            // NOTIFICATIONS
             label: "Notifications",
             Icon: BellIcon,
             panels: [
