@@ -100,6 +100,10 @@ export default function Student() {
   }>>([]);
 
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Attendance trends data
+  const [trendsData, setTrendsData] = useState<any[]>([]);
+  const [isLoadingTrends, setIsLoadingTrends] = useState(false);
 
   // Student Appeal
   const appealableRecords = dailyAttendance.filter(
@@ -189,6 +193,35 @@ export default function Student() {
 
     fetchStudentData();
   }, []);
+
+  // Fetch trends data when view or subject filter changes
+  useEffect(() => {
+    const fetchTrendsData = async () => {
+      setIsLoadingTrends(true);
+      try {
+        const params = new URLSearchParams({
+          view: selectedView
+        });
+        
+        if (selectedSubject && selectedSubject !== 'all') {
+          params.append('subject', selectedSubject);
+        }
+        
+        const response = await fetch(`/api/student/attendance/trends?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setTrendsData(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching trends data:', error);
+      } finally {
+        setIsLoadingTrends(false);
+      }
+    };
+
+    fetchTrendsData();
+  }, [selectedView, selectedSubject]);
 
   const { presentDays, lateDays, absentDays, totalDays, attendanceRate, totalSubjects } = attendanceSummary;
 
@@ -364,17 +397,12 @@ export default function Student() {
                     </div>
                     </div>
 
-                  <div className="student-filters">
-                    <div className="student-filters-group">
-                      <select className="student-select">
-                        <option value="1">1st Semester</option>
-                        <option value="2">2nd Semester</option>
-                      </select>
-
+                  <div className="teacher-filters">
+                    <div className="teacher-filters-group">
                       <select
                         value={selectedView}
                         onChange={(e) => setSelectedView(e.target.value as any)}
-                        className="student-select"
+                        className="teacher-select"
                       >
                         <option value="daily">Daily</option>
                         <option value="weekly">Weekly</option>
@@ -385,7 +413,7 @@ export default function Student() {
                       <select
                         value={selectedSubject}
                         onChange={(e) => setSelectedSubject(e.target.value)}
-                        className="student-select"
+                        className="teacher-select"
                       >
                         <option value="all">All Subjects</option>
                         {subjectAttendance.map((subject, index) => (
@@ -397,80 +425,166 @@ export default function Student() {
                     <button
                       onClick={handleExport}
                       disabled={isExporting}
-                      className="student-export-btn"
+                      className="teacher-export-btn"
                     >
                       <DownloadIcon />
                       {isExporting ? "Exporting..." : ""}
                     </button>
                   </div>
 
-                  <div className="student-chart-container">
-                    <div className="student-chart-card">
+                  <div className="teacher-chart-container">
+                    <div className="teacher-chart-card">
+                      {isLoadingTrends ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                          <p>Loading chart data...</p>
+                        </div>
+                      ) : (
                       <ResponsiveContainer width="100%" height="100%">
+                        {selectedView === "daily" && (
+                          <BarChart data={trendsData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="day" />
+                            <YAxis />
+                            <Tooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0]?.payload;
+                                  return (
+                                    <div style={{ 
+                                      backgroundColor: 'white', 
+                                      padding: '10px', 
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px'
+                                    }}>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data.day}</p>
+                                      <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>{data.date}</p>
+                                      <p style={{ color: 'var(--present)' }}>Present: {data.present}</p>
+                                      <p style={{ color: 'var(--late)' }}>Late: {data.late}</p>
+                                      <p style={{ color: 'var(--absent)' }}>Absent: {data.absent}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Legend />
+                            <Bar dataKey="present" fill="var(--present)" name="Present" />
+                            <Bar dataKey="late" fill="var(--late)" name="Late" />
+                            <Bar dataKey="absent" fill="var(--absent)" name="Absent" />
+                          </BarChart>
+                        )}
+
                         {selectedView === "weekly" && (
-                          <BarChart data={weeklyTrend}>
+                          <BarChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="week" />
                             <YAxis />
-                            <Tooltip />
+                            <Tooltip 
+                              content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                  const data = trendsData.find(d => d.week === label);
+                                  return (
+                                    <div style={{ 
+                                      backgroundColor: 'white', 
+                                      padding: '10px', 
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px'
+                                    }}>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{label}</p>
+                                      <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>
+                                        {data?.dateRange}
+                                      </p>
+                                      <p style={{ color: 'var(--present)' }}>Present: {payload[0]?.value}</p>
+                                      <p style={{ color: 'var(--late)' }}>Late: {payload[1]?.value}</p>
+                                      <p style={{ color: 'var(--absent)' }}>Absent: {payload[2]?.value}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
                             <Legend />
-                            <Bar dataKey="present" fill="var(--present)" />
-                            <Bar dataKey="late" fill="var(--late)" />
-                            <Bar dataKey="absent" fill="var(--absent)" />
+                            <Bar dataKey="present" fill="var(--present)" name="Present" />
+                            <Bar dataKey="late" fill="var(--late)" name="Late" />
+                            <Bar dataKey="absent" fill="var(--absent)" name="Absent" />
                           </BarChart>
                         )}
 
                         {selectedView === "monthly" && (
-                          <LineChart data={monthlyData}>
+                          <LineChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="month" />
-                            <YAxis domain={[80, 100]} />
-                            <Tooltip />
+                            <YAxis />
+                            <Tooltip 
+                              content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                  const data = trendsData.find(d => d.month === label);
+                                  return (
+                                    <div style={{ 
+                                      backgroundColor: 'white', 
+                                      padding: '10px', 
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px'
+                                    }}>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data?.fullMonth}</p>
+                                      <p style={{ color: 'var(--present)' }}>Attendance Rate: {data?.attendanceRate}%</p>
+                                      <p style={{ color: '#666', fontSize: '12px', marginTop: '8px' }}>Present: {data?.present}</p>
+                                      <p style={{ color: '#666', fontSize: '12px' }}>Late: {data?.late}</p>
+                                      <p style={{ color: '#666', fontSize: '12px' }}>Absent: {data?.absent}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Legend />
                             <Line
                               type="monotone"
-                              dataKey="percentage"
+                              dataKey="attendanceRate"
                               stroke="var(--present)"
                               strokeWidth={3}
+                              name="Attendance Rate (%)"
                             />
                           </LineChart>
                         )}
 
                         {selectedView === "quarterly" && (
-                          <BarChart data={quarterlyData}>
+                          <BarChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
                             <YAxis />
-                            <Tooltip />
+                            <Tooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0]?.payload;
+                                  return (
+                                    <div style={{ 
+                                      backgroundColor: 'white', 
+                                      padding: '10px', 
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px'
+                                    }}>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data.label}</p>
+                                      <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>
+                                        {data.dateRange}
+                                      </p>
+                                      <p style={{ color: 'var(--present)' }}>Present: {data.present}</p>
+                                      <p style={{ color: 'var(--late)' }}>Late: {data.late}</p>
+                                      <p style={{ color: 'var(--absent)' }}>Absent: {data.absent}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
                             <Legend />
-                            <Bar dataKey="present" fill="var(--present)" />
-                            <Bar dataKey="late" fill="var(--late)" />
-                            <Bar dataKey="absent" fill="var(--absent)" />
-                          </BarChart>
-                        )}
-
-                        {selectedView === "daily" && (
-                          <BarChart data={dailyAttendance}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey={() => 1}>
-                              {dailyAttendance.map((entry, i) => (
-                                <Cell
-                                  key={i}
-                                  fill={
-                                    entry.status === "Present"
-                                      ? "var(--present)"
-                                      : entry.status === "Late"
-                                      ? "var(--late)"
-                                      : "var(--absent)"
-                                  }
-                                />
-                              ))}
-                            </Bar>
+                            <Bar dataKey="present" fill="var(--present)" name="Present" />
+                            <Bar dataKey="late" fill="var(--late)" name="Late" />
+                            <Bar dataKey="absent" fill="var(--absent)" name="Absent" />
                           </BarChart>
                         )}
                       </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -43,7 +43,7 @@ async function getEnrolledCount(userId: string, courseFilter: string | null, sec
         query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
                  FROM enrollment_data e
                  INNER JOIN course c ON e.course = c.id
-                 INNER JOIN student_data sd ON e.student = sd.id
+                 INNER JOIN student_data sd ON e.student = sd.student
                  WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3`
         params = [userId, courseFilter, sectionFilter]
     } else if (courseFilter) {
@@ -73,7 +73,7 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
         query = `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
                  FROM record r
                  INNER JOIN course c ON r.course = c.id
-                 INNER JOIN student_data sd ON r.student = sd.id
+                 INNER JOIN student_data sd ON r.student = sd.student
                  WHERE c.teacher = $1
                    AND c.id = $2
                    AND sd.section = $3
@@ -117,7 +117,7 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                     COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
                  FROM record r
                  INNER JOIN course c ON r.course = c.id
-                 INNER JOIN student_data sd ON r.student = sd.id
+                 INNER JOIN student_data sd ON r.student = sd.student
                  WHERE c.teacher = $1
                    AND c.id = $2
                    AND sd.section = $3

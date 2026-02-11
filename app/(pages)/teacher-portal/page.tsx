@@ -335,7 +335,7 @@ export default function Teacher() {
         confidence: string;
     }>>([]);
     const [isLoadingRecords, setIsLoadingRecords] = useState(true);
-    const [courses, setCourses] = useState<Array<{ id: string; name: string; schedule?: string; studentCount?: number; sectionCount?: number; sectionNames?: string[] }>>([]);
+    const [courses, setCourses] = useState<Array<{ id: string; name: string; schedule?: string; studentCount?: number; sectionCount?: number; sectionNames?: string[]; sections?: Array<{ name: string; studentCount: number }> }>>([]);
     const [selectedCourse, setSelectedCourse] = useState("");
     const [selectedChartCourse, setSelectedChartCourse] = useState("all");
     const [semesterAttendance, setSemesterAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
@@ -1077,11 +1077,15 @@ export default function Teacher() {
                                                         <span className="overview-course-stat-label">Students</span>
                                                     </div>
                                                 </div>
-                                                {course.sectionNames && course.sectionNames.length > 0 && (
+                                                {course.sections && course.sections.length > 0 && (
                                                     <div className="overview-course-card-sections-list">
                                                         <span className="overview-course-sections-label">Sections:</span>
                                                         <span className="overview-course-sections-names">
-                                                            {course.sectionNames.join(', ')}
+                                                            {course.sections.map((section, idx) => (
+                                                                <span key={section.name}>
+                                                                    {section.name} ({section.studentCount} {section.studentCount === 1 ? 'student' : 'students'}){idx < course.sections!.length - 1 ? ', ' : ''}
+                                                                </span>
+                                                            ))}
                                                         </span>
                                                     </div>
                                                 )}
