@@ -51,41 +51,23 @@ interface LowAttendanceStudent {
     attendanceRate: number;
 }
 
-// Types for comparative analytics
-interface StudentForComparison {
-    id: string;
-    name: string;
-    email: string;
+// Types for section comparison analytics
+interface SectionStat {
+    section: string;
+    studentCount: number;
+    schoolDays: number;
+    presentCount: number;
+    lateCount: number;
+    absentCount: number;
+    attendanceRate: number;
 }
 
-interface ComparisonData {
-    student: {
-        id: string;
-        name: string;
-        courseName: string;
-        totalRecords: number;
-        present: number;
-        late: number;
-        absent: number;
-        attendanceRate: number;
-    } | null;
-    class: {
-        totalStudents: number;
-        totalRecords: number;
-        present: number;
-        late: number;
-        absent: number;
-        attendanceRate: number;
-    };
-    monthlyComparison: Array<{
-        month: string;
-        studentRate: number;
-        classRate: number;
-    }>;
-    comparison: {
-        rateVsClass: string | null;
-        status: 'above' | 'below' | 'unknown';
-    };
+interface SectionComparisonData {
+    courseName: string;
+    sections: SectionStat[];
+    courseAvgRate: number;
+    monthlyComparison: Array<Record<string, any>>;
+    sectionNames: string[];
 }
 
 export default function Teacher() {
@@ -94,6 +76,19 @@ export default function Teacher() {
     const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("daily");
     const [totalStudents, setTotalStudents] = useState<number>(0);
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+
+    // Helper function to format schedule object to readable string
+    const formatSchedule = (schedule: any): string => {
+        if (!schedule) return '';
+        if (typeof schedule === 'string') return schedule;
+        if (typeof schedule === 'object') {
+            const days = Object.keys(schedule).map(day => 
+                day.charAt(0).toUpperCase() + day.slice(1)
+            ).join(', ');
+            return days;
+        }
+        return '';
+    };
     const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
     const [attendanceRecords, setAttendanceRecords] = useState<Array<{
         id: string;
@@ -105,7 +100,7 @@ export default function Teacher() {
         confidence: string;
     }>>([]);
     const [isLoadingRecords, setIsLoadingRecords] = useState(true);
-    const [courses, setCourses] = useState<Array<{ id: string; name: string; studentCount?: number; sectionCount?: number }>>([]);
+    const [courses, setCourses] = useState<Array<{ id: string; name: string; schedule?: string; studentCount?: number; sectionCount?: number; sectionNames?: string[] }>>([]);
     const [selectedCourse, setSelectedCourse] = useState("");
     const [selectedChartCourse, setSelectedChartCourse] = useState("all");
     const [semesterAttendance, setSemesterAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
@@ -113,7 +108,7 @@ export default function Teacher() {
     // Overview drill-down state
     const [overviewStep, setOverviewStep] = useState<'courses' | 'sections' | 'stats'>('courses');
     const [selectedOverviewCourse, setSelectedOverviewCourse] = useState<{ id: string; name: string } | null>(null);
-    const [courseSections, setCourseSections] = useState<Array<{ section: string; studentCount: number }>>([]);
+    const [courseSections, setCourseSections] = useState<Array<{ section: string; studentCount: number; students?: string[] }>>([]);
     const [selectedSection, setSelectedSection] = useState<string>("");
     const [isLoadingSections, setIsLoadingSections] = useState(false);
 
@@ -123,12 +118,13 @@ export default function Teacher() {
     const [lowAttendanceThreshold, setLowAttendanceThreshold] = useState(50);
     const [lowAttendanceCourseFilter, setLowAttendanceCourseFilter] = useState("all");
 
-    // Comparative Analytics State
-    const [studentsForComparison, setStudentsForComparison] = useState<StudentForComparison[]>([]);
-    const [selectedStudentForComparison, setSelectedStudentForComparison] = useState("");
+    // Section Comparison Analytics State
     const [selectedCourseForComparison, setSelectedCourseForComparison] = useState("");
-    const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
+    const [sectionComparisonData, setSectionComparisonData] = useState<SectionComparisonData | null>(null);
     const [isLoadingComparison, setIsLoadingComparison] = useState(false);
+
+    // Total sections count
+    const totalSections = courses.reduce((sum, c) => sum + (c.sectionCount || 0), 0);
 
     // Trend Data State
     const [weeklyTrendData, setWeeklyTrendData] = useState<Array<{
@@ -234,8 +230,13 @@ export default function Teacher() {
         const fetchSemesterAttendance = async () => {
             try {
                 const params = new URLSearchParams();
-                if (selectedChartCourse !== "all") params.set('course', selectedChartCourse);
-                if (overviewStep === 'stats' && selectedSection) params.set('section', selectedSection);
+                // In stats view, use the selected overview course + section
+                if (overviewStep === 'stats' && selectedOverviewCourse) {
+                    params.set('course', selectedOverviewCourse.id);
+                    if (selectedSection) params.set('section', selectedSection);
+                } else if (selectedChartCourse !== "all") {
+                    params.set('course', selectedChartCourse);
+                }
                 const queryStr = params.toString() ? `?${params.toString()}` : '';
                 const response = await fetch(`/api/teacher/attendance/summary${queryStr}`);
                 const result = await response.json();
@@ -248,18 +249,26 @@ export default function Teacher() {
         };
         
         fetchSemesterAttendance();
-    }, [selectedChartCourse, selectedSection, overviewStep]);
+    }, [selectedChartCourse, selectedSection, overviewStep, selectedOverviewCourse]);
 
     // Fetch trend data for charts (weekly, monthly, quarterly)
     useEffect(() => {
         const fetchTrendData = async () => {
             try {
-                const courseParam = selectedChartCourse !== "all" ? `&course=${selectedChartCourse}` : '';
+                // In stats view, use the selected overview course + section
+                let courseParam = '';
+                let sectionParam = '';
+                if (overviewStep === 'stats' && selectedOverviewCourse) {
+                    courseParam = `&course=${selectedOverviewCourse.id}`;
+                    if (selectedSection) sectionParam = `&section=${selectedSection}`;
+                } else if (selectedChartCourse !== "all") {
+                    courseParam = `&course=${selectedChartCourse}`;
+                }
                 
                 const [weeklyRes, monthlyRes, quarterlyRes] = await Promise.all([
-                    fetch(`/api/teacher/attendance/trends?view=weekly${courseParam}`),
-                    fetch(`/api/teacher/attendance/trends?view=monthly${courseParam}`),
-                    fetch(`/api/teacher/attendance/trends?view=quarterly${courseParam}`)
+                    fetch(`/api/teacher/attendance/trends?view=weekly${courseParam}${sectionParam}`),
+                    fetch(`/api/teacher/attendance/trends?view=monthly${courseParam}${sectionParam}`),
+                    fetch(`/api/teacher/attendance/trends?view=quarterly${courseParam}${sectionParam}`)
                 ]);
 
                 const [weeklyData, monthlyData, quarterlyData] = await Promise.all([
@@ -283,7 +292,7 @@ export default function Teacher() {
         };
         
         fetchTrendData();
-    }, [selectedChartCourse, selectedView]);
+    }, [selectedChartCourse, selectedView, selectedSection, overviewStep, selectedOverviewCourse]);
 
     // Fetch attendance records
     useEffect(() => {
@@ -389,53 +398,32 @@ export default function Teacher() {
         fetchLowAttendanceStudents();
     }, [lowAttendanceThreshold, lowAttendanceCourseFilter]);
 
-    // Fetch students list for comparison dropdown
+    // Fetch section comparison data
     useEffect(() => {
-        const fetchStudentsForComparison = async () => {
-            if (!selectedCourseForComparison) return;
-            
-            try {
-                const response = await fetch(`/api/teacher/students/list?course=${selectedCourseForComparison}`);
-                const result = await response.json();
-                if (result.success) {
-                    setStudentsForComparison(result.data);
-                    setSelectedStudentForComparison(''); // Reset student selection when course changes
-                    setComparisonData(null);
-                }
-            } catch (error) {
-                console.error('Error fetching students for comparison:', error);
-            }
-        };
-        
-        fetchStudentsForComparison();
-    }, [selectedCourseForComparison]);
-
-    // Fetch comparative analytics data
-    useEffect(() => {
-        const fetchComparisonData = async () => {
-            if (!selectedStudentForComparison || !selectedCourseForComparison) {
-                setComparisonData(null);
+        const fetchSectionComparison = async () => {
+            if (!selectedCourseForComparison) {
+                setSectionComparisonData(null);
                 return;
             }
             
             setIsLoadingComparison(true);
             try {
                 const response = await fetch(
-                    `/api/teacher/analytics/compare?student=${selectedStudentForComparison}&course=${selectedCourseForComparison}`
+                    `/api/teacher/analytics/compare/sections?course=${selectedCourseForComparison}`
                 );
                 const result = await response.json();
                 if (result.success) {
-                    setComparisonData(result.data);
+                    setSectionComparisonData(result.data);
                 }
             } catch (error) {
-                console.error('Error fetching comparison data:', error);
+                console.error('Error fetching section comparison:', error);
             } finally {
                 setIsLoadingComparison(false);
             }
         };
         
-        fetchComparisonData();
-    }, [selectedStudentForComparison, selectedCourseForComparison]);
+        fetchSectionComparison();
+    }, [selectedCourseForComparison]);
 
     const handleExport = async () => {
         setIsExporting(true);
@@ -765,12 +753,12 @@ export default function Teacher() {
                     <div key="student-count" className="teacher-panel-card present">
                         <PersonIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Number of Students</div>
+                            <div className="teacher-panel-label">Total Number of Sections</div>
                             <div className="teacher-panel-value">
-                                {isLoadingStudents ? "..." : totalStudents}
+                                {courseSections.length}
                             </div>
                             <div className="teacher-panel-sub">
-                                Enrolled in your courses
+                                In {selectedOverviewCourse?.name || 'this course'}
                             </div>
                         </div>
                     </div>,
@@ -795,15 +783,15 @@ export default function Teacher() {
                         </div>
                     </div>,
 
-                    <div key="student-count" className="teacher-panel-card present">
+                    <div key="section-count" className="teacher-panel-card present">
                         <PersonIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Number of Students</div>
+                            <div className="teacher-panel-label">Total Number of Sections Handled</div>
                             <div className="teacher-panel-value">
-                                {isLoadingStudents ? "..." : totalStudents}
+                                {totalSections}
                             </div>
                             <div className="teacher-panel-sub">
-                                Enrolled in your courses
+                                Across all your courses
                             </div>
                         </div>
                     </div>,
@@ -836,6 +824,12 @@ export default function Teacher() {
                                             </div>
                                             <div className="overview-course-card-body">
                                                 <h4 className="overview-course-card-name">{course.name}</h4>
+                                                {course.schedule && (
+                                                    <div className="overview-course-card-schedule">
+                                                        <CalendarIcon className="overview-course-schedule-icon" />
+                                                        <span>{formatSchedule(course.schedule)}</span>
+                                                    </div>
+                                                )}
                                                 <div className="overview-course-card-stats">
                                                     <div className="overview-course-stat">
                                                         <span className="overview-course-stat-value">{course.sectionCount || 0}</span>
@@ -848,6 +842,14 @@ export default function Teacher() {
                                                         <span className="overview-course-stat-label">Students</span>
                                                     </div>
                                                 </div>
+                                                {course.sectionNames && course.sectionNames.length > 0 && (
+                                                    <div className="overview-course-card-sections-list">
+                                                        <span className="overview-course-sections-label">Sections:</span>
+                                                        <span className="overview-course-sections-names">
+                                                            {course.sectionNames.join(', ')}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -900,6 +902,16 @@ export default function Teacher() {
                                                             {sec.studentCount === 1 ? 'Student' : 'Students'}
                                                         </span>
                                                     </div>
+                                                    {sec.students && sec.students.length > 0 && (
+                                                        <div className="overview-section-students-list">
+                                                            <span className="overview-section-students-label">Enrolled Students:</span>
+                                                            <ul className="overview-section-students-names">
+                                                                {sec.students.map((name, idx) => (
+                                                                    <li key={idx}>{name}</li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -1346,22 +1358,20 @@ export default function Teacher() {
                                             <th>Email</th>
                                             <th>Course</th>
                                             <th className="center">Present</th>
-                                            <th className="center">Late</th>
                                             <th className="center">Absent</th>
-                                            <th className="center">Total Records</th>
                                             <th className="center">Attendance Rate</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {isLoadingLowAttendance ? (
                                             <tr>
-                                                <td colSpan={8} style={{ textAlign: 'center', padding: '30px' }}>
+                                                <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
                                                     Loading low attendance students...
                                                 </td>
                                             </tr>
                                         ) : lowAttendanceStudents.length === 0 ? (
                                             <tr>
-                                                <td colSpan={8} style={{ textAlign: 'center', padding: '30px' }}>
+                                                <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
                                                     <div className="no-low-attendance">
                                                         <span className="success-icon">✓</span>
                                                         <p>No students with attendance below {lowAttendanceThreshold}%</p>
@@ -1375,9 +1385,7 @@ export default function Teacher() {
                                                     <td className="student-email">{student.email}</td>
                                                     <td className="course-name">{student.courseName}</td>
                                                     <td className="center present-cell">{student.presentCount}</td>
-                                                    <td className="center late-cell">{student.lateCount}</td>
                                                     <td className="center absent-cell">{student.absentCount}</td>
-                                                    <td className="center">{student.totalRecords}</td>
                                                     <td className="center">
                                                         <span className={`attendance-rate-badge ${student.attendanceRate < 30 ? 'critical' : 'warning'}`}>
                                                             {student.attendanceRate}%
@@ -1397,24 +1405,28 @@ export default function Teacher() {
                 label: "Comparative Analytics",
                 Icon: BarChartIcon,
                 panels: [
-                    <div key="students-available" className="teacher-panel-card enroll">
-                        <PersonIcon className="teacher-panel-icon" />
+                    <div key="sections-compared" className="teacher-panel-card enroll">
+                        <BarChartIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Students in Selected Course</div>
-                            <div className="teacher-panel-value">{studentsForComparison.length}</div>
-                            <div className="teacher-panel-sub">Available for comparison</div>
+                            <div className="teacher-panel-label">Sections Compared</div>
+                            <div className="teacher-panel-value">{sectionComparisonData?.sections.length ?? 0}</div>
+                            <div className="teacher-panel-sub">
+                                {selectedCourseForComparison 
+                                    ? courses.find(c => c.id === selectedCourseForComparison)?.name || 'Selected Course'
+                                    : 'Select a course'}
+                            </div>
                         </div>
                     </div>,
 
-                    <div key="attendance-gap" className="teacher-panel-card attendance">
-                        <BarChartIcon className="teacher-panel-icon" />
+                    <div key="course-avg" className="teacher-panel-card attendance">
+                        <CalendarIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Attendance Gap</div>
+                            <div className="teacher-panel-label">Course Average Rate</div>
                             <div className="teacher-panel-value">
-                                {comparisonData?.comparison?.rateVsClass ?? "N/A"}
+                                {sectionComparisonData?.courseAvgRate ?? "N/A"}%
                             </div>
                             <div className="teacher-panel-sub">
-                                {comparisonData ? (comparisonData.comparison.status === 'above' ? "Above class average" : comparisonData.comparison.status === 'below' ? "Below class average" : "Compared to class") : "Select student to compare"}
+                                Overall attendance across all sections
                             </div>
                         </div>
                     </div>,
@@ -1427,7 +1439,10 @@ export default function Teacher() {
                                     <label>Select Course:</label>
                                     <select
                                         value={selectedCourseForComparison}
-                                        onChange={(e) => setSelectedCourseForComparison(e.target.value)}
+                                        onChange={(e) => {
+                                            setSelectedCourseForComparison(e.target.value);
+                                            setSectionComparisonData(null);
+                                        }}
                                         className="teacher-select"
                                     >
                                         <option value="">-- Select Course --</option>
@@ -1436,119 +1451,70 @@ export default function Teacher() {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="control-group">
-                                    <label>Select Student:</label>
-                                    <select
-                                        value={selectedStudentForComparison}
-                                        onChange={(e) => setSelectedStudentForComparison(e.target.value)}
-                                        className="teacher-select"
-                                        disabled={!selectedCourseForComparison}
-                                    >
-                                        <option value="">-- Select Student --</option>
-                                        {studentsForComparison.map(student => (
-                                            <option key={student.id} value={student.id}>{student.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
                             </div>
 
                             {isLoadingComparison ? (
                                 <div className="comparison-loading">
-                                    Loading comparison data...
+                                    Loading section comparison data...
                                 </div>
-                            ) : comparisonData ? (
+                            ) : sectionComparisonData ? (
                                 <div className="comparison-content">
-                                    {/* Summary Cards */}
-                                    <div className="comparison-summary-grid">
-                                        <div className="comparison-card student-card">
-                                            <div className="comparison-card-header">
-                                                <PersonIcon className="comparison-card-icon" />
-                                                <h4>Student Performance</h4>
-                                            </div>
-                                            <div className="comparison-card-body">
-                                                <div className="comparison-name">{comparisonData.student?.name || 'N/A'}</div>
-                                                <div className="comparison-rate">
-                                                    <span className="rate-value">{comparisonData.student?.attendanceRate || 0}%</span>
-                                                    <span className="rate-label">Attendance Rate</span>
-                                                </div>
-                                                <div className="comparison-breakdown">
-                                                    <div className="breakdown-item present">
-                                                        <span className="breakdown-value">{comparisonData.student?.present || 0}</span>
-                                                        <span className="breakdown-label">Present</span>
+                                    {/* Section Cards Grid */}
+                                    <div className="section-comparison-grid">
+                                        {sectionComparisonData.sections.map((sec, idx) => {
+                                            const colors = ['#1DA1F2', '#0F9D58', '#F4B400', '#DB4437', '#9C27B0', '#00BCD4'];
+                                            const color = colors[idx % colors.length];
+                                            const isAbove = sec.attendanceRate >= sectionComparisonData.courseAvgRate;
+                                            return (
+                                                <div key={sec.section} className="section-comparison-card">
+                                                    <div className="section-comparison-card-header" style={{ borderLeftColor: color }}>
+                                                        <h4>{sec.section}</h4>
+                                                        <span className="section-student-count">{sec.studentCount} {sec.studentCount === 1 ? 'student' : 'students'}</span>
                                                     </div>
-                                                    <div className="breakdown-item late">
-                                                        <span className="breakdown-value">{comparisonData.student?.late || 0}</span>
-                                                        <span className="breakdown-label">Late</span>
-                                                    </div>
-                                                    <div className="breakdown-item absent">
-                                                        <span className="breakdown-value">{comparisonData.student?.absent || 0}</span>
-                                                        <span className="breakdown-label">Absent</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="comparison-card class-card">
-                                            <div className="comparison-card-header">
-                                                <BookmarkIcon className="comparison-card-icon" />
-                                                <h4>Class Average</h4>
-                                            </div>
-                                            <div className="comparison-card-body">
-                                                <div className="comparison-name">{comparisonData.student?.courseName || 'N/A'}</div>
-                                                <div className="comparison-rate">
-                                                    <span className="rate-value">{comparisonData.class.attendanceRate}%</span>
-                                                    <span className="rate-label">Attendance Rate</span>
-                                                </div>
-                                                <div className="comparison-breakdown">
-                                                    <div className="breakdown-item present">
-                                                        <span className="breakdown-value">{comparisonData.class.present}</span>
-                                                        <span className="breakdown-label">Present</span>
-                                                    </div>
-                                                    <div className="breakdown-item late">
-                                                        <span className="breakdown-value">{comparisonData.class.late}</span>
-                                                        <span className="breakdown-label">Late</span>
-                                                    </div>
-                                                    <div className="breakdown-item absent">
-                                                        <span className="breakdown-value">{comparisonData.class.absent}</span>
-                                                        <span className="breakdown-label">Absent</span>
+                                                    <div className="section-comparison-card-body">
+                                                        <div className="section-rate-display">
+                                                            <span className="section-rate-value">{sec.attendanceRate}%</span>
+                                                            <span className={`section-rate-badge ${isAbove ? 'above' : 'below'}`}>
+                                                                {isAbove ? '▲' : '▼'} {Math.abs(sec.attendanceRate - sectionComparisonData.courseAvgRate).toFixed(1)}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="section-breakdown-row">
+                                                            <div className="section-breakdown-item">
+                                                                <span className="section-breakdown-val present">{sec.presentCount}</span>
+                                                                <span className="section-breakdown-lbl">Present</span>
+                                                            </div>
+                                                            <div className="section-breakdown-item">
+                                                                <span className="section-breakdown-val late">{sec.lateCount}</span>
+                                                                <span className="section-breakdown-lbl">Late</span>
+                                                            </div>
+                                                            <div className="section-breakdown-item">
+                                                                <span className="section-breakdown-val absent">{sec.absentCount}</span>
+                                                                <span className="section-breakdown-lbl">Absent</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        <div className={`comparison-card difference-card ${comparisonData.comparison.status}`}>
-                                            <div className="comparison-card-header">
-                                                <BarChartIcon className="comparison-card-icon" />
-                                                <h4>Comparison Result</h4>
-                                            </div>
-                                            <div className="comparison-card-body">
-                                                <div className="difference-indicator">
-                                                    <span className={`difference-value ${comparisonData.comparison.status}`}>
-                                                        {comparisonData.comparison.status === 'above' ? '+' : ''}
-                                                        {comparisonData.comparison.rateVsClass}%
-                                                    </span>
-                                                    <span className="difference-label">
-                                                        {comparisonData.comparison.status === 'above' 
-                                                            ? 'Above Class Average' 
-                                                            : 'Below Class Average'}
-                                                    </span>
-                                                </div>
-                                                <div className="total-students-info">
-                                                    <span className="info-value">{comparisonData.class.totalStudents}</span>
-                                                    <span className="info-label">Total Students in Class</span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                            );
+                                        })}
                                     </div>
 
-                                    {/* Comparison Chart */}
-                                    <div className="comparison-chart-section">
-                                        <h4 className="chart-section-title">Monthly Attendance Trend Comparison</h4>
+                                    {/* Charts Row - Side by Side */}
+                                    <div className="comparison-charts-row">
+                                        {/* Bar Chart - Section Attendance Rates */}
+                                        <div className="comparison-chart-section">
+                                        <h4 className="chart-section-title">Section Attendance Rate Comparison</h4>
                                         <div className="comparison-chart-container">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <LineChart data={comparisonData.monthlyComparison} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                                <BarChart 
+                                                    data={sectionComparisonData.sections.map(sec => ({
+                                                        section: sec.section,
+                                                        attendanceRate: sec.attendanceRate,
+                                                        courseAvg: sectionComparisonData.courseAvgRate
+                                                    }))}
+                                                    margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+                                                >
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-                                                    <XAxis dataKey="month" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                    <XAxis dataKey="section" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
                                                     <YAxis domain={[0, 100]} tick={{ fill: '#4F4F4F', fontSize: 11 }} />
                                                     <Tooltip 
                                                         contentStyle={{ 
@@ -1557,36 +1523,68 @@ export default function Teacher() {
                                                             borderRadius: '8px',
                                                             fontSize: '12px'
                                                         }}
-                                                        formatter={(value) => [`${value}%`, '']}
+                                                        formatter={(value: any, name: any) => [
+                                                            `${value}%`, 
+                                                            name === 'attendanceRate' ? 'Attendance Rate' : 'Course Average'
+                                                        ]}
                                                     />
-                                                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                                    <Line 
-                                                        type="monotone"
-                                                        dataKey="studentRate" 
-                                                        name="Student" 
-                                                        stroke="#1DA1F2" 
-                                                        strokeWidth={3}
-                                                        dot={{ fill: '#1DA1F2', r: 4 }}
-                                                        activeDot={{ r: 6 }}
+                                                    <Legend 
+                                                        wrapperStyle={{ fontSize: '12px' }}
+                                                        formatter={(value) => value === 'attendanceRate' ? 'Section Rate' : 'Course Average'}
                                                     />
-                                                    <Line 
-                                                        type="monotone"
-                                                        dataKey="classRate" 
-                                                        name="Class Average" 
-                                                        stroke="#0F9D58" 
-                                                        strokeWidth={3}
-                                                        dot={{ fill: '#0F9D58', r: 4 }}
-                                                        activeDot={{ r: 6 }}
-                                                    />
-                                                </LineChart>
+                                                    <Bar dataKey="attendanceRate" fill="#1DA1F2" name="attendanceRate" radius={[4, 4, 0, 0]} />
+                                                    <Bar dataKey="courseAvg" fill="#E0E0E0" name="courseAvg" radius={[4, 4, 0, 0]} />
+                                                </BarChart>
                                             </ResponsiveContainer>
                                         </div>
+                                    </div>
+
+                                    {/* Monthly Trend Comparison */}
+                                    {sectionComparisonData.monthlyComparison.length > 0 && (
+                                        <div className="comparison-chart-section">
+                                            <h4 className="chart-section-title">Monthly Attendance Trend by Section</h4>
+                                            <div className="comparison-chart-container">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <LineChart data={sectionComparisonData.monthlyComparison} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                                                        <XAxis dataKey="month" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                        <YAxis domain={[0, 100]} tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                        <Tooltip 
+                                                            contentStyle={{ 
+                                                                backgroundColor: '#fff', 
+                                                                border: '1px solid #E0E0E0',
+                                                                borderRadius: '8px',
+                                                                fontSize: '12px'
+                                                            }}
+                                                            formatter={(value: any) => [`${value}%`, '']}
+                                                        />
+                                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                                        {sectionComparisonData.sectionNames.map((section, idx) => {
+                                                            const colors = ['#1DA1F2', '#0F9D58', '#F4B400', '#DB4437', '#9C27B0', '#00BCD4'];
+                                                            return (
+                                                                <Line 
+                                                                    key={section}
+                                                                    type="monotone"
+                                                                    dataKey={section}
+                                                                    name={section}
+                                                                    stroke={colors[idx % colors.length]}
+                                                                    strokeWidth={2}
+                                                                    dot={{ fill: colors[idx % colors.length], r: 3 }}
+                                                                    activeDot={{ r: 5 }}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </LineChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
                                 <div className="comparison-placeholder">
                                     <BarChartIcon className="placeholder-icon" />
-                                    <p>Select a course and student to view comparative analytics</p>
+                                    <p>Select a course to compare section attendance rates</p>
                                 </div>
                             )}
                         </div>

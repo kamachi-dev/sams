@@ -21,7 +21,8 @@ export async function GET() {
                 c.name, 
                 c.schedule,
                 COUNT(DISTINCT e.student) as student_count,
-                COUNT(DISTINCT COALESCE(sd.section, 'Unassigned')) as section_count
+                COUNT(DISTINCT COALESCE(sd.section, 'Unassigned')) as section_count,
+                ARRAY_AGG(DISTINCT COALESCE(sd.section, 'Unassigned') ORDER BY COALESCE(sd.section, 'Unassigned')) as section_names
             FROM course c
             LEFT JOIN enrollment_data e ON e.course = c.id
             LEFT JOIN student_data sd ON sd.student = e.student
@@ -35,9 +36,10 @@ export async function GET() {
             data: result.rows.map(row => ({
                 id: row.id,
                 name: row.name,
-                schedule: row.schedule,
+                schedule: row.schedule || '',
                 studentCount: parseInt(row.student_count || '0'),
-                sectionCount: parseInt(row.section_count || '0')
+                sectionCount: parseInt(row.section_count || '0'),
+                sectionNames: row.section_names || []
             }))
         })
     } catch (error) {

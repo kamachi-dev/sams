@@ -34,6 +34,130 @@ function getMonthName(monthIndex: number): string {
     return months[monthIndex]
 }
 
+// Query helper: Get enrolled student count for a teacher's course/section
+async function getEnrolledCount(userId: string, courseFilter: string | null, sectionFilter: string | null): Promise<number> {
+    let query: string
+    let params: any[]
+
+    if (courseFilter && sectionFilter) {
+        query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
+                 FROM enrollment_data e
+                 INNER JOIN course c ON e.course = c.id
+                 INNER JOIN student_data sd ON e.student = sd.id
+                 WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3`
+        params = [userId, courseFilter, sectionFilter]
+    } else if (courseFilter) {
+        query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
+                 FROM enrollment_data e
+                 INNER JOIN course c ON e.course = c.id
+                 WHERE c.teacher = $1 AND c.id = $2`
+        params = [userId, courseFilter]
+    } else {
+        query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
+                 FROM enrollment_data e
+                 INNER JOIN course c ON e.course = c.id
+                 WHERE c.teacher = $1`
+        params = [userId]
+    }
+
+    const result = await db.query(query, params)
+    return parseInt(result.rows[0]?.enrolled_count || '0')
+}
+
+// Query helper: Get number of distinct school days with records in a date range
+async function getSchoolDays(userId: string, courseFilter: string | null, sectionFilter: string | null, startStr: string, endStr: string): Promise<number> {
+    let query: string
+    let params: any[]
+
+    if (courseFilter && sectionFilter) {
+        query = `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
+                 FROM record r
+                 INNER JOIN course c ON r.course = c.id
+                 INNER JOIN student_data sd ON r.student = sd.id
+                 WHERE c.teacher = $1
+                   AND c.id = $2
+                   AND sd.section = $3
+                   AND r.created_at IS NOT NULL
+                   AND DATE(r.created_at) >= $4
+                   AND DATE(r.created_at) <= $5`
+        params = [userId, courseFilter, sectionFilter, startStr, endStr]
+    } else if (courseFilter) {
+        query = `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
+                 FROM record r
+                 INNER JOIN course c ON r.course = c.id
+                 WHERE c.teacher = $1
+                   AND c.id = $2
+                   AND r.created_at IS NOT NULL
+                   AND DATE(r.created_at) >= $3
+                   AND DATE(r.created_at) <= $4`
+        params = [userId, courseFilter, startStr, endStr]
+    } else {
+        query = `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
+                 FROM record r
+                 INNER JOIN course c ON r.course = c.id
+                 WHERE c.teacher = $1
+                   AND r.created_at IS NOT NULL
+                   AND DATE(r.created_at) >= $2
+                   AND DATE(r.created_at) <= $3`
+        params = [userId, startStr, endStr]
+    }
+
+    const result = await db.query(query, params)
+    return parseInt(result.rows[0]?.school_days || '0')
+}
+
+// Query helper: Get present and late counts in a date range
+async function getAttendanceCounts(userId: string, courseFilter: string | null, sectionFilter: string | null, startStr: string, endStr: string): Promise<{ present: number; late: number }> {
+    let query: string
+    let params: any[]
+
+    if (courseFilter && sectionFilter) {
+        query = `SELECT 
+                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
+                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
+                 FROM record r
+                 INNER JOIN course c ON r.course = c.id
+                 INNER JOIN student_data sd ON r.student = sd.id
+                 WHERE c.teacher = $1
+                   AND c.id = $2
+                   AND sd.section = $3
+                   AND r.created_at IS NOT NULL
+                   AND DATE(r.created_at) >= $4
+                   AND DATE(r.created_at) <= $5`
+        params = [userId, courseFilter, sectionFilter, startStr, endStr]
+    } else if (courseFilter) {
+        query = `SELECT 
+                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
+                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
+                 FROM record r
+                 INNER JOIN course c ON r.course = c.id
+                 WHERE c.teacher = $1
+                   AND c.id = $2
+                   AND r.created_at IS NOT NULL
+                   AND DATE(r.created_at) >= $3
+                   AND DATE(r.created_at) <= $4`
+        params = [userId, courseFilter, startStr, endStr]
+    } else {
+        query = `SELECT 
+                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
+                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
+                 FROM record r
+                 INNER JOIN course c ON r.course = c.id
+                 WHERE c.teacher = $1
+                   AND r.created_at IS NOT NULL
+                   AND DATE(r.created_at) >= $2
+                   AND DATE(r.created_at) <= $3`
+        params = [userId, startStr, endStr]
+    }
+
+    const result = await db.query(query, params)
+    const row = result.rows[0] || { present: 0, late: 0 }
+    return {
+        present: parseInt(row.present || '0'),
+        late: parseInt(row.late || '0')
+    }
+}
+
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
@@ -48,6 +172,7 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url)
         const view = searchParams.get('view') || 'weekly'
         const courseFilter = searchParams.get('course')
+        const sectionFilter = searchParams.get('section')
 
         if (view === 'weekly') {
             // Get 4 weeks of the current month with date ranges (school days Mon-Fri)
@@ -98,77 +223,9 @@ export async function GET(req: Request) {
                 const startStr = weekInfo.startDate.toISOString().split('T')[0]
                 const endStr = weekInfo.endDate.toISOString().split('T')[0]
                 
-                // Get count of enrolled students
-                const enrolledQuery = courseFilter
-                    ? `SELECT COUNT(DISTINCT e.student) as enrolled_count
-                       FROM enrollment_data e
-                       INNER JOIN course c ON e.course = c.id
-                       WHERE c.teacher = $1 AND c.id = $2`
-                    : `SELECT COUNT(DISTINCT e.student) as enrolled_count
-                       FROM enrollment_data e
-                       INNER JOIN course c ON e.course = c.id
-                       WHERE c.teacher = $1`
-                
-                const enrolledParams = courseFilter ? [user.id, courseFilter] : [user.id]
-                const enrolledResult = await db.query(enrolledQuery, enrolledParams)
-                const enrolledCount = parseInt(enrolledResult.rows[0]?.enrolled_count || '0')
-                
-                // Get count of distinct school days with records in this period
-                const daysQuery = courseFilter
-                    ? `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND c.id = $2
-                         AND r.created_at IS NOT NULL
-                         AND DATE(r.created_at) >= $3
-                         AND DATE(r.created_at) <= $4`
-                    : `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND r.created_at IS NOT NULL
-                         AND DATE(r.created_at) >= $2
-                         AND DATE(r.created_at) <= $3`
-                
-                const daysParams = courseFilter
-                    ? [user.id, courseFilter, startStr, endStr]
-                    : [user.id, startStr, endStr]
-                
-                const daysResult = await db.query(daysQuery, daysParams)
-                const schoolDays = parseInt(daysResult.rows[0]?.school_days || '0')
-                
-                // Get present and late counts from actual records
-                const attendanceQuery = courseFilter
-                    ? `SELECT 
-                        COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
-                        COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND c.id = $2
-                         AND r.created_at IS NOT NULL
-                         AND DATE(r.created_at) >= $3
-                         AND DATE(r.created_at) <= $4`
-                    : `SELECT 
-                        COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
-                        COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND r.created_at IS NOT NULL
-                         AND DATE(r.created_at) >= $2
-                         AND DATE(r.created_at) <= $3`
-                
-                const attendanceParams = courseFilter
-                    ? [user.id, courseFilter, startStr, endStr]
-                    : [user.id, startStr, endStr]
-                
-                const attendanceResult = await db.query(attendanceQuery, attendanceParams)
-                const row = attendanceResult.rows[0] || { present: 0, late: 0 }
-                
-                const present = parseInt(row.present || '0')
-                const late = parseInt(row.late || '0')
+                const enrolledCount = await getEnrolledCount(user.id, courseFilter, sectionFilter)
+                const schoolDays = await getSchoolDays(user.id, courseFilter, sectionFilter, startStr, endStr)
+                const { present, late } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
                 
                 // Calculate expected attendance and absent count
                 // Expected = enrolled students × school days in the period
@@ -216,73 +273,9 @@ export async function GET(req: Request) {
                 const startStr = monthInfo.startDate.toISOString().split('T')[0]
                 const endStr = monthInfo.endDate.toISOString().split('T')[0]
                 
-                // Get count of enrolled students
-                const enrolledQuery = courseFilter
-                    ? `SELECT COUNT(DISTINCT e.student) as enrolled_count
-                       FROM enrollment_data e
-                       INNER JOIN course c ON e.course = c.id
-                       WHERE c.teacher = $1 AND c.id = $2`
-                    : `SELECT COUNT(DISTINCT e.student) as enrolled_count
-                       FROM enrollment_data e
-                       INNER JOIN course c ON e.course = c.id
-                       WHERE c.teacher = $1`
-                
-                const enrolledParams = courseFilter ? [user.id, courseFilter] : [user.id]
-                const enrolledResult = await db.query(enrolledQuery, enrolledParams)
-                const enrolledCount = parseInt(enrolledResult.rows[0]?.enrolled_count || '0')
-                
-                // Get distinct school days with records in this period
-                const daysQuery = courseFilter
-                    ? `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND c.id = $2
-                         AND DATE(r.created_at) >= $3
-                         AND DATE(r.created_at) <= $4`
-                    : `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND DATE(r.created_at) >= $2
-                         AND DATE(r.created_at) <= $3`
-                
-                const daysParams = courseFilter
-                    ? [user.id, courseFilter, startStr, endStr]
-                    : [user.id, startStr, endStr]
-                
-                const daysResult = await db.query(daysQuery, daysParams)
-                const schoolDays = parseInt(daysResult.rows[0]?.school_days || '0')
-                
-                // Get present and late counts from actual records
-                const attendanceQuery = courseFilter
-                    ? `SELECT 
-                        COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
-                        COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND c.id = $2
-                         AND DATE(r.created_at) >= $3
-                         AND DATE(r.created_at) <= $4`
-                    : `SELECT 
-                        COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
-                        COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND DATE(r.created_at) >= $2
-                         AND DATE(r.created_at) <= $3`
-                
-                const attendanceParams = courseFilter
-                    ? [user.id, courseFilter, startStr, endStr]
-                    : [user.id, startStr, endStr]
-                
-                const attendanceResult = await db.query(attendanceQuery, attendanceParams)
-                const row = attendanceResult.rows[0] || { present: 0, late: 0 }
-                
-                const present = parseInt(row.present || '0')
-                const late = parseInt(row.late || '0')
+                const enrolledCount = await getEnrolledCount(user.id, courseFilter, sectionFilter)
+                const schoolDays = await getSchoolDays(user.id, courseFilter, sectionFilter, startStr, endStr)
+                const { present, late } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
                 
                 // Calculate expected attendance and absent count
                 const expectedAttendance = enrolledCount * schoolDays
@@ -353,73 +346,9 @@ export async function GET(req: Request) {
                 const startStr = quarter.startDate.toISOString().split('T')[0]
                 const endStr = quarter.endDate.toISOString().split('T')[0]
                 
-                // Get count of enrolled students
-                const enrolledQuery = courseFilter
-                    ? `SELECT COUNT(DISTINCT e.student) as enrolled_count
-                       FROM enrollment_data e
-                       INNER JOIN course c ON e.course = c.id
-                       WHERE c.teacher = $1 AND c.id = $2`
-                    : `SELECT COUNT(DISTINCT e.student) as enrolled_count
-                       FROM enrollment_data e
-                       INNER JOIN course c ON e.course = c.id
-                       WHERE c.teacher = $1`
-                
-                const enrolledParams = courseFilter ? [user.id, courseFilter] : [user.id]
-                const enrolledResult = await db.query(enrolledQuery, enrolledParams)
-                const enrolledCount = parseInt(enrolledResult.rows[0]?.enrolled_count || '0')
-                
-                // Get distinct school days with records in this period
-                const daysQuery = courseFilter
-                    ? `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND c.id = $2
-                         AND DATE(r.created_at) >= $3
-                         AND DATE(r.created_at) <= $4`
-                    : `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND DATE(r.created_at) >= $2
-                         AND DATE(r.created_at) <= $3`
-                
-                const daysParams = courseFilter
-                    ? [user.id, courseFilter, startStr, endStr]
-                    : [user.id, startStr, endStr]
-                
-                const daysResult = await db.query(daysQuery, daysParams)
-                const schoolDays = parseInt(daysResult.rows[0]?.school_days || '0')
-                
-                // Get present and late counts from actual records
-                const attendanceQuery = courseFilter
-                    ? `SELECT 
-                        COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
-                        COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND c.id = $2
-                         AND DATE(r.created_at) >= $3
-                         AND DATE(r.created_at) <= $4`
-                    : `SELECT 
-                        COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
-                        COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
-                       FROM record r
-                       INNER JOIN course c ON r.course = c.id
-                       WHERE c.teacher = $1
-                         AND DATE(r.created_at) >= $2
-                         AND DATE(r.created_at) <= $3`
-                
-                const attendanceParams = courseFilter
-                    ? [user.id, courseFilter, startStr, endStr]
-                    : [user.id, startStr, endStr]
-                
-                const attendanceResult = await db.query(attendanceQuery, attendanceParams)
-                const row = attendanceResult.rows[0] || { present: 0, late: 0 }
-                
-                const present = parseInt(row.present || '0')
-                const late = parseInt(row.late || '0')
+                const enrolledCount = await getEnrolledCount(user.id, courseFilter, sectionFilter)
+                const schoolDays = await getSchoolDays(user.id, courseFilter, sectionFilter, startStr, endStr)
+                const { present, late } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
                 
                 // Calculate expected attendance and absent count
                 const expectedAttendance = enrolledCount * schoolDays

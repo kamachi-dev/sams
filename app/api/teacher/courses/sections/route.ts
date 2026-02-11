@@ -50,13 +50,35 @@ export async function GET(req: Request) {
             ORDER BY sd.section
         `, [courseId])
 
+        // Get student names per section
+        const studentsResult = await db.query(`
+            SELECT 
+                COALESCE(sd.section, 'Unassigned') as section,
+                a.username as name
+            FROM enrollment_data e
+            INNER JOIN account a ON e.student = a.id
+            LEFT JOIN student_data sd ON sd.student = a.id
+            WHERE e.course = $1
+            ORDER BY sd.section, a.username
+        `, [courseId])
+
+        // Group students by section
+        const studentsBySection: Record<string, string[]> = {}
+        for (const row of studentsResult.rows) {
+            if (!studentsBySection[row.section]) {
+                studentsBySection[row.section] = []
+            }
+            studentsBySection[row.section].push(row.name)
+        }
+
         return NextResponse.json({ 
             success: true, 
             data: {
                 course: courseCheck.rows[0],
                 sections: result.rows.map(row => ({
                     section: row.section,
-                    studentCount: parseInt(row.student_count)
+                    studentCount: parseInt(row.student_count),
+                    students: (studentsBySection[row.section] || []).sort((a: string, b: string) => a.localeCompare(b))
                 }))
             }
         })
