@@ -954,7 +954,10 @@ export default function Teacher() {
                                                 <div>
                                                     <div className="teacher-info-field-label">Total Students</div>
                                                     <div className="teacher-info-field-value">
-                                                        {isLoadingStudents ? "Loading..." : totalStudents}
+                                                        {(() => {
+                                                            const sectionData = courseSections.find(s => s.section === selectedSection);
+                                                            return sectionData ? sectionData.studentCount : (isLoadingStudents ? "Loading..." : totalStudents);
+                                                        })()}
                                                     </div>
                                                 </div>
                                                 <div>
