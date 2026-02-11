@@ -19,6 +19,11 @@
     background: var(--present);
 }
 
+.teacher-panel-card.absent {
+    background: var(--absent);
+    color: var(--foreground1);
+}
+
 .teacher-panel-card.enroll {
     background: var(--background1);
 }
@@ -1458,4 +1463,119 @@
 .comparison-chart-container {
     width: 100%;
     height: 220px;
+}
+
+/* Appeal */
+/* Approve Button */
+.teacher-approve-btn {
+    padding: 6px;
+    background: var(--present);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    justify-content: center;
+    display: flex;
+}
+
+.teacher-approve-btn:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 10px rgba(23, 161, 250, 0.35);
+}
+
+.teacher-approve-btn:active {
+    transform: scale(0.98);
+}
+
+.teacher-approve-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Reject Button */
+.teacher-reject-btn {
+    padding: 6px;
+    background: var(--absent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    justify-content: center;
+    display: flex;
+}
+
+.teacher-reject-btn:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 10px rgba(249, 38, 0, 0.35);
+}
+
+.teacher-reject-btn:active {
+    transform: scale(0.98);
+}
+
+.teacher-reject-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.appeal-list-filters {
+    padding: 8px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Group */
+.teacher-appeal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+}
+
+.appeal-field textarea {
+    resize: none;       
+    max-height: 120px;    
+    min-height: 120px;   
+    overflow-y: auto;    
+}
+
+.appeal-item-status,
+.appeal-history-status {
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.appeal-item-status.pending,
+.appeal-history-status.pending {
+    color: var(--late);
+}
+
+.appeal-empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #888;
+    font-size: 14px;
+    font-weight: 500;
 }

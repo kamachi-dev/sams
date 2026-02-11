@@ -7,6 +7,7 @@ html {
     --foreground2: #919191;
     --foreground3: #C1C1C1;
     --foreground4: #8F8F8F;
+    --foreground5: #0000000d;
     --accent1: #172852;
     --present: #17A1FA;
     --late: #FFAC01;
@@ -295,14 +296,18 @@ a {
 
 .sams-nav-link {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start; /* better alignment */
     align-items: center;
+
+    width: 100%;                /* force same width */
+    box-sizing: border-box;    /* include padding in width */
+
     border-radius: 15px;
     margin: 5px 0;
-    padding: 5px 30px;
-    min-width: 100px;
+    padding: 10px 20px;        /* consistent padding */
     gap: 15px;
 }
+
 
 .sams-nav-link:hover {
     background-color: black;
@@ -434,7 +439,6 @@ a {
         height: auto;
         flex-direction: row;
         padding: 10px;
-        align-items: center;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         z-index: 100;
         position: relative;

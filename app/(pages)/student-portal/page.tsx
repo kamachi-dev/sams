@@ -29,6 +29,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import "./styles.css";
+import "../teacher-portal/styles.css";
 import {
   studentInfo,
   dailyAttendance,
@@ -118,8 +119,39 @@ export default function Student() {
 
   const [selectedRecord, setSelectedRecord] = useState<
     (typeof appealableRecords)[number] | null
-  >(appealableRecords.length > 0 ? appealableRecords[0] : null);
+  >(null);
 
+  const [appeals, setAppeals] = useState(attendanceAppeals);
+  const [records, setRecords] = useState(appealableRecords);
+  const [appealReason, setAppealReason] = useState("");
+
+  const handleSubmitAppeal = () => {
+    if (!selectedRecord || !appealReason.trim()) return;
+    const newAppeal = {
+      id: Date.now(),
+      subject: selectedRecord.subject,
+      date: selectedRecord.date,
+      recordedStatus: selectedRecord.status,
+      requestedStatus: "Present",
+      reason: appealReason,
+      status: "pending",
+      submittedAt: new Date().toISOString(),
+      reviewedBy: null,
+      teacherResponse: null,
+    };
+    // move to RIGHT (history)
+    setAppeals(prev => [newAppeal, ...prev]);
+    // remove from LEFT (issues)
+    setRecords(prev =>
+      prev.filter(r =>
+        !(r.subject === selectedRecord.subject && 
+          r.date === selectedRecord.date)
+      )
+    );
+    // clear form
+    setSelectedRecord(null);
+    setAppealReason("");
+  };
 
   // Fetch student data
   useEffect(() => {
@@ -549,7 +581,7 @@ export default function Student() {
               </div>
             </div>,
           ],
-          
+
             content: (
               <div className="appeal-container">
 
@@ -564,12 +596,12 @@ export default function Student() {
 
                     <div className="appeal-list-scroll">
 
-                      {appealableRecords.length === 0 ? (
+                      {records.length === 0 ? (
                         <div className="appeal-empty">
                           No attendance issues today
                         </div>
                       ) : (
-                        appealableRecords.map((record, index) => (
+                        records.map((record, index) => (
                           <div
                             key={index}
                             className={`appeal-item ${
@@ -661,10 +693,18 @@ export default function Student() {
 
                           <div className="appeal-field">
                             <label>Reason for Appeal</label>
-                            <textarea placeholder="Explain why your attendance should be corrected..." />
+                            <textarea
+                              placeholder="Explain why your attendance should be corrected..."
+                              value={appealReason}
+                              onChange={(e) => setAppealReason(e.target.value)}
+                            />
                           </div>
 
-                          <button className="student-export-btn">
+                          <button
+                            className="student-export-btn"
+                            onClick={handleSubmitAppeal}
+                            disabled={!selectedRecord || !appealReason.trim()}
+                          >
                             Submit Appeal
                           </button>
 
@@ -680,8 +720,7 @@ export default function Student() {
 
                         <div className="appeal-history-scroll">
 
-                          {attendanceAppeals.map((appeal) => (
-
+                          {appeals.map((appeal) => (
                             <div
                               key={appeal.id}
                               className={`appeal-history-item ${appeal.status}`}

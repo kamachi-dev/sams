@@ -885,6 +885,8 @@
 
 /*Contents*/
 .preview-empty {
+    height: 100%;
+    width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -942,13 +944,12 @@
 .appeal-form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 5px;
 }
 
 .appeal-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
 }
 
 .appeal-field label {
@@ -963,7 +964,7 @@
     padding: 8px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    background: var(--background1);
+    background: var(--foreground5);
     color: var(--accent1);
     font-size: 13px;
 }
@@ -1211,4 +1212,3 @@
   background: rgba(0,0,0,0.05);
   font-size: 12px;
 }
-

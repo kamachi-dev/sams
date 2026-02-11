@@ -36,6 +36,8 @@ import {
 } from "recharts";
 import { useState, useEffect } from "react";
 import './styles.css';
+import '../student-portal/styles.css';
+import { attendanceAppeals } from "../teacher-portal/constants";
 
 // Types for low attendance students
 interface LowAttendanceStudent {
@@ -69,6 +71,239 @@ interface SectionComparisonData {
     monthlyComparison: Array<Record<string, any>>;
     sectionNames: string[];
 }
+
+//Temporary for student appeal
+function TeacherAppealsSection({ courses }: any) {
+
+    const [appeals, setAppeals] = useState(attendanceAppeals);
+    const [selectedAppeal, setSelectedAppeal] = useState<any>(null);
+
+    const [selectedCourseFilter, setSelectedCourseFilter] = useState("all");
+    const [selectedSectionFilter, setSelectedSectionFilter] = useState("all");
+
+    const [teacherResponse, setTeacherResponse] = useState("");
+
+    // Appeals would normally be fetched from the database, but for this demo we use hardcoded data from constants.ts. The filtering and review logic is implemented here to demonstrate the UI and interactions.
+    const pendingAppeals = appeals.filter(a => a.status === "pending");
+
+    const appealHistory = appeals.filter(
+        a => a.status === "approved" || a.status === "rejected"
+    );
+    const filteredAppeals = pendingAppeals.filter(a => {
+
+        if (selectedCourseFilter !== "all" && a.courseId !== selectedCourseFilter)
+            return false;
+
+        if (selectedSectionFilter !== "all" && a.section !== selectedSectionFilter)
+            return false;
+
+        return true;
+    });
+    // End of Temporary for student appeal
+
+
+    const handleDecision = (status: "approved" | "rejected") => {
+        if (!selectedAppeal) return;
+        setAppeals(prev =>
+            prev.map(a =>
+                a.id === selectedAppeal.id
+                    ? {
+                        ...a,
+                        status,
+                        teacherResponse,
+                        reviewedBy: "Your"
+                    }
+                    : a
+            )
+        );
+        // CLEAR SELECTION
+        setSelectedAppeal(null);
+        // CLEAR RESPONSE FIELD
+        setTeacherResponse("");
+
+    };
+
+
+    return (
+
+        <div className="appeal-container">
+            <div className="appeal-split-layout">
+
+                {/* LEFT LIST */}
+                <div className="appeal-list">
+                    <div className="appeal-list-title">
+                        Attendance Appeals
+                    </div>
+                    <div className="appeal-list-filters">
+                        <select
+                            className="teacher-select"
+                            value={selectedCourseFilter}
+                            onChange={(e) => setSelectedCourseFilter(e.target.value)}
+                        >
+                            <option value="all">All Subjects</option>
+                            {courses.map((c: any) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            className="teacher-select"
+                            value={selectedSectionFilter}
+                            onChange={(e) => setSelectedSectionFilter(e.target.value)}
+                        >
+                            <option value="all">All Sections</option>
+                            {[...new Set(appeals.map(a => a.section))]
+                                .filter(Boolean)
+                                .map((section: any) => (
+                                    <option key={section} value={section}>
+                                        {section}
+                                    </option>
+                                ))}
+                        </select>
+                    </div>
+                    <div className="appeal-list-scroll">
+                        {filteredAppeals.length === 0 ? (
+                            <div className="appeal-empty">
+                                No pending requests
+                            </div>
+                        ) : (
+                            filteredAppeals.map((appeal: any) => (
+                                <div
+                                    key={appeal.id}
+                                    className={`appeal-item ${appeal.status}`}
+                                    onClick={() => setSelectedAppeal(appeal)}
+                                >
+                                    <div className="appeal-item-header">
+                                        <div className="appeal-item-subject">
+                                            {appeal.studentName}
+                                        </div>
+                                        <div className={`appeal-item-status ${appeal.status}`}>
+                                            {appeal.status}
+                                        </div>
+                                    </div>
+                                    <div className="appeal-item-prof">
+                                        {appeal.subject}
+                                    </div>
+                                    <div className="appeal-item-time-range">
+                                        {appeal.date}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                </div>
+            </div>
+
+                {/* RIGHT REVIEW */}
+                <div className="appeal-form-container">
+                    <div className="appeal-right-layout">
+                        {/* REVIEW FORM */}
+                        <div className="appeal-card">
+                            <>
+                                <h3 className="appeal-title">Review Appeal</h3>
+                                <div className="appeal-form">
+                                    <div className="appeal-field">
+                                        <label>Student</label>
+                                        <input value={selectedAppeal?.studentName || ""} readOnly />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Subject</label>
+                                        <input value={selectedAppeal?.subject || ""} readOnly />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Date</label>
+                                        <input value={selectedAppeal?.date || ""} readOnly />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Status Change</label>
+                                        <input
+                                            value={
+                                                selectedAppeal
+                                                    ? `${selectedAppeal.recordedStatus} → ${selectedAppeal.requestedStatus}`
+                                                    : ""
+                                            }
+                                            readOnly
+                                        />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Student Reason</label>
+                                        <textarea value={selectedAppeal?.reason || ""} readOnly />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Teacher Response</label>
+                                        <textarea
+                                            value={teacherResponse}
+                                            onChange={(e) => setTeacherResponse(e.target.value)}
+                                            disabled={!selectedAppeal}
+                                        />
+                                    </div>
+                                    <div className="teacher-appeal-actions">
+                                        <button
+                                            className="teacher-approve-btn"
+                                            onClick={() => handleDecision("approved")}
+                                            disabled={!selectedAppeal}
+                                        >
+                                            Approve
+                                        </button>
+                                        <button
+                                            className="teacher-reject-btn"
+                                            onClick={() => handleDecision("rejected")}
+                                            disabled={!selectedAppeal}
+                                        >
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        </div>
+
+                        {/* HISTORY PANEL */}
+                        <div className="appeal-history-card">
+                            <div className="appeal-history-title">
+                                Appeal History
+                            </div>
+                            <div className="appeal-history-scroll">
+                                {appealHistory.map((appeal) => (
+                                    <div
+                                        key={appeal.id}
+                                        className={`appeal-history-item ${appeal.status}`}
+                                    >
+                                        <div className="appeal-history-header">
+
+                                            <div className="appeal-history-subject">
+                                                {appeal.studentName}
+                                            </div>
+                                            <div className="appeal-history-status">
+                                                {appeal.status}
+                                            </div>
+                                        </div>
+                                        <div className="appeal-history-meta">
+                                            {appeal.subject} • {appeal.date}
+                                        </div>
+                                        <div className="appeal-history-reason">
+                                            <strong>Student:</strong> {appeal.reason}
+                                        </div>
+                                        <div className="appeal-history-teacher-response">
+                                            <strong>
+                                                {appeal.reviewedBy || "Teacher"} decision:
+                                            </strong>
+                                            <div>
+                                                {appeal.teacherResponse?.trim()
+                                                    ? appeal.teacherResponse
+                                                    : `Appeal was ${appeal.status}.`}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+// End of temporary component
 
 export default function Teacher() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -1592,16 +1827,49 @@ export default function Teacher() {
                 )
             },
             {
-                label: "Student Data",
-                Icon: PersonIcon,
-                panels: [],
+                label: "Attendance Appeals",
+                Icon: ExclamationTriangleIcon,
+
+                panels: [
+                    <div key="pending-appeals" className="teacher-panel-card enroll">
+                        <ExclamationTriangleIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Pending Appeals</div>
+                            <div className="teacher-panel-value">
+                                {attendanceAppeals.filter(a => a.status === "pending").length}
+                            </div>
+                            <div className="teacher-panel-sub">Awaiting your decision</div>
+                        </div>
+                    </div>,
+
+                    <div key="approved-appeals" className="teacher-panel-card attendance">
+                        <BookmarkIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Approved Appeals</div>
+                            <div className="teacher-panel-value">
+                                {attendanceAppeals.filter(a => a.status === "approved").length}
+                            </div>
+                            <div className="teacher-panel-sub">Successfully approved</div>
+                        </div>
+                    </div>,
+
+                    <div key="rejected-appeals" className="teacher-panel-card absent">
+                        <PersonIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Rejected Appeals</div>
+                            <div className="teacher-panel-value">
+                                {attendanceAppeals.filter(a => a.status === "rejected").length}
+                            </div>
+                            <div className="teacher-panel-sub">Marked as invalid</div>
+                        </div>
+                    </div>,
+                ],
+
                 content: (
-                    <div className="teacher-content-section">
-                        <h2 className="teacher-section-title">Student Data</h2>
-                        <p className="teacher-section-text">Student data management will be displayed here</p>
-                    </div>
+                    <TeacherAppealsSection courses={courses} />
                 )
             }
+
         ]} />
     );
 }
