@@ -111,10 +111,17 @@ export async function GET(req: Request) {
         }
 
         const records = result.rows.map(row => {
-            let status = 'absent'
+            let status = 'no record'
             if (row.attendance === 1) status = 'present'
             else if (row.attendance === 2) status = 'late'
             else if (row.attendance === 0) status = 'absent'
+            // If attendance is NULL (no record in database), status stays 'no record'
+
+            // For absent records (attendance=0), do not show time or confidence
+            // since absent means no face detection occurred before the class end time.
+            // The camera module inserts these with confidence=0 and no meaningful timestamp.
+            // For 'no record' students, also show no time/confidence as no record exists yet.
+            const isAbsentOrNoRecord = status === 'absent' || status === 'no record'
             
             return {
                 id: row.id,
@@ -123,12 +130,12 @@ export async function GET(req: Request) {
                 course: row.course_name,
                 status: status,
                 date: row.created_at ? new Date(row.created_at).toLocaleDateString('en-US') : '-',
-                time: row.created_at ? new Date(row.created_at).toLocaleTimeString('en-US', { 
+                time: isAbsentOrNoRecord ? '-' : (row.created_at ? new Date(row.created_at).toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit',
                     hour12: true 
-                }) : '-',
-                confidence: row.confidence ? `${Math.round(row.confidence * 100)}%` : 'No Detection'
+                }) : '-'),
+                confidence: isAbsentOrNoRecord ? 'No Detection' : (row.confidence ? `${Math.round(row.confidence * 100)}%` : 'No Detection')
             }
         })
 

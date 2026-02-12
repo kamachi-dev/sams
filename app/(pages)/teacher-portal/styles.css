@@ -426,6 +426,11 @@
     color: #DB4437;
 }
 
+.teacher-status-badge.no.record {
+    background: rgba(158, 158, 158, 0.15);
+    color: #9E9E9E;
+}
+
 /* Confidence Cell */
 .confidence-cell {
     font-weight: 600;
@@ -1254,6 +1259,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    overflow: auto;
 }
 
 .comparison-summary-grid {

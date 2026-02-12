@@ -71,11 +71,12 @@ export async function GET(req: Request) {
             student_best_attendance AS (
                 -- For each student, get their BEST attendance for THIS SPECIFIC COURSE today
                 -- Use MIN since present(1) < late(2), so MIN gives best status
+                -- Only consider students who actually have records (no COALESCE - NULL means no record)
                 SELECT 
                     sc.student,
-                    MIN(COALESCE(r.attendance, 0)) as best_attendance
+                    MIN(r.attendance) as best_attendance
                 FROM student_courses sc
-                LEFT JOIN record r ON r.student = sc.student 
+                INNER JOIN record r ON r.student = sc.student 
                     AND r.created_at IS NOT NULL
                     AND DATE(r.created_at) = $1
                     AND r.course = $3
@@ -99,11 +100,12 @@ export async function GET(req: Request) {
             ),
             student_best_attendance AS (
                 -- For each student, get their BEST attendance across all courses today
+                -- Only consider students who actually have records (INNER JOIN, no COALESCE)
                 SELECT 
                     sc.student,
-                    MIN(COALESCE(r.attendance, 0)) as best_attendance
+                    MIN(r.attendance) as best_attendance
                 FROM student_courses sc
-                LEFT JOIN record r ON r.student = sc.student 
+                INNER JOIN record r ON r.student = sc.student 
                     AND r.created_at IS NOT NULL
                     AND DATE(r.created_at) = $1
                     AND r.course IN (SELECT id FROM teacher_courses)

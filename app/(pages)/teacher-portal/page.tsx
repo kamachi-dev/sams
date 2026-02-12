@@ -324,6 +324,52 @@ export default function Teacher() {
         }
         return '';
     };
+
+    // Helper to get the schedule time for the selected course (shows current day's schedule with date)
+    const getScheduleTime = (courseId: string | undefined): string => {
+        if (!courseId) return '';
+        const course = courses.find(c => c.id === courseId);
+        if (!course?.schedule || typeof course.schedule !== 'object') return '';
+        const schedule = course.schedule as Record<string, { start: string; end: string }>;
+        // Format times from 24h to 12h format
+        const formatTime = (t: string) => {
+            const [h, m] = t.split(':').map(Number);
+            const period = h >= 12 ? 'PM' : 'AM';
+            const hour12 = h % 12 || 12;
+            return `${hour12}:${m.toString().padStart(2, '0')}${period}`;
+        };
+        // Get today's day name (lowercase) and check if it exists in the schedule
+        const today = new Date();
+        const todayName = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        
+        if (schedule[todayName]) {
+            const { start, end } = schedule[todayName];
+            if (start && end) {
+                const dayLabel = todayName.charAt(0).toUpperCase() + todayName.slice(1);
+                const dateStr = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                return `${dayLabel}, ${dateStr} ${formatTime(start)} - ${formatTime(end)}`;
+            }
+        }
+        // If today is not a scheduled day, find the most recent scheduled day in the PAST
+        const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const todayIndex = daysOfWeek.indexOf(todayName);
+        for (let i = 1; i <= 7; i++) {
+            const prevDayIndex = (todayIndex - i + 7) % 7; // Go backwards, wrapping around
+            const prevDay = daysOfWeek[prevDayIndex];
+            if (schedule[prevDay]) {
+                const { start, end } = schedule[prevDay];
+                if (start && end) {
+                    const dayLabel = prevDay.charAt(0).toUpperCase() + prevDay.slice(1);
+                    // Calculate the date for this previous day
+                    const prevDate = new Date(today);
+                    prevDate.setDate(today.getDate() - i);
+                    const dateStr = prevDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    return `${dayLabel}, ${dateStr} ${formatTime(start)} - ${formatTime(end)}`;
+                }
+            }
+        }
+        return '';
+    };
     const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
     const [attendanceRecords, setAttendanceRecords] = useState<Array<{
         id: string;
@@ -1449,7 +1495,17 @@ export default function Teacher() {
                                     {/* RIGHT 50% */}
                                     <div className="teacher-right-column">
                                         <div className="teacher-records-header">
-                                            <h3 className="teacher-records-title">Today&apos;s Attendance Records</h3>
+                                            <h3 className="teacher-records-title">
+                                                Latest Attendance Records
+                                                {(() => {
+                                                    const time = getScheduleTime(selectedOverviewCourse?.id);
+                                                    return time ? (
+                                                        <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#666', marginLeft: '8px' }}>
+                                                            ({time})
+                                                        </span>
+                                                    ) : null;
+                                                })()}
+                                            </h3>
                                             <div className="teacher-records-controls">
                                                 <div className="teacher-search-wrapper">
                                                     <MagnifyingGlassIcon className="teacher-search-icon" />
