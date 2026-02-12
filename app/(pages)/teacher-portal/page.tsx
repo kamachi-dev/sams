@@ -358,6 +358,9 @@ export default function Teacher() {
     const [sectionComparisonData, setSectionComparisonData] = useState<SectionComparisonData | null>(null);
     const [isLoadingComparison, setIsLoadingComparison] = useState(false);
 
+    // Compute unique student count for Students at Risk
+    const uniqueLowAttendanceCount = new Set(lowAttendanceStudents.map(s => s.id)).size;
+
     // Total sections count
     const totalSections = courses.reduce((sum, c) => sum + (c.sectionCount || 0), 0);
 
@@ -965,12 +968,17 @@ export default function Teacher() {
                 label: "Overview",
                 Icon: DashboardIcon,
                 panels: overviewStep === 'stats' ? [
-                    <div key="total-subjects" className="teacher-panel-card enroll">
-                        <BookmarkIcon className="teacher-panel-icon" />
+                    <div key="total-students" className="teacher-panel-card enroll">
+                        <PersonIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Current Subject</div>
-                            <div className="teacher-panel-value" style={{ fontSize: '16px' }}>{selectedOverviewCourse?.name || '-'}</div>
-                            <div className="teacher-panel-sub">Section: {selectedSection}</div>
+                            <div className="teacher-panel-label">Total Number of Students</div>
+                            <div className="teacher-panel-value">
+                                {(() => {
+                                    const sectionData = courseSections.find(s => s.section === selectedSection);
+                                    return sectionData ? sectionData.studentCount : (isLoadingStudents ? "Loading..." : totalStudents);
+                                })()}
+                            </div>
+                            <div className="teacher-panel-sub">In Section: {selectedSection}</div>
                         </div>
                     </div>,
 
@@ -1181,39 +1189,6 @@ export default function Teacher() {
 
                                     {/* LEFT 50% */}
                                     <div className="teacher-left-column">
-                                        <div className="teacher-info-card">
-                                            <div className="teacher-info-header">
-                                                <h3 className="teacher-info-title">Class Summary</h3>
-                                                <div className="teacher-info-meta">
-                                                    2nd Semester, S.Y. 2025-2026
-                                                </div>
-                                            </div>
-
-                                            <div className="teacher-info-grid">
-                                                <div>
-                                                    <div className="teacher-info-field-label">Total Students</div>
-                                                    <div className="teacher-info-field-value">
-                                                        {(() => {
-                                                            const sectionData = courseSections.find(s => s.section === selectedSection);
-                                                            return sectionData ? sectionData.studentCount : (isLoadingStudents ? "Loading..." : totalStudents);
-                                                        })()}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className="teacher-info-field-label">Section</div>
-                                                    <div className="teacher-info-field-value">{selectedSection}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="teacher-info-field-label">Present Today</div>
-                                                    <div className="teacher-info-field-value">{todayAttendance.present}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="teacher-info-field-label">Absent Today</div>
-                                                    <div className="teacher-info-field-value">{todayAttendance.absent}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
                                         <div className="teacher-summary-card">
                                             <h3 className="teacher-summary-title">
                                                 Current Semester Summary
@@ -1301,7 +1276,7 @@ export default function Teacher() {
 
                                         <div className="teacher-chart-container">
                                             <div className="teacher-chart-card">
-                                                <ResponsiveContainer width="100%" height="100%">
+                                                <ResponsiveContainer width="100%" height="80%">
                                                     {selectedView === "daily" && (
                                                         <BarChart data={[
                                                             { category: "Present", count: todayAttendance.present },
@@ -1548,7 +1523,7 @@ export default function Teacher() {
                         <ExclamationTriangleIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Students Below {lowAttendanceThreshold}%</div>
-                            <div className="teacher-panel-value">{lowAttendanceStudents.length}</div>
+                            <div className="teacher-panel-value">{uniqueLowAttendanceCount}</div>
                             <div className="teacher-panel-sub">Require immediate attention</div>
                         </div>
                     </div>,

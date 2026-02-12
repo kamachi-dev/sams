@@ -314,14 +314,14 @@
 .teacher-chart-card {
     background: var(--background1);
     padding: 8px;
-    flex: 1;
+    flex: 2;
     display: flex;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     min-width: 0;
     max-width: 100%;
-    min-height: 200px;
+    min-height: 350px;
 }
 
 /* Records Section */
