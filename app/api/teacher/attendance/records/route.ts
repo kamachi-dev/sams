@@ -36,10 +36,11 @@ export async function GET(req: Request) {
         console.log('Date:', date, 'StartDate:', startDate, 'EndDate:', endDate)
         console.log('Course:', courseFilter, 'UserId:', user.id)
         
-        // Get ALL students enrolled in the specified course, with their attendance records if they exist
+        // Get ALL students enrolled in the specified course, with their FIRST attendance record only (earliest detection)
         // Note: attendance column is smallint (1=present, 2=late, 0/NULL=absent)
+        // Using DISTINCT ON to get only one record per student (the earliest detection)
         const query = useDateRange
-            ? `SELECT 
+            ? `SELECT DISTINCT ON (a.id)
                 a.id,
                 a.username,
                 a.email,
@@ -59,15 +60,9 @@ export async function GET(req: Request) {
             WHERE c.teacher = $3 AND c.id = $4
             ${sectionFilter ? 'AND sd.section = $5' : ''}
             ORDER BY 
-                CASE 
-                    WHEN r.attendance = 1 THEN 1
-                    WHEN r.attendance = 2 THEN 2
-                    WHEN r.attendance = 0 THEN 3
-                    WHEN r.attendance IS NULL THEN 4
-                    ELSE 5
-                END,
-                a.username`
-            : `SELECT 
+                a.id,
+                r.created_at ASC NULLS LAST`
+            : `SELECT DISTINCT ON (a.id)
                 a.id,
                 a.username,
                 a.email,
@@ -86,14 +81,8 @@ export async function GET(req: Request) {
             WHERE c.teacher = $2 AND c.id = $3
             ${sectionFilter ? 'AND sd.section = $4' : ''}
             ORDER BY 
-                CASE 
-                    WHEN r.attendance = 1 THEN 1
-                    WHEN r.attendance = 2 THEN 2
-                    WHEN r.attendance = 0 THEN 3
-                    WHEN r.attendance IS NULL THEN 4
-                    ELSE 5
-                END,
-                a.username`
+                a.id,
+                r.created_at ASC NULLS LAST`
         
         const params = useDateRange 
             ? (sectionFilter 

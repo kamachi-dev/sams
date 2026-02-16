@@ -253,8 +253,8 @@ export default function Student() {
     <SamsTemplate
       links={[
         {
-          // DASHBOARD
-          label: "Dashboard",
+          // OVERVIEW
+          label: "Overview",
           Icon: DashboardIcon,
           panels: [
             <div key="total-subjects" className="student-panel-card enroll">

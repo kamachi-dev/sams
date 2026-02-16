@@ -331,11 +331,31 @@ export default function Teacher() {
         const course = courses.find(c => c.id === courseId);
         if (!course?.schedule || typeof course.schedule !== 'object') return '';
         const schedule = course.schedule as Record<string, { start: string; end: string }>;
-        // Format times from 24h to 12h format
+        // Format times to 12h format with proper AM/PM handling
+        // For school schedules: 1-6 are typically PM (afternoon), 7-11 are AM (morning), 12 is PM (noon)
         const formatTime = (t: string) => {
             const [h, m] = t.split(':').map(Number);
-            const period = h >= 12 ? 'PM' : 'AM';
-            const hour12 = h % 12 || 12;
+            let hour24 = h;
+            // If hour is 1-6 and appears to be afternoon class time (not in 24h format already)
+            // interpret it as PM. For 7-11, interpret as AM. 12 is noon (PM). 0 is midnight.
+            if (h >= 13 && h <= 23) {
+                // Already in 24-hour format (13:00 = 1 PM)
+                hour24 = h;
+            } else if (h >= 1 && h <= 6) {
+                // 1-6 likely means PM for afternoon classes (1pm-6pm)
+                hour24 = h + 12;
+            } else if (h >= 7 && h <= 11) {
+                // 7-11 likely means AM for morning classes
+                hour24 = h;
+            } else if (h === 12) {
+                // 12 is noon (PM)
+                hour24 = 12;
+            } else if (h === 0) {
+                // 0 is midnight (12 AM)
+                hour24 = 0;
+            }
+            const period = hour24 >= 12 ? 'PM' : 'AM';
+            const hour12 = hour24 % 12 || 12;
             return `${hour12}:${m.toString().padStart(2, '0')}${period}`;
         };
         // Get today's day name (lowercase) and check if it exists in the schedule
