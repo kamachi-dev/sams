@@ -34,6 +34,12 @@ function getMonthName(monthIndex: number): string {
     return months[monthIndex]
 }
 
+// Helper to get day name from date
+function getDayName(date: Date): string {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return days[date.getDay()]
+}
+
 // Query helper: Get enrolled student count for a teacher's course/section
 async function getEnrolledCount(userId: string, courseFilter: string | null, sectionFilter: string | null): Promise<number> {
     let query: string
@@ -106,47 +112,64 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
     return parseInt(result.rows[0]?.school_days || '0')
 }
 
-// Query helper: Get present and late counts in a date range
+// Query helper: Get present and late counts in a date range (deduplicates by taking first record per student per day)
 async function getAttendanceCounts(userId: string, courseFilter: string | null, sectionFilter: string | null, startStr: string, endStr: string): Promise<{ present: number; late: number }> {
     let query: string
     let params: any[]
 
+    // Use a subquery with DISTINCT ON to get only the first record per student per day
+    // Then count those deduplicated records
     if (courseFilter && sectionFilter) {
         query = `SELECT 
-                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
-                 FROM record r
-                 INNER JOIN course c ON r.course = c.id
-                 INNER JOIN student_data sd ON r.student = sd.student
-                 WHERE c.teacher = $1
-                   AND c.id = $2
-                   AND sd.section = $3
-                   AND r.created_at IS NOT NULL
-                   AND DATE(r.created_at) >= $4
-                   AND DATE(r.created_at) <= $5`
+                    COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present,
+                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late
+                 FROM (
+                    SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                        r.attendance
+                    FROM record r
+                    INNER JOIN course c ON r.course = c.id
+                    INNER JOIN student_data sd ON r.student = sd.student
+                    WHERE c.teacher = $1
+                      AND c.id = $2
+                      AND sd.section = $3
+                      AND r.created_at IS NOT NULL
+                      AND DATE(r.created_at) >= $4
+                      AND DATE(r.created_at) <= $5
+                    ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+                 ) AS first_records`
         params = [userId, courseFilter, sectionFilter, startStr, endStr]
     } else if (courseFilter) {
         query = `SELECT 
-                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
-                 FROM record r
-                 INNER JOIN course c ON r.course = c.id
-                 WHERE c.teacher = $1
-                   AND c.id = $2
-                   AND r.created_at IS NOT NULL
-                   AND DATE(r.created_at) >= $3
-                   AND DATE(r.created_at) <= $4`
+                    COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present,
+                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late
+                 FROM (
+                    SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                        r.attendance
+                    FROM record r
+                    INNER JOIN course c ON r.course = c.id
+                    WHERE c.teacher = $1
+                      AND c.id = $2
+                      AND r.created_at IS NOT NULL
+                      AND DATE(r.created_at) >= $3
+                      AND DATE(r.created_at) <= $4
+                    ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+                 ) AS first_records`
         params = [userId, courseFilter, startStr, endStr]
     } else {
         query = `SELECT 
-                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late
-                 FROM record r
-                 INNER JOIN course c ON r.course = c.id
-                 WHERE c.teacher = $1
-                   AND r.created_at IS NOT NULL
-                   AND DATE(r.created_at) >= $2
-                   AND DATE(r.created_at) <= $3`
+                    COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present,
+                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late
+                 FROM (
+                    SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                        r.attendance
+                    FROM record r
+                    INNER JOIN course c ON r.course = c.id
+                    WHERE c.teacher = $1
+                      AND r.created_at IS NOT NULL
+                      AND DATE(r.created_at) >= $2
+                      AND DATE(r.created_at) <= $3
+                    ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+                 ) AS first_records`
         params = [userId, startStr, endStr]
     }
 
@@ -174,7 +197,58 @@ export async function GET(req: Request) {
         const courseFilter = searchParams.get('course')
         const sectionFilter = searchParams.get('section')
 
-        if (view === 'weekly') {
+        if (view === 'daily') {
+            // Get last 7 days of attendance (like student portal)
+            const now = new Date()
+            const days: Array<{
+                date: Date
+                dayName: string
+                dateLabel: string
+            }> = []
+            
+            for (let i = 6; i >= 0; i--) {
+                const day = new Date(now)
+                day.setDate(now.getDate() - i)
+                day.setHours(0, 0, 0, 0)
+                
+                days.push({
+                    date: day,
+                    dayName: getDayName(day),
+                    dateLabel: formatDate(day)
+                })
+            }
+            
+            const dailyData = await Promise.all(days.map(async (dayInfo) => {
+                const startStr = dayInfo.date.toISOString().split('T')[0]
+                const endDate = new Date(dayInfo.date)
+                endDate.setHours(23, 59, 59, 999)
+                const endStr = endDate.toISOString().split('T')[0]
+                
+                const enrolledCount = await getEnrolledCount(user.id, courseFilter, sectionFilter)
+                const schoolDays = await getSchoolDays(user.id, courseFilter, sectionFilter, startStr, endStr)
+                const { present, late } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
+                
+                // Calculate absent: expected for this day minus present and late
+                // If there are records for this day (schoolDays > 0), expected = enrolled count
+                // Otherwise expected = 0 (no class that day)
+                const expectedForDay = schoolDays > 0 ? enrolledCount : 0
+                const absent = Math.max(0, expectedForDay - present - late)
+                
+                return {
+                    day: dayInfo.dayName,
+                    date: dayInfo.dateLabel,
+                    present: present,
+                    late: late,
+                    absent: absent
+                }
+            }))
+            
+            return NextResponse.json({ 
+                success: true, 
+                data: dailyData
+            })
+            
+        } else if (view === 'weekly') {
             // Get 4 weeks of the current month with date ranges (school days Mon-Fri)
             const now = new Date()
             const currentMonth = now.getMonth()

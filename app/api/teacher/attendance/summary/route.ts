@@ -28,16 +28,21 @@ export async function GET(req: Request) {
         let params: string[]
 
         if (courseFilter && sectionFilter) {
-            // Filter by both course and section
+            // Filter by both course and section - use subquery to deduplicate records
             attendanceQuery = `SELECT 
-                COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
-                COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as explicit_absent_count
-            FROM record r
-            INNER JOIN course c ON r.course = c.id
-            INNER JOIN enrollment_data e ON e.student = r.student AND e.course = c.id
-            LEFT JOIN student_data sd ON sd.student = r.student
-            WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3`
+                COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present_count,
+                COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late_count,
+                COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as explicit_absent_count
+            FROM (
+                SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                    r.attendance
+                FROM record r
+                INNER JOIN course c ON r.course = c.id
+                INNER JOIN enrollment_data e ON e.student = r.student AND e.course = c.id
+                LEFT JOIN student_data sd ON sd.student = r.student
+                WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3
+                ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+            ) AS first_records`
             
             totalQuery = `SELECT 
                 COUNT(DISTINCT e.student) as enrolled_count,
@@ -52,12 +57,17 @@ export async function GET(req: Request) {
             params = [user.id, courseFilter, sectionFilter]
         } else if (courseFilter) {
             attendanceQuery = `SELECT 
-                COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
-                COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as explicit_absent_count
-            FROM record r
-            INNER JOIN course c ON r.course = c.id
-            WHERE c.teacher = $1 AND c.id = $2`
+                COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present_count,
+                COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late_count,
+                COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as explicit_absent_count
+            FROM (
+                SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                    r.attendance
+                FROM record r
+                INNER JOIN course c ON r.course = c.id
+                WHERE c.teacher = $1 AND c.id = $2
+                ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+            ) AS first_records`
             
             totalQuery = `SELECT 
                 COUNT(DISTINCT e.student) as enrolled_count,
@@ -71,12 +81,17 @@ export async function GET(req: Request) {
             params = [user.id, courseFilter]
         } else {
             attendanceQuery = `SELECT 
-                COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
-                COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as explicit_absent_count
-            FROM record r
-            INNER JOIN course c ON r.course = c.id
-            WHERE c.teacher = $1`
+                COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present_count,
+                COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late_count,
+                COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as explicit_absent_count
+            FROM (
+                SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                    r.attendance
+                FROM record r
+                INNER JOIN course c ON r.course = c.id
+                WHERE c.teacher = $1
+                ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+            ) AS first_records`
             
             totalQuery = `SELECT 
                 COUNT(DISTINCT e.student) as enrolled_count,

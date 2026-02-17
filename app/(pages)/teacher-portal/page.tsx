@@ -431,6 +431,13 @@ export default function Teacher() {
     const totalSections = courses.reduce((sum, c) => sum + (c.sectionCount || 0), 0);
 
     // Trend Data State
+    const [dailyTrendData, setDailyTrendData] = useState<Array<{
+        day: string;
+        date: string;
+        present: number;
+        late: number;
+        absent: number;
+    }>>([]);
     const [weeklyTrendData, setWeeklyTrendData] = useState<Array<{
         week: string;
         dateRange: string;
@@ -569,18 +576,23 @@ export default function Teacher() {
                     courseParam = `&course=${selectedChartCourse}`;
                 }
                 
-                const [weeklyRes, monthlyRes, quarterlyRes] = await Promise.all([
+                const [dailyRes, weeklyRes, monthlyRes, quarterlyRes] = await Promise.all([
+                    fetch(`/api/teacher/attendance/trends?view=daily${courseParam}${sectionParam}`),
                     fetch(`/api/teacher/attendance/trends?view=weekly${courseParam}${sectionParam}`),
                     fetch(`/api/teacher/attendance/trends?view=monthly${courseParam}${sectionParam}`),
                     fetch(`/api/teacher/attendance/trends?view=quarterly${courseParam}${sectionParam}`)
                 ]);
 
-                const [weeklyData, monthlyData, quarterlyData] = await Promise.all([
+                const [dailyData, weeklyData, monthlyData, quarterlyData] = await Promise.all([
+                    dailyRes.json(),
                     weeklyRes.json(),
                     monthlyRes.json(),
                     quarterlyRes.json()
                 ]);
 
+                if (dailyData.success) {
+                    setDailyTrendData(dailyData.data);
+                }
                 if (weeklyData.success) {
                     setWeeklyTrendData(weeklyData.data);
                 }
@@ -1344,24 +1356,14 @@ export default function Teacher() {
                                             <div className="teacher-chart-card">
                                                 <ResponsiveContainer width="100%" height="80%">
                                                     {selectedView === "daily" && (
-                                                        <BarChart data={[
-                                                            { category: "Present", count: todayAttendance.present },
-                                                            { category: "Late", count: todayAttendance.late },
-                                                            { category: "Absent", count: todayAttendance.absent }
-                                                        ]}>
+                                                        <BarChart data={dailyTrendData}>
                                                             <CartesianGrid strokeDasharray="3 3" />
-                                                            <XAxis dataKey="category" />
+                                                            <XAxis dataKey="date" />
                                                             <YAxis />
                                                             <Tooltip 
                                                                 content={({ active, payload }) => {
                                                                     if (active && payload && payload.length) {
-                                                                        const category = payload[0]?.payload?.category;
-                                                                        const count = payload[0]?.value;
-                                                                        const colorMap: Record<string, string> = {
-                                                                            'Present': 'var(--present)',
-                                                                            'Late': 'var(--late)',
-                                                                            'Absent': 'var(--absent)'
-                                                                        };
+                                                                        const data = payload[0]?.payload;
                                                                         return (
                                                                             <div style={{ 
                                                                                 backgroundColor: 'white', 
@@ -1369,28 +1371,20 @@ export default function Teacher() {
                                                                                 border: '1px solid #ccc',
                                                                                 borderRadius: '4px'
                                                                             }}>
-                                                                                <p style={{ fontWeight: 'bold', marginBottom: '5px', color: '#1F2F57' }}>
-                                                                                    {new Date().toLocaleDateString('en-US', { 
-                                                                                        weekday: 'long', 
-                                                                                        year: 'numeric', 
-                                                                                        month: 'long', 
-                                                                                        day: 'numeric' 
-                                                                                    })}
-                                                                                </p>
-                                                                                <p style={{ color: colorMap[category] || '#333' }}>
-                                                                                    {category}: {count}
-                                                                                </p>
+                                                                                <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data.date}</p>
+                                                                                <p style={{ color: 'var(--present)' }}>Present: {data.present}</p>
+                                                                                <p style={{ color: 'var(--late)' }}>Late: {data.late}</p>
+                                                                                <p style={{ color: 'var(--absent)' }}>Absent: {data.absent}</p>
                                                                             </div>
                                                                         );
                                                                     }
                                                                     return null;
                                                                 }}
                                                             />
-                                                            <Bar dataKey="count">
-                                                                <Cell fill="var(--present)" />
-                                                                <Cell fill="var(--late)" />
-                                                                <Cell fill="var(--absent)" />
-                                                            </Bar>
+                                                            <Legend />
+                                                            <Bar dataKey="present" fill="var(--present)" name="Present" />
+                                                            <Bar dataKey="late" fill="var(--late)" name="Late" />
+                                                            <Bar dataKey="absent" fill="var(--absent)" name="Absent" />
                                                         </BarChart>
                                                     )}
 

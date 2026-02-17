@@ -443,7 +443,7 @@ export default function Student() {
                         {selectedView === "daily" && (
                           <BarChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="day" />
+                            <XAxis dataKey="date" />
                             <YAxis />
                             <Tooltip 
                               content={({ active, payload }) => {
@@ -456,8 +456,7 @@ export default function Student() {
                                       border: '1px solid #ccc',
                                       borderRadius: '4px'
                                     }}>
-                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data.day}</p>
-                                      <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>{data.date}</p>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data.date}</p>
                                       <p style={{ color: 'var(--present)' }}>Present: {data.present}</p>
                                       <p style={{ color: 'var(--late)' }}>Late: {data.late}</p>
                                       <p style={{ color: 'var(--absent)' }}>Absent: {data.absent}</p>
