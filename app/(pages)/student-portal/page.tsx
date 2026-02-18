@@ -29,6 +29,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import "./styles.css";
+import "../teacher-portal/styles.css";
 import {
   studentInfo,
   dailyAttendance,
@@ -38,6 +39,7 @@ import {
   notifications,
   subjectAttendance,
   chartColors,
+  attendanceAppeals,
 } from "./constants";
 
 const totalDays = 40;
@@ -48,6 +50,13 @@ const warnings = 4;
 const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
 const attendanceAlerts = (presentDays + lateDays);
 const totalSubjects = subjectAttendance.length;
+
+function getLateReason(record: any) {
+  if (record.status !== "LATE") return "";
+
+  return `Arrival recorded at (${record.recordedTime}), exceeding the 15 minute grace period (${record.classStart}).`;
+}
+
 
 export default function Student() {
   const [selectedView, setSelectedView] = useState<
@@ -91,6 +100,62 @@ export default function Student() {
   }>>([]);
 
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Attendance trends data
+  const [trendsData, setTrendsData] = useState<any[]>([]);
+  const [isLoadingTrends, setIsLoadingTrends] = useState(false);
+
+  // Student Appeal
+  const appealableRecords = dailyAttendance.filter(
+    (record) => record.status === "LATE" || record.status === "ABSENT"
+  );
+
+  // Appeal stats
+  const availableAppealsCount = appealableRecords.length;
+
+  const pendingAppealsCount = attendanceAppeals.filter(
+    appeal => appeal.status === "pending"
+  ).length;
+
+  const completedAppealsCount = attendanceAppeals.filter(
+    appeal => appeal.status === "approved" || appeal.status === "rejected"
+  ).length;
+
+  const [selectedRecord, setSelectedRecord] = useState<
+    (typeof appealableRecords)[number] | null
+  >(null);
+
+  const [appeals, setAppeals] = useState(attendanceAppeals);
+  const [records, setRecords] = useState(appealableRecords);
+  const [appealReason, setAppealReason] = useState("");
+
+  const handleSubmitAppeal = () => {
+    if (!selectedRecord || !appealReason.trim()) return;
+    const newAppeal = {
+      id: Date.now(),
+      subject: selectedRecord.subject,
+      date: selectedRecord.date,
+      recordedStatus: selectedRecord.status,
+      requestedStatus: "Present",
+      reason: appealReason,
+      status: "pending",
+      submittedAt: new Date().toISOString(),
+      reviewedBy: null,
+      teacherResponse: null,
+    };
+    // move to RIGHT (history)
+    setAppeals(prev => [newAppeal, ...prev]);
+    // remove from LEFT (issues)
+    setRecords(prev =>
+      prev.filter(r =>
+        !(r.subject === selectedRecord.subject && 
+          r.date === selectedRecord.date)
+      )
+    );
+    // clear form
+    setSelectedRecord(null);
+    setAppealReason("");
+  };
 
   // Fetch student data
   useEffect(() => {
@@ -129,6 +194,35 @@ export default function Student() {
     fetchStudentData();
   }, []);
 
+  // Fetch trends data when view or subject filter changes
+  useEffect(() => {
+    const fetchTrendsData = async () => {
+      setIsLoadingTrends(true);
+      try {
+        const params = new URLSearchParams({
+          view: selectedView
+        });
+        
+        if (selectedSubject && selectedSubject !== 'all') {
+          params.append('subject', selectedSubject);
+        }
+        
+        const response = await fetch(`/api/student/attendance/trends?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setTrendsData(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching trends data:', error);
+      } finally {
+        setIsLoadingTrends(false);
+      }
+    };
+
+    fetchTrendsData();
+  }, [selectedView, selectedSubject]);
+
   const { presentDays, lateDays, absentDays, totalDays, attendanceRate, totalSubjects } = attendanceSummary;
 
   const pieData = [
@@ -155,12 +249,12 @@ export default function Student() {
     }, 1500);
   };
 
-
   return (
     <SamsTemplate
       links={[
         {
-          label: "Dashboard",
+          // OVERVIEW
+          label: "Overview",
           Icon: DashboardIcon,
           panels: [
             <div key="total-subjects" className="student-panel-card enroll">
@@ -303,17 +397,12 @@ export default function Student() {
                     </div>
                     </div>
 
-                  <div className="student-filters">
-                    <div className="student-filters-group">
-                      <select className="student-select">
-                        <option value="1">1st Semester</option>
-                        <option value="2">2nd Semester</option>
-                      </select>
-
+                  <div className="teacher-filters">
+                    <div className="teacher-filters-group">
                       <select
                         value={selectedView}
                         onChange={(e) => setSelectedView(e.target.value as any)}
-                        className="student-select"
+                        className="teacher-select"
                       >
                         <option value="daily">Daily</option>
                         <option value="weekly">Weekly</option>
@@ -324,7 +413,7 @@ export default function Student() {
                       <select
                         value={selectedSubject}
                         onChange={(e) => setSelectedSubject(e.target.value)}
-                        className="student-select"
+                        className="teacher-select"
                       >
                         <option value="all">All Subjects</option>
                         {subjectAttendance.map((subject, index) => (
@@ -336,80 +425,165 @@ export default function Student() {
                     <button
                       onClick={handleExport}
                       disabled={isExporting}
-                      className="student-export-btn"
+                      className="teacher-export-btn"
                     >
                       <DownloadIcon />
                       {isExporting ? "Exporting..." : ""}
                     </button>
                   </div>
 
-                  <div className="student-chart-container">
-                    <div className="student-chart-card">
+                  <div className="teacher-chart-container">
+                    <div className="teacher-chart-card">
+                      {isLoadingTrends ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                          <p>Loading chart data...</p>
+                        </div>
+                      ) : (
                       <ResponsiveContainer width="100%" height="100%">
+                        {selectedView === "daily" && (
+                          <BarChart data={trendsData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0]?.payload;
+                                  return (
+                                    <div style={{ 
+                                      backgroundColor: 'white', 
+                                      padding: '10px', 
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px'
+                                    }}>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data.date}</p>
+                                      <p style={{ color: 'var(--present)' }}>Present: {data.present}</p>
+                                      <p style={{ color: 'var(--late)' }}>Late: {data.late}</p>
+                                      <p style={{ color: 'var(--absent)' }}>Absent: {data.absent}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Legend />
+                            <Bar dataKey="present" fill="var(--present)" name="Present" />
+                            <Bar dataKey="late" fill="var(--late)" name="Late" />
+                            <Bar dataKey="absent" fill="var(--absent)" name="Absent" />
+                          </BarChart>
+                        )}
+
                         {selectedView === "weekly" && (
-                          <BarChart data={weeklyTrend}>
+                          <BarChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="week" />
                             <YAxis />
-                            <Tooltip />
+                            <Tooltip 
+                              content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                  const data = trendsData.find(d => d.week === label);
+                                  return (
+                                    <div style={{ 
+                                      backgroundColor: 'white', 
+                                      padding: '10px', 
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px'
+                                    }}>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{label}</p>
+                                      <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>
+                                        {data?.dateRange}
+                                      </p>
+                                      <p style={{ color: 'var(--present)' }}>Present: {payload[0]?.value}</p>
+                                      <p style={{ color: 'var(--late)' }}>Late: {payload[1]?.value}</p>
+                                      <p style={{ color: 'var(--absent)' }}>Absent: {payload[2]?.value}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
                             <Legend />
-                            <Bar dataKey="present" fill="var(--present)" />
-                            <Bar dataKey="late" fill="var(--late)" />
-                            <Bar dataKey="absent" fill="var(--absent)" />
+                            <Bar dataKey="present" fill="var(--present)" name="Present" />
+                            <Bar dataKey="late" fill="var(--late)" name="Late" />
+                            <Bar dataKey="absent" fill="var(--absent)" name="Absent" />
                           </BarChart>
                         )}
 
                         {selectedView === "monthly" && (
-                          <LineChart data={monthlyData}>
+                          <LineChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="month" />
-                            <YAxis domain={[80, 100]} />
-                            <Tooltip />
+                            <YAxis />
+                            <Tooltip 
+                              content={({ active, payload, label }) => {
+                                if (active && payload && payload.length) {
+                                  const data = trendsData.find(d => d.month === label);
+                                  return (
+                                    <div style={{ 
+                                      backgroundColor: 'white', 
+                                      padding: '10px', 
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px'
+                                    }}>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data?.fullMonth}</p>
+                                      <p style={{ color: 'var(--present)' }}>Attendance Rate: {data?.attendanceRate}%</p>
+                                      <p style={{ color: '#666', fontSize: '12px', marginTop: '8px' }}>Present: {data?.present}</p>
+                                      <p style={{ color: '#666', fontSize: '12px' }}>Late: {data?.late}</p>
+                                      <p style={{ color: '#666', fontSize: '12px' }}>Absent: {data?.absent}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Legend />
                             <Line
                               type="monotone"
-                              dataKey="percentage"
+                              dataKey="attendanceRate"
                               stroke="var(--present)"
                               strokeWidth={3}
+                              name="Attendance Rate (%)"
                             />
                           </LineChart>
                         )}
 
                         {selectedView === "quarterly" && (
-                          <BarChart data={quarterlyData}>
+                          <BarChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
                             <YAxis />
-                            <Tooltip />
+                            <Tooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0]?.payload;
+                                  return (
+                                    <div style={{ 
+                                      backgroundColor: 'white', 
+                                      padding: '10px', 
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px'
+                                    }}>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data.label}</p>
+                                      <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>
+                                        {data.dateRange}
+                                      </p>
+                                      <p style={{ color: 'var(--present)' }}>Present: {data.present}</p>
+                                      <p style={{ color: 'var(--late)' }}>Late: {data.late}</p>
+                                      <p style={{ color: 'var(--absent)' }}>Absent: {data.absent}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
                             <Legend />
-                            <Bar dataKey="present" fill="var(--present)" />
-                            <Bar dataKey="late" fill="var(--late)" />
-                            <Bar dataKey="absent" fill="var(--absent)" />
-                          </BarChart>
-                        )}
-
-                        {selectedView === "daily" && (
-                          <BarChart data={dailyAttendance}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey={() => 1}>
-                              {dailyAttendance.map((entry, i) => (
-                                <Cell
-                                  key={i}
-                                  fill={
-                                    entry.status === "Present"
-                                      ? "var(--present)"
-                                      : entry.status === "Late"
-                                      ? "var(--late)"
-                                      : "var(--absent)"
-                                  }
-                                />
-                              ))}
-                            </Bar>
+                            <Bar dataKey="present" fill="var(--present)" name="Present" />
+                            <Bar dataKey="late" fill="var(--late)" name="Late" />
+                            <Bar dataKey="absent" fill="var(--absent)" name="Absent" />
                           </BarChart>
                         )}
                       </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -485,7 +659,234 @@ export default function Student() {
             </div>
           ),
         },
+          // ATTENDANCE APPEAL
+          {
+            label: "Attendance Appeal",
+            Icon: ExclamationTriangleIcon,
+            panels: [
+            // 1. Available subjects for appeal
+            <div key="appeal-available" className="student-panel-card appeal">
+              <ExclamationTriangleIcon className="student-panel-icon" />
+              <div className="student-panel-content">
+                <div className="student-panel-label">Available Appeals</div>
+                <div className="student-panel-value">{availableAppealsCount}</div>
+                <div className="student-panel-sub">Subjects eligible for appeal</div>
+              </div>
+            </div>,
+
+            // 2. Pending appeals
+            <div key="appeal-pending" className="student-panel-card appeal-status">
+              <BookmarkIcon className="student-panel-icon" />
+              <div className="student-panel-content">
+                <div className="student-panel-label">Pending Requests</div>
+                <div className="student-panel-value">{pendingAppealsCount}</div>
+                <div className="student-panel-sub">Awaiting professor review</div>
+              </div>
+            </div>,
+
+            // 3. Completed appeals
+            <div key="appeal-completed" className="student-panel-card appeal-status">
+              <BookmarkIcon className="student-panel-icon" />
+              <div className="student-panel-content">
+                <div className="student-panel-label">Completed Appeals</div>
+                <div className="student-panel-value">{completedAppealsCount}</div>
+                <div className="student-panel-sub">Approved and rejected requests</div>
+              </div>
+            </div>,
+          ],
+
+            content: (
+              <div className="appeal-container">
+
+                <div className="appeal-split-layout">
+
+                  {/* LEFT SIDE */}
+                  <div className="appeal-list">
+
+                    <div className="appeal-list-title">
+                      Attendance Issues
+                    </div>
+
+                    <div className="appeal-list-scroll">
+
+                      {records.length === 0 ? (
+                        <div className="appeal-empty">
+                          No attendance issues today
+                        </div>
+                      ) : (
+                        records.map((record, index) => (
+                          <div
+                            key={index}
+                            className={`appeal-item ${
+                              selectedRecord === record ? "active" : ""
+                            } ${record.status.toLowerCase()}`}
+                            onClick={() => setSelectedRecord(record)}
+                          >
+
+                            <div className="appeal-item-header">
+                              <div className="appeal-item-subject">
+                                {record.subject}
+                              </div>
+
+                              <div className="appeal-item-status">
+                                {record.status}
+                              </div>
+                            </div>
+
+                            <div className="appeal-item-prof">
+                              {record.prof}
+                            </div>
+
+                            <div className="appeal-item-time-range">
+                              Class: {record.classStart} – {record.classEnd}
+                            </div>
+
+                            {record.status === "LATE" && (
+                              <div className="appeal-item-reason">
+                                {getLateReason(record)}
+                              </div>
+                            )}
+
+                            {record.status === "ABSENT" && (
+                              <div className="appeal-item-reason">
+                                No face recognition detected during class session.
+                              </div>
+                            )}
+
+                          </div>
+                        ))
+                      )}
+
+                    </div>
+
+                  </div>
+
+                  {/* RIGHT SIDE */}
+                  <div className="appeal-form-container">
+                    <div className="appeal-right-layout">
+                      {/* Appeal Form */}
+                      <div className="appeal-card">
+                        <h3 className="appeal-title">
+                          Submit Attendance Appeal
+                        </h3>
+
+                        <div className="appeal-form">
+
+                          <div className="appeal-field">
+                            <label>Date and Time</label>
+                            <input
+                              type="text"
+                              value={
+                                selectedRecord
+                                  ? `${selectedRecord.date} (${selectedRecord.classStart} – ${selectedRecord.classEnd})`
+                                  : ""
+                              }
+                              readOnly
+                            />
+                          </div>
+
+                          <div className="appeal-field">
+                            <label>Subject</label>
+                            <input type="text" value={selectedRecord?.subject || ""} readOnly />
+                          </div>
+
+                          <div className="appeal-field">
+                            <label>Professor</label>
+                            <input
+                              type="text"
+                              value={selectedRecord?.prof || ""}
+                              readOnly
+                            />
+                          </div>
+
+                          <div className="appeal-field">
+                            <label>Recorded Status</label>
+                            <input type="text" value={selectedRecord?.status || ""} readOnly />
+                          </div>
+
+                          <div className="appeal-field">
+                            <label>Reason for Appeal</label>
+                            <textarea
+                              placeholder="Explain why your attendance should be corrected..."
+                              value={appealReason}
+                              onChange={(e) => setAppealReason(e.target.value)}
+                            />
+                          </div>
+
+                          <button
+                            className="student-export-btn"
+                            onClick={handleSubmitAppeal}
+                            disabled={!selectedRecord || !appealReason.trim()}
+                          >
+                            Submit Appeal
+                          </button>
+
+                        </div>
+                      </div>
+
+                      {/* Appeal History */}
+                      <div className="appeal-history-card">
+
+                        <div className="appeal-history-title">
+                          Appeal History
+                        </div>
+
+                        <div className="appeal-history-scroll">
+
+                          {appeals.map((appeal) => (
+                            <div
+                              key={appeal.id}
+                              className={`appeal-history-item ${appeal.status}`}
+                              style={{ cursor: "default" }}
+                            >
+                              <div className="appeal-history-header">
+
+                                <div className="appeal-history-subject">
+                                  {appeal.subject}
+                                </div>
+
+                                <div className="appeal-history-status">
+                                  {appeal.status.toUpperCase()}
+                                </div>
+
+                              </div>
+
+                              <div className="appeal-history-meta">
+                                {appeal.date} • {appeal.recordedStatus} → {appeal.requestedStatus}
+                              </div>
+
+                              <div className="appeal-history-reason">
+                                <strong>Your reason:</strong> {appeal.reason}
+                              </div>
+
+                              {appeal.status !== "pending" && (
+                                <div className="appeal-history-teacher-response">
+
+                                  <strong>
+                                    {appeal.reviewedBy || "System"} decision:
+                                  </strong>
+
+                                  <div>
+                                    {appeal.teacherResponse?.trim()
+                                      ? appeal.teacherResponse
+                                      : `Your attendance appeal has been ${appeal.status}.`}
+                                  </div>
+
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          },
         {
+            // NOTIFICATIONS
             label: "Notifications",
             Icon: BellIcon,
             panels: [

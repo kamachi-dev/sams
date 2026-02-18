@@ -36,6 +36,8 @@ import {
 } from "recharts";
 import { useState, useEffect } from "react";
 import './styles.css';
+import '../student-portal/styles.css';
+import { attendanceAppeals } from "../teacher-portal/constants";
 
 // Types for low attendance students
 interface LowAttendanceStudent {
@@ -51,42 +53,257 @@ interface LowAttendanceStudent {
     attendanceRate: number;
 }
 
-// Types for comparative analytics
-interface StudentForComparison {
-    id: string;
-    name: string;
-    email: string;
+// Types for section comparison analytics
+interface SectionStat {
+    section: string;
+    studentCount: number;
+    schoolDays: number;
+    presentCount: number;
+    lateCount: number;
+    absentCount: number;
+    attendanceRate: number;
 }
 
-interface ComparisonData {
-    student: {
-        id: string;
-        name: string;
-        courseName: string;
-        totalRecords: number;
-        present: number;
-        late: number;
-        absent: number;
-        attendanceRate: number;
-    } | null;
-    class: {
-        totalStudents: number;
-        totalRecords: number;
-        present: number;
-        late: number;
-        absent: number;
-        attendanceRate: number;
-    };
-    monthlyComparison: Array<{
-        month: string;
-        studentRate: number;
-        classRate: number;
-    }>;
-    comparison: {
-        rateVsClass: string | null;
-        status: 'above' | 'below' | 'unknown';
-    };
+interface SectionComparisonData {
+    courseName: string;
+    sections: SectionStat[];
+    courseAvgRate: number;
+    monthlyComparison: Array<Record<string, any>>;
+    sectionNames: string[];
 }
+
+//Temporary for student appeal
+function TeacherAppealsSection({ courses }: any) {
+
+    const [appeals, setAppeals] = useState(attendanceAppeals);
+    const [selectedAppeal, setSelectedAppeal] = useState<any>(null);
+
+    const [selectedCourseFilter, setSelectedCourseFilter] = useState("all");
+    const [selectedSectionFilter, setSelectedSectionFilter] = useState("all");
+
+    const [teacherResponse, setTeacherResponse] = useState("");
+
+    // Appeals would normally be fetched from the database, but for this demo we use hardcoded data from constants.ts. The filtering and review logic is implemented here to demonstrate the UI and interactions.
+    const pendingAppeals = appeals.filter(a => a.status === "pending");
+
+    const appealHistory = appeals.filter(
+        a => a.status === "approved" || a.status === "rejected"
+    );
+    const filteredAppeals = pendingAppeals.filter(a => {
+
+        if (selectedCourseFilter !== "all" && a.courseId !== selectedCourseFilter)
+            return false;
+
+        if (selectedSectionFilter !== "all" && a.section !== selectedSectionFilter)
+            return false;
+
+        return true;
+    });
+    // End of Temporary for student appeal
+
+
+    const handleDecision = (status: "approved" | "rejected") => {
+        if (!selectedAppeal) return;
+        setAppeals(prev =>
+            prev.map(a =>
+                a.id === selectedAppeal.id
+                    ? {
+                        ...a,
+                        status,
+                        teacherResponse,
+                        reviewedBy: "Your"
+                    }
+                    : a
+            )
+        );
+        // CLEAR SELECTION
+        setSelectedAppeal(null);
+        // CLEAR RESPONSE FIELD
+        setTeacherResponse("");
+
+    };
+
+
+    return (
+
+        <div className="appeal-container">
+            <div className="appeal-split-layout">
+
+                {/* LEFT LIST */}
+                <div className="appeal-list">
+                    <div className="appeal-list-title">
+                        Attendance Appeals
+                    </div>
+                    <div className="appeal-list-filters">
+                        <select
+                            className="teacher-select"
+                            value={selectedCourseFilter}
+                            onChange={(e) => setSelectedCourseFilter(e.target.value)}
+                        >
+                            <option value="all">All Subjects</option>
+                            {courses.map((c: any) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            className="teacher-select"
+                            value={selectedSectionFilter}
+                            onChange={(e) => setSelectedSectionFilter(e.target.value)}
+                        >
+                            <option value="all">All Sections</option>
+                            {[...new Set(appeals.map(a => a.section))]
+                                .filter(Boolean)
+                                .map((section: any) => (
+                                    <option key={section} value={section}>
+                                        {section}
+                                    </option>
+                                ))}
+                        </select>
+                    </div>
+                    <div className="appeal-list-scroll">
+                        {filteredAppeals.length === 0 ? (
+                            <div className="appeal-empty">
+                                No pending requests
+                            </div>
+                        ) : (
+                            filteredAppeals.map((appeal: any) => (
+                                <div
+                                    key={appeal.id}
+                                    className={`appeal-item ${appeal.status}`}
+                                    onClick={() => setSelectedAppeal(appeal)}
+                                >
+                                    <div className="appeal-item-header">
+                                        <div className="appeal-item-subject">
+                                            {appeal.studentName}
+                                        </div>
+                                        <div className={`appeal-item-status ${appeal.status}`}>
+                                            {appeal.status}
+                                        </div>
+                                    </div>
+                                    <div className="appeal-item-prof">
+                                        {appeal.subject}
+                                    </div>
+                                    <div className="appeal-item-time-range">
+                                        {appeal.date}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                </div>
+            </div>
+
+                {/* RIGHT REVIEW */}
+                <div className="appeal-form-container">
+                    <div className="appeal-right-layout">
+                        {/* REVIEW FORM */}
+                        <div className="appeal-card">
+                            <>
+                                <h3 className="appeal-title">Review Appeal</h3>
+                                <div className="appeal-form">
+                                    <div className="appeal-field">
+                                        <label>Student</label>
+                                        <input value={selectedAppeal?.studentName || ""} readOnly />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Subject</label>
+                                        <input value={selectedAppeal?.subject || ""} readOnly />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Date</label>
+                                        <input value={selectedAppeal?.date || ""} readOnly />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Status Change</label>
+                                        <input
+                                            value={
+                                                selectedAppeal
+                                                    ? `${selectedAppeal.recordedStatus} → ${selectedAppeal.requestedStatus}`
+                                                    : ""
+                                            }
+                                            readOnly
+                                        />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Student Reason</label>
+                                        <textarea value={selectedAppeal?.reason || ""} readOnly />
+                                    </div>
+                                    <div className="appeal-field">
+                                        <label>Teacher Response</label>
+                                        <textarea
+                                            value={teacherResponse}
+                                            onChange={(e) => setTeacherResponse(e.target.value)}
+                                            disabled={!selectedAppeal}
+                                        />
+                                    </div>
+                                    <div className="teacher-appeal-actions">
+                                        <button
+                                            className="teacher-approve-btn"
+                                            onClick={() => handleDecision("approved")}
+                                            disabled={!selectedAppeal}
+                                        >
+                                            Approve
+                                        </button>
+                                        <button
+                                            className="teacher-reject-btn"
+                                            onClick={() => handleDecision("rejected")}
+                                            disabled={!selectedAppeal}
+                                        >
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        </div>
+
+                        {/* HISTORY PANEL */}
+                        <div className="appeal-history-card">
+                            <div className="appeal-history-title">
+                                Appeal History
+                            </div>
+                            <div className="appeal-history-scroll">
+                                {appealHistory.map((appeal) => (
+                                    <div
+                                        key={appeal.id}
+                                        className={`appeal-history-item ${appeal.status}`}
+                                    >
+                                        <div className="appeal-history-header">
+
+                                            <div className="appeal-history-subject">
+                                                {appeal.studentName}
+                                            </div>
+                                            <div className="appeal-history-status">
+                                                {appeal.status}
+                                            </div>
+                                        </div>
+                                        <div className="appeal-history-meta">
+                                            {appeal.subject} • {appeal.date}
+                                        </div>
+                                        <div className="appeal-history-reason">
+                                            <strong>Student:</strong> {appeal.reason}
+                                        </div>
+                                        <div className="appeal-history-teacher-response">
+                                            <strong>
+                                                {appeal.reviewedBy || "Teacher"} decision:
+                                            </strong>
+                                            <div>
+                                                {appeal.teacherResponse?.trim()
+                                                    ? appeal.teacherResponse
+                                                    : `Appeal was ${appeal.status}.`}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+// End of temporary component
 
 export default function Teacher() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -94,6 +311,85 @@ export default function Teacher() {
     const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("daily");
     const [totalStudents, setTotalStudents] = useState<number>(0);
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+
+    // Helper function to format schedule object to readable string
+    const formatSchedule = (schedule: any): string => {
+        if (!schedule) return '';
+        if (typeof schedule === 'string') return schedule;
+        if (typeof schedule === 'object') {
+            const days = Object.keys(schedule).map(day => 
+                day.charAt(0).toUpperCase() + day.slice(1)
+            ).join(', ');
+            return days;
+        }
+        return '';
+    };
+
+    // Helper to get the schedule time for the selected course (shows current day's schedule with date)
+    const getScheduleTime = (courseId: string | undefined): string => {
+        if (!courseId) return '';
+        const course = courses.find(c => c.id === courseId);
+        if (!course?.schedule || typeof course.schedule !== 'object') return '';
+        const schedule = course.schedule as Record<string, { start: string; end: string }>;
+        // Format times to 12h format with proper AM/PM handling
+        // For school schedules: 1-6 are typically PM (afternoon), 7-11 are AM (morning), 12 is PM (noon)
+        const formatTime = (t: string) => {
+            const [h, m] = t.split(':').map(Number);
+            let hour24 = h;
+            // If hour is 1-6 and appears to be afternoon class time (not in 24h format already)
+            // interpret it as PM. For 7-11, interpret as AM. 12 is noon (PM). 0 is midnight.
+            if (h >= 13 && h <= 23) {
+                // Already in 24-hour format (13:00 = 1 PM)
+                hour24 = h;
+            } else if (h >= 1 && h <= 6) {
+                // 1-6 likely means PM for afternoon classes (1pm-6pm)
+                hour24 = h + 12;
+            } else if (h >= 7 && h <= 11) {
+                // 7-11 likely means AM for morning classes
+                hour24 = h;
+            } else if (h === 12) {
+                // 12 is noon (PM)
+                hour24 = 12;
+            } else if (h === 0) {
+                // 0 is midnight (12 AM)
+                hour24 = 0;
+            }
+            const period = hour24 >= 12 ? 'PM' : 'AM';
+            const hour12 = hour24 % 12 || 12;
+            return `${hour12}:${m.toString().padStart(2, '0')}${period}`;
+        };
+        // Get today's day name (lowercase) and check if it exists in the schedule
+        const today = new Date();
+        const todayName = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        
+        if (schedule[todayName]) {
+            const { start, end } = schedule[todayName];
+            if (start && end) {
+                const dayLabel = todayName.charAt(0).toUpperCase() + todayName.slice(1);
+                const dateStr = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                return `${dayLabel}, ${dateStr} ${formatTime(start)} - ${formatTime(end)}`;
+            }
+        }
+        // If today is not a scheduled day, find the most recent scheduled day in the PAST
+        const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const todayIndex = daysOfWeek.indexOf(todayName);
+        for (let i = 1; i <= 7; i++) {
+            const prevDayIndex = (todayIndex - i + 7) % 7; // Go backwards, wrapping around
+            const prevDay = daysOfWeek[prevDayIndex];
+            if (schedule[prevDay]) {
+                const { start, end } = schedule[prevDay];
+                if (start && end) {
+                    const dayLabel = prevDay.charAt(0).toUpperCase() + prevDay.slice(1);
+                    // Calculate the date for this previous day
+                    const prevDate = new Date(today);
+                    prevDate.setDate(today.getDate() - i);
+                    const dateStr = prevDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    return `${dayLabel}, ${dateStr} ${formatTime(start)} - ${formatTime(end)}`;
+                }
+            }
+        }
+        return '';
+    };
     const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
     const [attendanceRecords, setAttendanceRecords] = useState<Array<{
         id: string;
@@ -105,7 +401,7 @@ export default function Teacher() {
         confidence: string;
     }>>([]);
     const [isLoadingRecords, setIsLoadingRecords] = useState(true);
-    const [courses, setCourses] = useState<Array<{ id: string; name: string; studentCount?: number; sectionCount?: number }>>([]);
+    const [courses, setCourses] = useState<Array<{ id: string; name: string; schedule?: string; studentCount?: number; sectionCount?: number; sectionNames?: string[]; sections?: Array<{ name: string; studentCount: number }> }>>([]);
     const [selectedCourse, setSelectedCourse] = useState("");
     const [selectedChartCourse, setSelectedChartCourse] = useState("all");
     const [semesterAttendance, setSemesterAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
@@ -113,7 +409,7 @@ export default function Teacher() {
     // Overview drill-down state
     const [overviewStep, setOverviewStep] = useState<'courses' | 'sections' | 'stats'>('courses');
     const [selectedOverviewCourse, setSelectedOverviewCourse] = useState<{ id: string; name: string } | null>(null);
-    const [courseSections, setCourseSections] = useState<Array<{ section: string; studentCount: number }>>([]);
+    const [courseSections, setCourseSections] = useState<Array<{ section: string; studentCount: number; students?: string[] }>>([]);
     const [selectedSection, setSelectedSection] = useState<string>("");
     const [isLoadingSections, setIsLoadingSections] = useState(false);
 
@@ -123,14 +419,25 @@ export default function Teacher() {
     const [lowAttendanceThreshold, setLowAttendanceThreshold] = useState(50);
     const [lowAttendanceCourseFilter, setLowAttendanceCourseFilter] = useState("all");
 
-    // Comparative Analytics State
-    const [studentsForComparison, setStudentsForComparison] = useState<StudentForComparison[]>([]);
-    const [selectedStudentForComparison, setSelectedStudentForComparison] = useState("");
+    // Section Comparison Analytics State
     const [selectedCourseForComparison, setSelectedCourseForComparison] = useState("");
-    const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
+    const [sectionComparisonData, setSectionComparisonData] = useState<SectionComparisonData | null>(null);
     const [isLoadingComparison, setIsLoadingComparison] = useState(false);
 
+    // Compute unique student count for Students at Risk
+    const uniqueLowAttendanceCount = new Set(lowAttendanceStudents.map(s => s.id)).size;
+
+    // Total sections count
+    const totalSections = courses.reduce((sum, c) => sum + (c.sectionCount || 0), 0);
+
     // Trend Data State
+    const [dailyTrendData, setDailyTrendData] = useState<Array<{
+        day: string;
+        date: string;
+        present: number;
+        late: number;
+        absent: number;
+    }>>([]);
     const [weeklyTrendData, setWeeklyTrendData] = useState<Array<{
         week: string;
         dateRange: string;
@@ -234,8 +541,13 @@ export default function Teacher() {
         const fetchSemesterAttendance = async () => {
             try {
                 const params = new URLSearchParams();
-                if (selectedChartCourse !== "all") params.set('course', selectedChartCourse);
-                if (overviewStep === 'stats' && selectedSection) params.set('section', selectedSection);
+                // In stats view, use the selected overview course + section
+                if (overviewStep === 'stats' && selectedOverviewCourse) {
+                    params.set('course', selectedOverviewCourse.id);
+                    if (selectedSection) params.set('section', selectedSection);
+                } else if (selectedChartCourse !== "all") {
+                    params.set('course', selectedChartCourse);
+                }
                 const queryStr = params.toString() ? `?${params.toString()}` : '';
                 const response = await fetch(`/api/teacher/attendance/summary${queryStr}`);
                 const result = await response.json();
@@ -248,26 +560,39 @@ export default function Teacher() {
         };
         
         fetchSemesterAttendance();
-    }, [selectedChartCourse, selectedSection, overviewStep]);
+    }, [selectedChartCourse, selectedSection, overviewStep, selectedOverviewCourse]);
 
     // Fetch trend data for charts (weekly, monthly, quarterly)
     useEffect(() => {
         const fetchTrendData = async () => {
             try {
-                const courseParam = selectedChartCourse !== "all" ? `&course=${selectedChartCourse}` : '';
+                // In stats view, use the selected overview course + section
+                let courseParam = '';
+                let sectionParam = '';
+                if (overviewStep === 'stats' && selectedOverviewCourse) {
+                    courseParam = `&course=${selectedOverviewCourse.id}`;
+                    if (selectedSection) sectionParam = `&section=${selectedSection}`;
+                } else if (selectedChartCourse !== "all") {
+                    courseParam = `&course=${selectedChartCourse}`;
+                }
                 
-                const [weeklyRes, monthlyRes, quarterlyRes] = await Promise.all([
-                    fetch(`/api/teacher/attendance/trends?view=weekly${courseParam}`),
-                    fetch(`/api/teacher/attendance/trends?view=monthly${courseParam}`),
-                    fetch(`/api/teacher/attendance/trends?view=quarterly${courseParam}`)
+                const [dailyRes, weeklyRes, monthlyRes, quarterlyRes] = await Promise.all([
+                    fetch(`/api/teacher/attendance/trends?view=daily${courseParam}${sectionParam}`),
+                    fetch(`/api/teacher/attendance/trends?view=weekly${courseParam}${sectionParam}`),
+                    fetch(`/api/teacher/attendance/trends?view=monthly${courseParam}${sectionParam}`),
+                    fetch(`/api/teacher/attendance/trends?view=quarterly${courseParam}${sectionParam}`)
                 ]);
 
-                const [weeklyData, monthlyData, quarterlyData] = await Promise.all([
+                const [dailyData, weeklyData, monthlyData, quarterlyData] = await Promise.all([
+                    dailyRes.json(),
                     weeklyRes.json(),
                     monthlyRes.json(),
                     quarterlyRes.json()
                 ]);
 
+                if (dailyData.success) {
+                    setDailyTrendData(dailyData.data);
+                }
                 if (weeklyData.success) {
                     setWeeklyTrendData(weeklyData.data);
                 }
@@ -283,7 +608,7 @@ export default function Teacher() {
         };
         
         fetchTrendData();
-    }, [selectedChartCourse, selectedView]);
+    }, [selectedChartCourse, selectedView, selectedSection, overviewStep, selectedOverviewCourse]);
 
     // Fetch attendance records
     useEffect(() => {
@@ -389,53 +714,32 @@ export default function Teacher() {
         fetchLowAttendanceStudents();
     }, [lowAttendanceThreshold, lowAttendanceCourseFilter]);
 
-    // Fetch students list for comparison dropdown
+    // Fetch section comparison data
     useEffect(() => {
-        const fetchStudentsForComparison = async () => {
-            if (!selectedCourseForComparison) return;
-            
-            try {
-                const response = await fetch(`/api/teacher/students/list?course=${selectedCourseForComparison}`);
-                const result = await response.json();
-                if (result.success) {
-                    setStudentsForComparison(result.data);
-                    setSelectedStudentForComparison(''); // Reset student selection when course changes
-                    setComparisonData(null);
-                }
-            } catch (error) {
-                console.error('Error fetching students for comparison:', error);
-            }
-        };
-        
-        fetchStudentsForComparison();
-    }, [selectedCourseForComparison]);
-
-    // Fetch comparative analytics data
-    useEffect(() => {
-        const fetchComparisonData = async () => {
-            if (!selectedStudentForComparison || !selectedCourseForComparison) {
-                setComparisonData(null);
+        const fetchSectionComparison = async () => {
+            if (!selectedCourseForComparison) {
+                setSectionComparisonData(null);
                 return;
             }
             
             setIsLoadingComparison(true);
             try {
                 const response = await fetch(
-                    `/api/teacher/analytics/compare?student=${selectedStudentForComparison}&course=${selectedCourseForComparison}`
+                    `/api/teacher/analytics/compare/sections?course=${selectedCourseForComparison}`
                 );
                 const result = await response.json();
                 if (result.success) {
-                    setComparisonData(result.data);
+                    setSectionComparisonData(result.data);
                 }
             } catch (error) {
-                console.error('Error fetching comparison data:', error);
+                console.error('Error fetching section comparison:', error);
             } finally {
                 setIsLoadingComparison(false);
             }
         };
         
-        fetchComparisonData();
-    }, [selectedStudentForComparison, selectedCourseForComparison]);
+        fetchSectionComparison();
+    }, [selectedCourseForComparison]);
 
     const handleExport = async () => {
         setIsExporting(true);
@@ -742,12 +1046,17 @@ export default function Teacher() {
                 label: "Overview",
                 Icon: DashboardIcon,
                 panels: overviewStep === 'stats' ? [
-                    <div key="total-subjects" className="teacher-panel-card enroll">
-                        <BookmarkIcon className="teacher-panel-icon" />
+                    <div key="total-students" className="teacher-panel-card enroll">
+                        <PersonIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Current Subject</div>
-                            <div className="teacher-panel-value" style={{ fontSize: '16px' }}>{selectedOverviewCourse?.name || '-'}</div>
-                            <div className="teacher-panel-sub">Section: {selectedSection}</div>
+                            <div className="teacher-panel-label">Total Number of Students</div>
+                            <div className="teacher-panel-value">
+                                {(() => {
+                                    const sectionData = courseSections.find(s => s.section === selectedSection);
+                                    return sectionData ? sectionData.studentCount : (isLoadingStudents ? "Loading..." : totalStudents);
+                                })()}
+                            </div>
+                            <div className="teacher-panel-sub">In Section: {selectedSection}</div>
                         </div>
                     </div>,
 
@@ -765,12 +1074,12 @@ export default function Teacher() {
                     <div key="student-count" className="teacher-panel-card present">
                         <PersonIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Number of Students</div>
+                            <div className="teacher-panel-label">Total Number of Sections</div>
                             <div className="teacher-panel-value">
-                                {isLoadingStudents ? "..." : totalStudents}
+                                {courseSections.length}
                             </div>
                             <div className="teacher-panel-sub">
-                                Enrolled in your courses
+                                In {selectedOverviewCourse?.name || 'this course'}
                             </div>
                         </div>
                     </div>,
@@ -795,15 +1104,15 @@ export default function Teacher() {
                         </div>
                     </div>,
 
-                    <div key="student-count" className="teacher-panel-card present">
+                    <div key="section-count" className="teacher-panel-card present">
                         <PersonIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Number of Students</div>
+                            <div className="teacher-panel-label">Total Number of Sections Handled</div>
                             <div className="teacher-panel-value">
-                                {isLoadingStudents ? "..." : totalStudents}
+                                {totalSections}
                             </div>
                             <div className="teacher-panel-sub">
-                                Enrolled in your courses
+                                Across all your courses
                             </div>
                         </div>
                     </div>,
@@ -836,6 +1145,12 @@ export default function Teacher() {
                                             </div>
                                             <div className="overview-course-card-body">
                                                 <h4 className="overview-course-card-name">{course.name}</h4>
+                                                {course.schedule && (
+                                                    <div className="overview-course-card-schedule">
+                                                        <CalendarIcon className="overview-course-schedule-icon" />
+                                                        <span>{formatSchedule(course.schedule)}</span>
+                                                    </div>
+                                                )}
                                                 <div className="overview-course-card-stats">
                                                     <div className="overview-course-stat">
                                                         <span className="overview-course-stat-value">{course.sectionCount || 0}</span>
@@ -848,6 +1163,18 @@ export default function Teacher() {
                                                         <span className="overview-course-stat-label">Students</span>
                                                     </div>
                                                 </div>
+                                                {course.sections && course.sections.length > 0 && (
+                                                    <div className="overview-course-card-sections-list">
+                                                        <span className="overview-course-sections-label">Sections:</span>
+                                                        <span className="overview-course-sections-names">
+                                                            {course.sections.map((section, idx) => (
+                                                                <span key={section.name}>
+                                                                    {section.name} ({section.studentCount} {section.studentCount === 1 ? 'student' : 'students'}){idx < course.sections!.length - 1 ? ', ' : ''}
+                                                                </span>
+                                                            ))}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -900,6 +1227,16 @@ export default function Teacher() {
                                                             {sec.studentCount === 1 ? 'Student' : 'Students'}
                                                         </span>
                                                     </div>
+                                                    {sec.students && sec.students.length > 0 && (
+                                                        <div className="overview-section-students-list">
+                                                            <span className="overview-section-students-label">Enrolled Students:</span>
+                                                            <ul className="overview-section-students-names">
+                                                                {sec.students.map((name, idx) => (
+                                                                    <li key={idx}>{name}</li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -930,36 +1267,6 @@ export default function Teacher() {
 
                                     {/* LEFT 50% */}
                                     <div className="teacher-left-column">
-                                        <div className="teacher-info-card">
-                                            <div className="teacher-info-header">
-                                                <h3 className="teacher-info-title">Class Summary</h3>
-                                                <div className="teacher-info-meta">
-                                                    2nd Semester, S.Y. 2025-2026
-                                                </div>
-                                            </div>
-
-                                            <div className="teacher-info-grid">
-                                                <div>
-                                                    <div className="teacher-info-field-label">Total Students</div>
-                                                    <div className="teacher-info-field-value">
-                                                        {isLoadingStudents ? "Loading..." : totalStudents}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className="teacher-info-field-label">Section</div>
-                                                    <div className="teacher-info-field-value">{selectedSection}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="teacher-info-field-label">Present Today</div>
-                                                    <div className="teacher-info-field-value">{todayAttendance.present}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="teacher-info-field-label">Absent Today</div>
-                                                    <div className="teacher-info-field-value">{todayAttendance.absent}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
                                         <div className="teacher-summary-card">
                                             <h3 className="teacher-summary-title">
                                                 Current Semester Summary
@@ -1047,26 +1354,16 @@ export default function Teacher() {
 
                                         <div className="teacher-chart-container">
                                             <div className="teacher-chart-card">
-                                                <ResponsiveContainer width="100%" height="100%">
+                                                <ResponsiveContainer width="100%" height="80%">
                                                     {selectedView === "daily" && (
-                                                        <BarChart data={[
-                                                            { category: "Present", count: todayAttendance.present },
-                                                            { category: "Late", count: todayAttendance.late },
-                                                            { category: "Absent", count: todayAttendance.absent }
-                                                        ]}>
+                                                        <BarChart data={dailyTrendData}>
                                                             <CartesianGrid strokeDasharray="3 3" />
-                                                            <XAxis dataKey="category" />
+                                                            <XAxis dataKey="date" />
                                                             <YAxis />
                                                             <Tooltip 
                                                                 content={({ active, payload }) => {
                                                                     if (active && payload && payload.length) {
-                                                                        const category = payload[0]?.payload?.category;
-                                                                        const count = payload[0]?.value;
-                                                                        const colorMap: Record<string, string> = {
-                                                                            'Present': 'var(--present)',
-                                                                            'Late': 'var(--late)',
-                                                                            'Absent': 'var(--absent)'
-                                                                        };
+                                                                        const data = payload[0]?.payload;
                                                                         return (
                                                                             <div style={{ 
                                                                                 backgroundColor: 'white', 
@@ -1074,28 +1371,20 @@ export default function Teacher() {
                                                                                 border: '1px solid #ccc',
                                                                                 borderRadius: '4px'
                                                                             }}>
-                                                                                <p style={{ fontWeight: 'bold', marginBottom: '5px', color: '#1F2F57' }}>
-                                                                                    {new Date().toLocaleDateString('en-US', { 
-                                                                                        weekday: 'long', 
-                                                                                        year: 'numeric', 
-                                                                                        month: 'long', 
-                                                                                        day: 'numeric' 
-                                                                                    })}
-                                                                                </p>
-                                                                                <p style={{ color: colorMap[category] || '#333' }}>
-                                                                                    {category}: {count}
-                                                                                </p>
+                                                                                <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data.date}</p>
+                                                                                <p style={{ color: 'var(--present)' }}>Present: {data.present}</p>
+                                                                                <p style={{ color: 'var(--late)' }}>Late: {data.late}</p>
+                                                                                <p style={{ color: 'var(--absent)' }}>Absent: {data.absent}</p>
                                                                             </div>
                                                                         );
                                                                     }
                                                                     return null;
                                                                 }}
                                                             />
-                                                            <Bar dataKey="count">
-                                                                <Cell fill="var(--present)" />
-                                                                <Cell fill="var(--late)" />
-                                                                <Cell fill="var(--absent)" />
-                                                            </Bar>
+                                                            <Legend />
+                                                            <Bar dataKey="present" fill="var(--present)" name="Present" />
+                                                            <Bar dataKey="late" fill="var(--late)" name="Late" />
+                                                            <Bar dataKey="absent" fill="var(--absent)" name="Absent" />
                                                         </BarChart>
                                                     )}
 
@@ -1220,7 +1509,17 @@ export default function Teacher() {
                                     {/* RIGHT 50% */}
                                     <div className="teacher-right-column">
                                         <div className="teacher-records-header">
-                                            <h3 className="teacher-records-title">Today&apos;s Attendance Records</h3>
+                                            <h3 className="teacher-records-title">
+                                                Latest Attendance Records
+                                                {(() => {
+                                                    const time = getScheduleTime(selectedOverviewCourse?.id);
+                                                    return time ? (
+                                                        <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#666', marginLeft: '8px' }}>
+                                                            ({time})
+                                                        </span>
+                                                    ) : null;
+                                                })()}
+                                            </h3>
                                             <div className="teacher-records-controls">
                                                 <div className="teacher-search-wrapper">
                                                     <MagnifyingGlassIcon className="teacher-search-icon" />
@@ -1294,7 +1593,7 @@ export default function Teacher() {
                         <ExclamationTriangleIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Students Below {lowAttendanceThreshold}%</div>
-                            <div className="teacher-panel-value">{lowAttendanceStudents.length}</div>
+                            <div className="teacher-panel-value">{uniqueLowAttendanceCount}</div>
                             <div className="teacher-panel-sub">Require immediate attention</div>
                         </div>
                     </div>,
@@ -1346,22 +1645,20 @@ export default function Teacher() {
                                             <th>Email</th>
                                             <th>Course</th>
                                             <th className="center">Present</th>
-                                            <th className="center">Late</th>
                                             <th className="center">Absent</th>
-                                            <th className="center">Total Records</th>
                                             <th className="center">Attendance Rate</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {isLoadingLowAttendance ? (
                                             <tr>
-                                                <td colSpan={8} style={{ textAlign: 'center', padding: '30px' }}>
+                                                <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
                                                     Loading low attendance students...
                                                 </td>
                                             </tr>
                                         ) : lowAttendanceStudents.length === 0 ? (
                                             <tr>
-                                                <td colSpan={8} style={{ textAlign: 'center', padding: '30px' }}>
+                                                <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
                                                     <div className="no-low-attendance">
                                                         <span className="success-icon">✓</span>
                                                         <p>No students with attendance below {lowAttendanceThreshold}%</p>
@@ -1375,9 +1672,7 @@ export default function Teacher() {
                                                     <td className="student-email">{student.email}</td>
                                                     <td className="course-name">{student.courseName}</td>
                                                     <td className="center present-cell">{student.presentCount}</td>
-                                                    <td className="center late-cell">{student.lateCount}</td>
                                                     <td className="center absent-cell">{student.absentCount}</td>
-                                                    <td className="center">{student.totalRecords}</td>
                                                     <td className="center">
                                                         <span className={`attendance-rate-badge ${student.attendanceRate < 30 ? 'critical' : 'warning'}`}>
                                                             {student.attendanceRate}%
@@ -1397,24 +1692,28 @@ export default function Teacher() {
                 label: "Comparative Analytics",
                 Icon: BarChartIcon,
                 panels: [
-                    <div key="students-available" className="teacher-panel-card enroll">
-                        <PersonIcon className="teacher-panel-icon" />
+                    <div key="sections-compared" className="teacher-panel-card enroll">
+                        <BarChartIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Students in Selected Course</div>
-                            <div className="teacher-panel-value">{studentsForComparison.length}</div>
-                            <div className="teacher-panel-sub">Available for comparison</div>
+                            <div className="teacher-panel-label">Sections Compared</div>
+                            <div className="teacher-panel-value">{sectionComparisonData?.sections.length ?? 0}</div>
+                            <div className="teacher-panel-sub">
+                                {selectedCourseForComparison 
+                                    ? courses.find(c => c.id === selectedCourseForComparison)?.name || 'Selected Course'
+                                    : 'Select a course'}
+                            </div>
                         </div>
                     </div>,
 
-                    <div key="attendance-gap" className="teacher-panel-card attendance">
-                        <BarChartIcon className="teacher-panel-icon" />
+                    <div key="course-avg" className="teacher-panel-card attendance">
+                        <CalendarIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Attendance Gap</div>
+                            <div className="teacher-panel-label">Course Average Rate</div>
                             <div className="teacher-panel-value">
-                                {comparisonData?.comparison?.rateVsClass ?? "N/A"}
+                                {sectionComparisonData?.courseAvgRate ?? "N/A"}%
                             </div>
                             <div className="teacher-panel-sub">
-                                {comparisonData ? (comparisonData.comparison.status === 'above' ? "Above class average" : comparisonData.comparison.status === 'below' ? "Below class average" : "Compared to class") : "Select student to compare"}
+                                Overall attendance across all sections
                             </div>
                         </div>
                     </div>,
@@ -1427,7 +1726,10 @@ export default function Teacher() {
                                     <label>Select Course:</label>
                                     <select
                                         value={selectedCourseForComparison}
-                                        onChange={(e) => setSelectedCourseForComparison(e.target.value)}
+                                        onChange={(e) => {
+                                            setSelectedCourseForComparison(e.target.value);
+                                            setSectionComparisonData(null);
+                                        }}
                                         className="teacher-select"
                                     >
                                         <option value="">-- Select Course --</option>
@@ -1436,119 +1738,70 @@ export default function Teacher() {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="control-group">
-                                    <label>Select Student:</label>
-                                    <select
-                                        value={selectedStudentForComparison}
-                                        onChange={(e) => setSelectedStudentForComparison(e.target.value)}
-                                        className="teacher-select"
-                                        disabled={!selectedCourseForComparison}
-                                    >
-                                        <option value="">-- Select Student --</option>
-                                        {studentsForComparison.map(student => (
-                                            <option key={student.id} value={student.id}>{student.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
                             </div>
 
                             {isLoadingComparison ? (
                                 <div className="comparison-loading">
-                                    Loading comparison data...
+                                    Loading section comparison data...
                                 </div>
-                            ) : comparisonData ? (
+                            ) : sectionComparisonData ? (
                                 <div className="comparison-content">
-                                    {/* Summary Cards */}
-                                    <div className="comparison-summary-grid">
-                                        <div className="comparison-card student-card">
-                                            <div className="comparison-card-header">
-                                                <PersonIcon className="comparison-card-icon" />
-                                                <h4>Student Performance</h4>
-                                            </div>
-                                            <div className="comparison-card-body">
-                                                <div className="comparison-name">{comparisonData.student?.name || 'N/A'}</div>
-                                                <div className="comparison-rate">
-                                                    <span className="rate-value">{comparisonData.student?.attendanceRate || 0}%</span>
-                                                    <span className="rate-label">Attendance Rate</span>
-                                                </div>
-                                                <div className="comparison-breakdown">
-                                                    <div className="breakdown-item present">
-                                                        <span className="breakdown-value">{comparisonData.student?.present || 0}</span>
-                                                        <span className="breakdown-label">Present</span>
+                                    {/* Section Cards Grid */}
+                                    <div className="section-comparison-grid">
+                                        {sectionComparisonData.sections.map((sec, idx) => {
+                                            const colors = ['#1DA1F2', '#0F9D58', '#F4B400', '#DB4437', '#9C27B0', '#00BCD4'];
+                                            const color = colors[idx % colors.length];
+                                            const isAbove = sec.attendanceRate >= sectionComparisonData.courseAvgRate;
+                                            return (
+                                                <div key={sec.section} className="section-comparison-card">
+                                                    <div className="section-comparison-card-header" style={{ borderLeftColor: color }}>
+                                                        <h4>{sec.section}</h4>
+                                                        <span className="section-student-count">{sec.studentCount} {sec.studentCount === 1 ? 'student' : 'students'}</span>
                                                     </div>
-                                                    <div className="breakdown-item late">
-                                                        <span className="breakdown-value">{comparisonData.student?.late || 0}</span>
-                                                        <span className="breakdown-label">Late</span>
-                                                    </div>
-                                                    <div className="breakdown-item absent">
-                                                        <span className="breakdown-value">{comparisonData.student?.absent || 0}</span>
-                                                        <span className="breakdown-label">Absent</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="comparison-card class-card">
-                                            <div className="comparison-card-header">
-                                                <BookmarkIcon className="comparison-card-icon" />
-                                                <h4>Class Average</h4>
-                                            </div>
-                                            <div className="comparison-card-body">
-                                                <div className="comparison-name">{comparisonData.student?.courseName || 'N/A'}</div>
-                                                <div className="comparison-rate">
-                                                    <span className="rate-value">{comparisonData.class.attendanceRate}%</span>
-                                                    <span className="rate-label">Attendance Rate</span>
-                                                </div>
-                                                <div className="comparison-breakdown">
-                                                    <div className="breakdown-item present">
-                                                        <span className="breakdown-value">{comparisonData.class.present}</span>
-                                                        <span className="breakdown-label">Present</span>
-                                                    </div>
-                                                    <div className="breakdown-item late">
-                                                        <span className="breakdown-value">{comparisonData.class.late}</span>
-                                                        <span className="breakdown-label">Late</span>
-                                                    </div>
-                                                    <div className="breakdown-item absent">
-                                                        <span className="breakdown-value">{comparisonData.class.absent}</span>
-                                                        <span className="breakdown-label">Absent</span>
+                                                    <div className="section-comparison-card-body">
+                                                        <div className="section-rate-display">
+                                                            <span className="section-rate-value">{sec.attendanceRate}%</span>
+                                                            <span className={`section-rate-badge ${isAbove ? 'above' : 'below'}`}>
+                                                                {isAbove ? '▲' : '▼'} {Math.abs(sec.attendanceRate - sectionComparisonData.courseAvgRate).toFixed(1)}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="section-breakdown-row">
+                                                            <div className="section-breakdown-item">
+                                                                <span className="section-breakdown-val present">{sec.presentCount}</span>
+                                                                <span className="section-breakdown-lbl">Present</span>
+                                                            </div>
+                                                            <div className="section-breakdown-item">
+                                                                <span className="section-breakdown-val late">{sec.lateCount}</span>
+                                                                <span className="section-breakdown-lbl">Late</span>
+                                                            </div>
+                                                            <div className="section-breakdown-item">
+                                                                <span className="section-breakdown-val absent">{sec.absentCount}</span>
+                                                                <span className="section-breakdown-lbl">Absent</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        <div className={`comparison-card difference-card ${comparisonData.comparison.status}`}>
-                                            <div className="comparison-card-header">
-                                                <BarChartIcon className="comparison-card-icon" />
-                                                <h4>Comparison Result</h4>
-                                            </div>
-                                            <div className="comparison-card-body">
-                                                <div className="difference-indicator">
-                                                    <span className={`difference-value ${comparisonData.comparison.status}`}>
-                                                        {comparisonData.comparison.status === 'above' ? '+' : ''}
-                                                        {comparisonData.comparison.rateVsClass}%
-                                                    </span>
-                                                    <span className="difference-label">
-                                                        {comparisonData.comparison.status === 'above' 
-                                                            ? 'Above Class Average' 
-                                                            : 'Below Class Average'}
-                                                    </span>
-                                                </div>
-                                                <div className="total-students-info">
-                                                    <span className="info-value">{comparisonData.class.totalStudents}</span>
-                                                    <span className="info-label">Total Students in Class</span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                            );
+                                        })}
                                     </div>
 
-                                    {/* Comparison Chart */}
-                                    <div className="comparison-chart-section">
-                                        <h4 className="chart-section-title">Monthly Attendance Trend Comparison</h4>
+                                    {/* Charts Row - Side by Side */}
+                                    <div className="comparison-charts-row">
+                                        {/* Bar Chart - Section Attendance Rates */}
+                                        <div className="comparison-chart-section">
+                                        <h4 className="chart-section-title">Section Attendance Rate Comparison</h4>
                                         <div className="comparison-chart-container">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <LineChart data={comparisonData.monthlyComparison} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                                <BarChart 
+                                                    data={sectionComparisonData.sections.map(sec => ({
+                                                        section: sec.section,
+                                                        attendanceRate: sec.attendanceRate,
+                                                        courseAvg: sectionComparisonData.courseAvgRate
+                                                    }))}
+                                                    margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+                                                >
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-                                                    <XAxis dataKey="month" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                    <XAxis dataKey="section" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
                                                     <YAxis domain={[0, 100]} tick={{ fill: '#4F4F4F', fontSize: 11 }} />
                                                     <Tooltip 
                                                         contentStyle={{ 
@@ -1557,36 +1810,68 @@ export default function Teacher() {
                                                             borderRadius: '8px',
                                                             fontSize: '12px'
                                                         }}
-                                                        formatter={(value) => [`${value}%`, '']}
+                                                        formatter={(value: any, name: any) => [
+                                                            `${value}%`, 
+                                                            name === 'attendanceRate' ? 'Attendance Rate' : 'Course Average'
+                                                        ]}
                                                     />
-                                                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                                    <Line 
-                                                        type="monotone"
-                                                        dataKey="studentRate" 
-                                                        name="Student" 
-                                                        stroke="#1DA1F2" 
-                                                        strokeWidth={3}
-                                                        dot={{ fill: '#1DA1F2', r: 4 }}
-                                                        activeDot={{ r: 6 }}
+                                                    <Legend 
+                                                        wrapperStyle={{ fontSize: '12px' }}
+                                                        formatter={(value) => value === 'attendanceRate' ? 'Section Rate' : 'Course Average'}
                                                     />
-                                                    <Line 
-                                                        type="monotone"
-                                                        dataKey="classRate" 
-                                                        name="Class Average" 
-                                                        stroke="#0F9D58" 
-                                                        strokeWidth={3}
-                                                        dot={{ fill: '#0F9D58', r: 4 }}
-                                                        activeDot={{ r: 6 }}
-                                                    />
-                                                </LineChart>
+                                                    <Bar dataKey="attendanceRate" fill="#1DA1F2" name="attendanceRate" radius={[4, 4, 0, 0]} />
+                                                    <Bar dataKey="courseAvg" fill="#E0E0E0" name="courseAvg" radius={[4, 4, 0, 0]} />
+                                                </BarChart>
                                             </ResponsiveContainer>
                                         </div>
+                                    </div>
+
+                                    {/* Monthly Trend Comparison */}
+                                    {sectionComparisonData.monthlyComparison.length > 0 && (
+                                        <div className="comparison-chart-section">
+                                            <h4 className="chart-section-title">Monthly Attendance Trend by Section</h4>
+                                            <div className="comparison-chart-container">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <LineChart data={sectionComparisonData.monthlyComparison} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                                                        <XAxis dataKey="month" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                        <YAxis domain={[0, 100]} tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                        <Tooltip 
+                                                            contentStyle={{ 
+                                                                backgroundColor: '#fff', 
+                                                                border: '1px solid #E0E0E0',
+                                                                borderRadius: '8px',
+                                                                fontSize: '12px'
+                                                            }}
+                                                            formatter={(value: any) => [`${value}%`, '']}
+                                                        />
+                                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                                        {sectionComparisonData.sectionNames.map((section, idx) => {
+                                                            const colors = ['#1DA1F2', '#0F9D58', '#F4B400', '#DB4437', '#9C27B0', '#00BCD4'];
+                                                            return (
+                                                                <Line 
+                                                                    key={section}
+                                                                    type="monotone"
+                                                                    dataKey={section}
+                                                                    name={section}
+                                                                    stroke={colors[idx % colors.length]}
+                                                                    strokeWidth={2}
+                                                                    dot={{ fill: colors[idx % colors.length], r: 3 }}
+                                                                    activeDot={{ r: 5 }}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </LineChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
                                 <div className="comparison-placeholder">
                                     <BarChartIcon className="placeholder-icon" />
-                                    <p>Select a course and student to view comparative analytics</p>
+                                    <p>Select a course to compare section attendance rates</p>
                                 </div>
                             )}
                         </div>
@@ -1594,16 +1879,49 @@ export default function Teacher() {
                 )
             },
             {
-                label: "Student Data",
-                Icon: PersonIcon,
-                panels: [],
+                label: "Attendance Appeals",
+                Icon: ExclamationTriangleIcon,
+
+                panels: [
+                    <div key="pending-appeals" className="teacher-panel-card enroll">
+                        <ExclamationTriangleIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Pending Appeals</div>
+                            <div className="teacher-panel-value">
+                                {attendanceAppeals.filter(a => a.status === "pending").length}
+                            </div>
+                            <div className="teacher-panel-sub">Awaiting your decision</div>
+                        </div>
+                    </div>,
+
+                    <div key="approved-appeals" className="teacher-panel-card attendance">
+                        <BookmarkIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Approved Appeals</div>
+                            <div className="teacher-panel-value">
+                                {attendanceAppeals.filter(a => a.status === "approved").length}
+                            </div>
+                            <div className="teacher-panel-sub">Successfully approved</div>
+                        </div>
+                    </div>,
+
+                    <div key="rejected-appeals" className="teacher-panel-card absent">
+                        <PersonIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Rejected Appeals</div>
+                            <div className="teacher-panel-value">
+                                {attendanceAppeals.filter(a => a.status === "rejected").length}
+                            </div>
+                            <div className="teacher-panel-sub">Marked as invalid</div>
+                        </div>
+                    </div>,
+                ],
+
                 content: (
-                    <div className="teacher-content-section">
-                        <h2 className="teacher-section-title">Student Data</h2>
-                        <p className="teacher-section-text">Student data management will be displayed here</p>
-                    </div>
+                    <TeacherAppealsSection courses={courses} />
                 )
             }
+
         ]} />
     );
 }

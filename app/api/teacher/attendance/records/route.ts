@@ -36,10 +36,11 @@ export async function GET(req: Request) {
         console.log('Date:', date, 'StartDate:', startDate, 'EndDate:', endDate)
         console.log('Course:', courseFilter, 'UserId:', user.id)
         
-        // Get ALL students enrolled in the specified course, with their attendance records if they exist
+        // Get ALL students enrolled in the specified course, with their FIRST attendance record only (earliest detection)
         // Note: attendance column is smallint (1=present, 2=late, 0/NULL=absent)
+        // Using DISTINCT ON to get only one record per student (the earliest detection)
         const query = useDateRange
-            ? `SELECT 
+            ? `SELECT DISTINCT ON (a.id)
                 a.id,
                 a.username,
                 a.email,
@@ -59,15 +60,9 @@ export async function GET(req: Request) {
             WHERE c.teacher = $3 AND c.id = $4
             ${sectionFilter ? 'AND sd.section = $5' : ''}
             ORDER BY 
-                CASE 
-                    WHEN r.attendance = 1 THEN 1
-                    WHEN r.attendance = 2 THEN 2
-                    WHEN r.attendance = 0 THEN 3
-                    WHEN r.attendance IS NULL THEN 4
-                    ELSE 5
-                END,
-                a.username`
-            : `SELECT 
+                a.id,
+                r.created_at ASC NULLS LAST`
+            : `SELECT DISTINCT ON (a.id)
                 a.id,
                 a.username,
                 a.email,
@@ -86,14 +81,8 @@ export async function GET(req: Request) {
             WHERE c.teacher = $2 AND c.id = $3
             ${sectionFilter ? 'AND sd.section = $4' : ''}
             ORDER BY 
-                CASE 
-                    WHEN r.attendance = 1 THEN 1
-                    WHEN r.attendance = 2 THEN 2
-                    WHEN r.attendance = 0 THEN 3
-                    WHEN r.attendance IS NULL THEN 4
-                    ELSE 5
-                END,
-                a.username`
+                a.id,
+                r.created_at ASC NULLS LAST`
         
         const params = useDateRange 
             ? (sectionFilter 
@@ -111,10 +100,17 @@ export async function GET(req: Request) {
         }
 
         const records = result.rows.map(row => {
-            let status = 'absent'
+            let status = 'no record'
             if (row.attendance === 1) status = 'present'
             else if (row.attendance === 2) status = 'late'
             else if (row.attendance === 0) status = 'absent'
+            // If attendance is NULL (no record in database), status stays 'no record'
+
+            // For absent records (attendance=0), do not show time or confidence
+            // since absent means no face detection occurred before the class end time.
+            // The camera module inserts these with confidence=0 and no meaningful timestamp.
+            // For 'no record' students, also show no time/confidence as no record exists yet.
+            const isAbsentOrNoRecord = status === 'absent' || status === 'no record'
             
             return {
                 id: row.id,
@@ -123,12 +119,12 @@ export async function GET(req: Request) {
                 course: row.course_name,
                 status: status,
                 date: row.created_at ? new Date(row.created_at).toLocaleDateString('en-US') : '-',
-                time: row.created_at ? new Date(row.created_at).toLocaleTimeString('en-US', { 
+                time: isAbsentOrNoRecord ? '-' : (row.created_at ? new Date(row.created_at).toLocaleTimeString('en-US', { 
                     hour: 'numeric', 
                     minute: '2-digit',
                     hour12: true 
-                }) : '-',
-                confidence: row.confidence ? `${Math.round(row.confidence * 100)}%` : 'No Detection'
+                }) : '-'),
+                confidence: isAbsentOrNoRecord ? 'No Detection' : (row.confidence ? `${Math.round(row.confidence * 100)}%` : 'No Detection')
             }
         })
 

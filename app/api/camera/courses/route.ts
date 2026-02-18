@@ -12,8 +12,18 @@ export async function GET(req: Request) {
         const section = searchParams.get('section')
 
         if (courseId) {
-            // Get all students enrolled in the specified course and section
-            const result = await db.query(`
+            // Get course info
+            const courseResult = await db.query(
+                `SELECT id, name, schedule, teacher FROM course WHERE id = $1`,
+                [courseId]
+            )
+            if (courseResult.rows.length === 0) {
+                return NextResponse.json({ success: false, status: 404, data: null, error: 'Course not found' }, { status: 404 })
+            }
+            const course = courseResult.rows[0]
+
+            // Get enrolled students
+            const studentsQuery = `
                 SELECT a.id, a.username as name, a.email, sd.section
                 FROM enrollment_data e
                 INNER JOIN account a ON e.student = a.id
@@ -21,11 +31,9 @@ export async function GET(req: Request) {
                 WHERE e.course = $1
                 ${section ? 'AND sd.section = $2' : ''}
                 ORDER BY a.username ASC
-            `, section ? [courseId, section] : [courseId])
-
-            console.log('Courses query result:', result.rows);
-
-            const students = result.rows.map(row => ({
+            `
+            const studentsResult = await db.query(studentsQuery, section ? [courseId, section] : [courseId])
+            course.enrolled_students = studentsResult.rows.map(row => ({
                 id: row.id,
                 name: row.name,
                 email: row.email,
@@ -34,7 +42,7 @@ export async function GET(req: Request) {
 
             return NextResponse.json({
                 success: true,
-                data: students
+                data: course
             })
         } else {
             // Get all courses

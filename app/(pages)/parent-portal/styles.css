@@ -141,7 +141,7 @@
 }
 
 .student-info-title {
-    color: #1F2F57;
+    color: var(--accent1);
     font-size: 14px;
     font-weight: 600;
     margin: 0;
@@ -186,7 +186,7 @@
 }
 
 .student-summary-title {
-    color: #1F2F57;
+    color: var(--accent1);
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 4px;
@@ -246,7 +246,7 @@
 .student-legend-value {
     font-size: 14px;
     font-weight: 600;
-    color: #1F2F57;
+    color: var(--accent1);
 }
 
 /* Filters Section */
@@ -345,7 +345,7 @@
 }
 
 .student-chart-title {
-    color: #1F2F57;
+    color: var(--accent1);
     font-size: 14px;
     font-weight: 600;
     margin: 0;
@@ -369,7 +369,7 @@
 }
 
 .student-subject-table-title {
-    color: #1F2F57;
+    color: var(--accent1);
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 8px;
@@ -395,7 +395,7 @@
 .student-subject-table th {
     text-align: left;
     padding: 8px 6px;
-    color: #1F2F57;
+    color: var(--accent1);
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -484,7 +484,7 @@
 .attendance-percentage {
     font-size: 12px;
     font-weight: 600;
-    color: #1F2F57;
+    color: var(--accent1);
 }
 
 /* Records Placeholder */
@@ -527,7 +527,7 @@
 }
 
 .student-subjects-title {
-    color: #1F2F57;
+    color: var(--accent1);
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 8px;
@@ -553,7 +553,7 @@
 .student-subjects-table th {
     text-align: left;
     padding: 8px 6px;
-    color: #1F2F57;
+    color: var(--accent1);
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -647,7 +647,7 @@
 .student-progress-text {
     font-size: 12px;
     font-weight: 600;
-    color: #1F2F57;
+    color: var(--accent1);
 }
 
 /* Split */
@@ -715,6 +715,34 @@
   background: var(--accent1);
   color: var(--background1);
 }
+
+.notif-dropdown {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent1);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notifications-empty{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--foreground2)
+}
+
+.notif-dropdown:focus {
+  outline: none;
+}
+
+.preview-student {
+  font-weight: 600;
+  color: var(--accent1);
+}
+
 
 .notifications-scroll {
   overflow-y: auto;
@@ -927,6 +955,7 @@
 .parent-records-grid {
   display: flex;
   gap: 16px;
+  width: 100%;
 
   overflow-x: auto;      /* 👈 enable horizontal scroll */
   overflow-y: hidden;
@@ -1011,6 +1040,22 @@
   border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.student-panel-card.children .check-info-btn{
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  border-radius: inherit;
+  cursor: pointer;
+  
+  font-weight: 700;
+  font-size: 1.5rem;
 }
 
 /*Donut*/
@@ -1111,7 +1156,7 @@
   pointer-events: none;
   transition: all 0.2s ease;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
-  z-index: 20;
+  z-index: 2147483647;
 }
 
 /* Small arrow */

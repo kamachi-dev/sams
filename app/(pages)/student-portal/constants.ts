@@ -12,13 +12,33 @@ export const studentInfo = {
 // ATTENDANCE DATA
 // ==========================
 export const dailyAttendance = [
-  { date: "Jan 2", status: "Present", time: "7:45 AM" },
-  { date: "Jan 3", status: "Present", time: "7:52 AM" },
-  { date: "Jan 4", status: "Late", time: "8:15 AM" },
-  { date: "Jan 5", status: "Present", time: "7:48 AM" },
-  { date: "Jan 6", status: "Present", time: "7:50 AM" },
-  { date: "Jan 7", status: "Absent", time: "-" },
-  { date: "Jan 8", status: "Present", time: "7:43 AM" },
+  {
+    date: "Jan 2",
+    subject: "Computer Science",
+    prof: "Prof. Navarro",
+    classStart: "7:30 AM",
+    classEnd: "8:30 AM",
+    recordedTime: "7:45 AM",
+    status: "Present",
+  },
+  {
+    date: "Jan 4",
+    subject: "Mathematics",
+    prof: "Prof. Rizal",
+    classStart: "7:30 AM",
+    classEnd: "8:30 AM",
+    recordedTime: "8:15 AM",
+    status: "LATE",
+  },
+  {
+    date: "Jan 7",
+    subject: "English",
+    prof: "Prof. Santos",
+    classStart: "9:00 AM",
+    classEnd: "10:00 AM",
+    recordedTime: null,
+    status: "ABSENT",
+  },
 ];
 
 export const weeklyTrend = [
@@ -278,4 +298,90 @@ export const chartColors = {
   present: "#17a1fa",
   late: "#ffac01",
   absent: "#f92600",
+};
+
+// ==========================
+// ATTENDANCE APPEALS
+// ==========================
+export const attendanceAppeals = [
+  {
+    id: 1,
+    date: "2026-02-10",
+    subject: "Computer Science",
+    recordedStatus: "Absent",
+    requestedStatus: "Present",
+    reason: "I was present but the AI failed to recognize my face.",
+    status: "pending",
+    submittedAt: "2026-02-10 08:45 AM",
+    reviewedBy: null,
+    teacherResponse: null,
+  },
+  {
+    id: 2,
+    date: "2026-02-08",
+    subject: "Mathematics",
+    recordedStatus: "Late",
+    requestedStatus: "Present",
+    reason: "I arrived on time but camera detection was delayed.",
+    status: "approved",
+    submittedAt: "2026-02-08 09:10 AM",
+    reviewedBy: "Prof. Rizal",
+    teacherResponse:
+      "Camera logs confirm student arrival at 7:32 AM, within allowed grace period. Appeal approved.",
+  },
+  {
+    id: 3,
+    date: "2026-02-05",
+    subject: "English",
+    recordedStatus: "Absent",
+    requestedStatus: "Present",
+    reason: "System error during attendance capture.",
+    status: "rejected",
+    submittedAt: "2026-02-05 10:30 AM",
+    reviewedBy: "Prof. Santos",
+    teacherResponse:
+      "No facial recognition match or manual attendance confirmation found during class session.",
+  },
+  {
+    id: 4,
+    date: "2026-02-03",
+    subject: "Physics",
+    recordedStatus: "Late",
+    requestedStatus: "Present",
+    reason: "I entered the classroom on time but the camera detected me late.",
+    status: "approved",
+    submittedAt: "2026-02-03 07:50 AM",
+    reviewedBy: "Prof. Reyes",
+    teacherResponse: null,
+  },
+  {
+    id: 5,
+    date: "2026-02-01",
+    subject: "Chemistry",
+    recordedStatus: "Absent",
+    requestedStatus: "Present",
+    reason: "I believe the system failed to detect my attendance.",
+    status: "rejected",
+    submittedAt: "2026-02-01 09:20 AM",
+    reviewedBy: "Prof. Cruz",
+    teacherResponse: null,
+  },
+  {
+    id: 6,
+    date: "2026-02-01",
+    subject: "Chemistry",
+    recordedStatus: "Absent",
+    requestedStatus: "Present",
+    reason: "I believe the system failed to detect my attendance.",
+    status: "rejected",
+    submittedAt: "2026-02-01 09:20 AM",
+    reviewedBy: "Prof. Cruz",
+    teacherResponse: null,
+  },
+];
+
+export const appealStatusColors = {
+  pending: "#ffac01",
+  approved: "#17a1fa",
+  rejected: "#f92600",
 };

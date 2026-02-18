@@ -21,7 +21,8 @@ export async function GET() {
                 c.name, 
                 c.schedule,
                 COUNT(DISTINCT e.student) as student_count,
-                COUNT(DISTINCT COALESCE(sd.section, 'Unassigned')) as section_count
+                COUNT(DISTINCT COALESCE(sd.section, 'Unassigned')) as section_count,
+                ARRAY_AGG(DISTINCT COALESCE(sd.section, 'Unassigned') ORDER BY COALESCE(sd.section, 'Unassigned')) as section_names
             FROM course c
             LEFT JOIN enrollment_data e ON e.course = c.id
             LEFT JOIN student_data sd ON sd.student = e.student
@@ -30,15 +31,36 @@ export async function GET() {
             ORDER BY c.name
         `, [user.id])
 
-        return NextResponse.json({ 
-            success: true, 
-            data: result.rows.map(row => ({
+        // For each course, get the student count per section
+        const coursesWithSections = await Promise.all(result.rows.map(async (row) => {
+            const sectionDetails = await db.query(`
+                SELECT 
+                    COALESCE(sd.section, 'Unassigned') as section,
+                    COUNT(DISTINCT e.student) as student_count
+                FROM enrollment_data e
+                LEFT JOIN student_data sd ON sd.student = e.student
+                WHERE e.course = $1
+                GROUP BY COALESCE(sd.section, 'Unassigned')
+                ORDER BY COALESCE(sd.section, 'Unassigned')
+            `, [row.id])
+
+            return {
                 id: row.id,
                 name: row.name,
-                schedule: row.schedule,
+                schedule: row.schedule || '',
                 studentCount: parseInt(row.student_count || '0'),
-                sectionCount: parseInt(row.section_count || '0')
-            }))
+                sectionCount: parseInt(row.section_count || '0'),
+                sectionNames: row.section_names || [],
+                sections: sectionDetails.rows.map((s: any) => ({
+                    name: s.section,
+                    studentCount: parseInt(s.student_count || '0')
+                }))
+            }
+        }))
+
+        return NextResponse.json({ 
+            success: true, 
+            data: coursesWithSections
         })
     } catch (error) {
         console.error('Error fetching teacher courses:', error)
