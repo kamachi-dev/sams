@@ -18,8 +18,9 @@ export async function GET(req: Request) {
         const courseFilter = searchParams.get('course')
         const sectionFilter = searchParams.get('section')
 
-        // Get today's date in YYYY-MM-DD format
-        const today = new Date().toISOString().split('T')[0]
+        // Get today's date in YYYY-MM-DD format using local time (not UTC)
+        const _now = new Date()
+        const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
         
         console.log('=== TODAY API DEBUG ===')
         console.log('Today:', today)
@@ -77,8 +78,8 @@ export async function GET(req: Request) {
                     MIN(r.attendance) as best_attendance
                 FROM student_courses sc
                 INNER JOIN record r ON r.student = sc.student 
-                    AND r.created_at IS NOT NULL
-                    AND DATE(r.created_at) = $1
+                    AND r.time IS NOT NULL
+                    AND DATE(r.time) = $1
                     AND r.course = $3
                 GROUP BY sc.student
             )
@@ -106,8 +107,8 @@ export async function GET(req: Request) {
                     MIN(r.attendance) as best_attendance
                 FROM student_courses sc
                 INNER JOIN record r ON r.student = sc.student 
-                    AND r.created_at IS NOT NULL
-                    AND DATE(r.created_at) = $1
+                    AND r.time IS NOT NULL
+                    AND DATE(r.time) = $1
                     AND r.course IN (SELECT id FROM teacher_courses)
                 GROUP BY sc.student
             )

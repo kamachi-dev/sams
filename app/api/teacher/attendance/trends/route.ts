@@ -40,6 +40,14 @@ function getDayName(date: Date): string {
     return days[date.getDay()]
 }
 
+// Helper to get local date string (YYYY-MM-DD) without UTC offset shift
+function toLocalDateStr(date: Date): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+}
+
 // Query helper: Get enrolled student count for a teacher's course/section
 async function getEnrolledCount(userId: string, courseFilter: string | null, sectionFilter: string | null): Promise<number> {
     let query: string
@@ -76,35 +84,35 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
     let params: any[]
 
     if (courseFilter && sectionFilter) {
-        query = `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
+        query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
                  FROM record r
                  INNER JOIN course c ON r.course = c.id
                  INNER JOIN student_data sd ON r.student = sd.student
                  WHERE c.teacher = $1
                    AND c.id = $2
                    AND sd.section = $3
-                   AND r.created_at IS NOT NULL
-                   AND DATE(r.created_at) >= $4
-                   AND DATE(r.created_at) <= $5`
+                   AND r.time IS NOT NULL
+                   AND DATE(r.time) >= $4
+                   AND DATE(r.time) <= $5`
         params = [userId, courseFilter, sectionFilter, startStr, endStr]
     } else if (courseFilter) {
-        query = `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
+        query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
                  FROM record r
                  INNER JOIN course c ON r.course = c.id
                  WHERE c.teacher = $1
                    AND c.id = $2
-                   AND r.created_at IS NOT NULL
-                   AND DATE(r.created_at) >= $3
-                   AND DATE(r.created_at) <= $4`
+                   AND r.time IS NOT NULL
+                   AND DATE(r.time) >= $3
+                   AND DATE(r.time) <= $4`
         params = [userId, courseFilter, startStr, endStr]
     } else {
-        query = `SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
+        query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
                  FROM record r
                  INNER JOIN course c ON r.course = c.id
                  WHERE c.teacher = $1
-                   AND r.created_at IS NOT NULL
-                   AND DATE(r.created_at) >= $2
-                   AND DATE(r.created_at) <= $3`
+                   AND r.time IS NOT NULL
+                   AND DATE(r.time) >= $2
+                   AND DATE(r.time) <= $3`
         params = [userId, startStr, endStr]
     }
 
@@ -112,8 +120,10 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
     return parseInt(result.rows[0]?.school_days || '0')
 }
 
-// Query helper: Get present and late counts in a date range (deduplicates by taking first record per student per day)
-async function getAttendanceCounts(userId: string, courseFilter: string | null, sectionFilter: string | null, startStr: string, endStr: string): Promise<{ present: number; late: number }> {
+// Query helper: Get present, late, and explicit absent counts in a date range
+// Deduplicates by taking the first record per student per day (earliest detection)
+// Absent is only counted from EXPLICIT records (attendance=0) — not inferred
+async function getAttendanceCounts(userId: string, courseFilter: string | null, sectionFilter: string | null, startStr: string, endStr: string): Promise<{ present: number; late: number; absent: number }> {
     let query: string
     let params: any[]
 
@@ -122,9 +132,10 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
     if (courseFilter && sectionFilter) {
         query = `SELECT 
                     COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late
+                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late,
+                    COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as absent
                  FROM (
-                    SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                    SELECT DISTINCT ON (r.student, DATE(r.time))
                         r.attendance
                     FROM record r
                     INNER JOIN course c ON r.course = c.id
@@ -132,52 +143,55 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                     WHERE c.teacher = $1
                       AND c.id = $2
                       AND sd.section = $3
-                      AND r.created_at IS NOT NULL
-                      AND DATE(r.created_at) >= $4
-                      AND DATE(r.created_at) <= $5
-                    ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+                      AND r.time IS NOT NULL
+                      AND DATE(r.time) >= $4
+                      AND DATE(r.time) <= $5
+                    ORDER BY r.student, DATE(r.time), r.time ASC
                  ) AS first_records`
         params = [userId, courseFilter, sectionFilter, startStr, endStr]
     } else if (courseFilter) {
         query = `SELECT 
                     COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late
+                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late,
+                    COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as absent
                  FROM (
-                    SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                    SELECT DISTINCT ON (r.student, DATE(r.time))
                         r.attendance
                     FROM record r
                     INNER JOIN course c ON r.course = c.id
                     WHERE c.teacher = $1
                       AND c.id = $2
-                      AND r.created_at IS NOT NULL
-                      AND DATE(r.created_at) >= $3
-                      AND DATE(r.created_at) <= $4
-                    ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+                      AND r.time IS NOT NULL
+                      AND DATE(r.time) >= $3
+                      AND DATE(r.time) <= $4
+                    ORDER BY r.student, DATE(r.time), r.time ASC
                  ) AS first_records`
         params = [userId, courseFilter, startStr, endStr]
     } else {
         query = `SELECT 
                     COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late
+                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late,
+                    COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as absent
                  FROM (
-                    SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                    SELECT DISTINCT ON (r.student, DATE(r.time))
                         r.attendance
                     FROM record r
                     INNER JOIN course c ON r.course = c.id
                     WHERE c.teacher = $1
-                      AND r.created_at IS NOT NULL
-                      AND DATE(r.created_at) >= $2
-                      AND DATE(r.created_at) <= $3
-                    ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+                      AND r.time IS NOT NULL
+                      AND DATE(r.time) >= $2
+                      AND DATE(r.time) <= $3
+                    ORDER BY r.student, DATE(r.time), r.time ASC
                  ) AS first_records`
         params = [userId, startStr, endStr]
     }
 
     const result = await db.query(query, params)
-    const row = result.rows[0] || { present: 0, late: 0 }
+    const row = result.rows[0] || { present: 0, late: 0, absent: 0 }
     return {
         present: parseInt(row.present || '0'),
-        late: parseInt(row.late || '0')
+        late: parseInt(row.late || '0'),
+        absent: parseInt(row.absent || '0')
     }
 }
 
@@ -219,27 +233,16 @@ export async function GET(req: Request) {
             }
             
             const dailyData = await Promise.all(days.map(async (dayInfo) => {
-                const startStr = dayInfo.date.toISOString().split('T')[0]
-                const endDate = new Date(dayInfo.date)
-                endDate.setHours(23, 59, 59, 999)
-                const endStr = endDate.toISOString().split('T')[0]
+                const dateStr = toLocalDateStr(dayInfo.date)
                 
-                const enrolledCount = await getEnrolledCount(user.id, courseFilter, sectionFilter)
-                const schoolDays = await getSchoolDays(user.id, courseFilter, sectionFilter, startStr, endStr)
-                const { present, late } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
-                
-                // Calculate absent: expected for this day minus present and late
-                // If there are records for this day (schoolDays > 0), expected = enrolled count
-                // Otherwise expected = 0 (no class that day)
-                const expectedForDay = schoolDays > 0 ? enrolledCount : 0
-                const absent = Math.max(0, expectedForDay - present - late)
+                const { present, late, absent } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, dateStr, dateStr)
                 
                 return {
                     day: dayInfo.dayName,
                     date: dayInfo.dateLabel,
-                    present: present,
-                    late: late,
-                    absent: absent
+                    present,
+                    late,
+                    absent
                 }
             }))
             
@@ -292,27 +295,18 @@ export async function GET(req: Request) {
             }
             
             // Query attendance for each week
-            // We need to calculate absences based on enrolled students who don't have records
             const weeklyData = await Promise.all(weeks.map(async (weekInfo) => {
-                const startStr = weekInfo.startDate.toISOString().split('T')[0]
-                const endStr = weekInfo.endDate.toISOString().split('T')[0]
+                const startStr = toLocalDateStr(weekInfo.startDate)
+                const endStr = toLocalDateStr(weekInfo.endDate)
                 
-                const enrolledCount = await getEnrolledCount(user.id, courseFilter, sectionFilter)
-                const schoolDays = await getSchoolDays(user.id, courseFilter, sectionFilter, startStr, endStr)
-                const { present, late } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
-                
-                // Calculate expected attendance and absent count
-                // Expected = enrolled students × school days in the period
-                // Absent = expected - present - late
-                const expectedTotal = enrolledCount * schoolDays
-                const absent = Math.max(0, expectedTotal - present - late)
+                const { present, late, absent } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
                 
                 return {
                     week: weekInfo.week,
                     dateRange: weekInfo.dateRange,
-                    present: present,
-                    late: late,
-                    absent: absent
+                    present,
+                    late,
+                    absent
                 }
             }))
             
@@ -344,16 +338,11 @@ export async function GET(req: Request) {
             }
             
             const monthlyData = await Promise.all(months.map(async (monthInfo) => {
-                const startStr = monthInfo.startDate.toISOString().split('T')[0]
-                const endStr = monthInfo.endDate.toISOString().split('T')[0]
+                const startStr = toLocalDateStr(monthInfo.startDate)
+                const endStr = toLocalDateStr(monthInfo.endDate)
                 
-                const enrolledCount = await getEnrolledCount(user.id, courseFilter, sectionFilter)
-                const schoolDays = await getSchoolDays(user.id, courseFilter, sectionFilter, startStr, endStr)
-                const { present, late } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
+                const { present, late, absent } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
                 
-                // Calculate expected attendance and absent count
-                const expectedAttendance = enrolledCount * schoolDays
-                const absent = Math.max(0, expectedAttendance - present - late)
                 const total = present + late + absent
                 
                 // Calculate attendance rate: only present counts
@@ -417,16 +406,10 @@ export async function GET(req: Request) {
             ]
             
             const quarterlyData = await Promise.all(quarters.map(async (quarter) => {
-                const startStr = quarter.startDate.toISOString().split('T')[0]
-                const endStr = quarter.endDate.toISOString().split('T')[0]
+                const startStr = toLocalDateStr(quarter.startDate)
+                const endStr = toLocalDateStr(quarter.endDate)
                 
-                const enrolledCount = await getEnrolledCount(user.id, courseFilter, sectionFilter)
-                const schoolDays = await getSchoolDays(user.id, courseFilter, sectionFilter, startStr, endStr)
-                const { present, late } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
-                
-                // Calculate expected attendance and absent count
-                const expectedAttendance = enrolledCount * schoolDays
-                const absent = Math.max(0, expectedAttendance - present - late)
+                const { present, late, absent } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
                 
                 // Format date range for tooltip
                 const formatQuarterDate = (d: Date) => {

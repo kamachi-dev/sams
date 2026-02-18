@@ -24,7 +24,6 @@ export async function GET(req: Request) {
         
         // Build queries based on filters
         let attendanceQuery: string
-        let totalQuery: string
         let params: string[]
 
         if (courseFilter && sectionFilter) {
@@ -34,25 +33,15 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as explicit_absent_count
             FROM (
-                SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                SELECT DISTINCT ON (r.student, DATE(r.time))
                     r.attendance
                 FROM record r
                 INNER JOIN course c ON r.course = c.id
                 INNER JOIN enrollment_data e ON e.student = r.student AND e.course = c.id
                 LEFT JOIN student_data sd ON sd.student = r.student
                 WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3
-                ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+                ORDER BY r.student, DATE(r.time), r.time ASC
             ) AS first_records`
-            
-            totalQuery = `SELECT 
-                COUNT(DISTINCT e.student) as enrolled_count,
-                COUNT(DISTINCT DATE(r.created_at)) as school_days
-            FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
-            LEFT JOIN student_data sd ON sd.student = e.student
-            LEFT JOIN record r ON r.course = c.id AND r.student = e.student
-                AND r.created_at IS NOT NULL
-            WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3`
             
             params = [user.id, courseFilter, sectionFilter]
         } else if (courseFilter) {
@@ -61,22 +50,13 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as explicit_absent_count
             FROM (
-                SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                SELECT DISTINCT ON (r.student, DATE(r.time))
                     r.attendance
                 FROM record r
                 INNER JOIN course c ON r.course = c.id
                 WHERE c.teacher = $1 AND c.id = $2
-                ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+                ORDER BY r.student, DATE(r.time), r.time ASC
             ) AS first_records`
-            
-            totalQuery = `SELECT 
-                COUNT(DISTINCT e.student) as enrolled_count,
-                COUNT(DISTINCT DATE(r.created_at)) as school_days
-            FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
-            LEFT JOIN record r ON r.course = c.id 
-                AND r.created_at IS NOT NULL
-            WHERE c.teacher = $1 AND c.id = $2`
             
             params = [user.id, courseFilter]
         } else {
@@ -85,53 +65,30 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as explicit_absent_count
             FROM (
-                SELECT DISTINCT ON (r.student, DATE(r.created_at))
+                SELECT DISTINCT ON (r.student, DATE(r.time))
                     r.attendance
                 FROM record r
                 INNER JOIN course c ON r.course = c.id
                 WHERE c.teacher = $1
-                ORDER BY r.student, DATE(r.created_at), r.created_at ASC
+                ORDER BY r.student, DATE(r.time), r.time ASC
             ) AS first_records`
-            
-            totalQuery = `SELECT 
-                COUNT(DISTINCT e.student) as enrolled_count,
-                COUNT(DISTINCT DATE(r.created_at)) as school_days
-            FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
-            LEFT JOIN record r ON r.course = c.id
-                AND r.created_at IS NOT NULL
-            WHERE c.teacher = $1`
             
             params = [user.id]
         }
         
-        const [attendanceResult, totalResult] = await Promise.all([
-            db.query(attendanceQuery, params),
-            db.query(totalQuery, params)
-        ])
-
+        const attendanceResult = await db.query(attendanceQuery, params)
         const attendanceData = attendanceResult.rows[0]
-        const totalData = totalResult.rows[0]
         
         const present = parseInt(attendanceData.present_count || '0')
         const late = parseInt(attendanceData.late_count || '0')
-        const explicitAbsent = parseInt(attendanceData.explicit_absent_count || '0')
-        const enrolledCount = parseInt(totalData.enrolled_count || '0')
-        const schoolDays = parseInt(totalData.school_days || '0')
-        
-        // Calculate total expected attendance records
-        // Expected = enrolled students × number of school days with records
-        const expectedTotal = enrolledCount * schoolDays
-        
-        // Calculate absent count
-        // Absent = expected total - present - late
-        // This includes both explicit absent records (attendance=0) and missing records
-        const absent = Math.max(0, expectedTotal - present - late)
-        const total = expectedTotal
+        const absent = parseInt(attendanceData.explicit_absent_count || '0')
 
-        // Attendance rate = (present / (enrolled × school_days)) * 100
-        // Only present counts toward attendance rate
-        const attendanceRate = total > 0 
+        // Total = only actual records that exist in DB (present + late + explicit absent)
+        // We do NOT multiply enrolled × school_days — that inflates the number meaninglessly
+        const total = present + late + absent
+
+        // Attendance rate = present out of all actual records
+        const attendanceRate = total > 0
             ? ((present / total) * 100).toFixed(1)
             : '0.0'
 

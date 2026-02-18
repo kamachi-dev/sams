@@ -677,6 +677,48 @@
     transform: translateX(3px);
 }
 
+/* Pinned / Selected card states */
+.overview-course-card.overview-card-pinned {
+    border-color: #1DA1F2;
+    box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.15), 0 4px 16px rgba(29, 161, 242, 0.12);
+    background: rgba(29, 161, 242, 0.03);
+    order: -1;
+}
+
+.overview-course-card.overview-card-pinned .overview-course-card-arrow {
+    color: #1DA1F2;
+}
+
+.overview-section-card.overview-card-pinned {
+    border-color: #0F9D58;
+    box-shadow: 0 0 0 3px rgba(15, 157, 88, 0.15), 0 4px 16px rgba(15, 157, 88, 0.12);
+    background: rgba(15, 157, 88, 0.03);
+    order: -1;
+}
+
+.overview-section-card.overview-card-pinned .overview-course-card-arrow {
+    color: #0F9D58;
+}
+
+.overview-card-pinned-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #1DA1F2;
+    background: rgba(29, 161, 242, 0.1);
+    border-radius: 4px;
+    padding: 2px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.overview-card-pinned-badge.green {
+    color: #0F9D58;
+    background: rgba(15, 157, 88, 0.1);
+}
+
 .overview-section-card-body {
     display: flex;
     flex-direction: column;

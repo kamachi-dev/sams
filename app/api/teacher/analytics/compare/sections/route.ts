@@ -61,43 +61,32 @@ export async function GET(req: Request) {
             `, [courseId, section])
             const enrolledCount = parseInt(enrolledResult.rows[0]?.enrolled_count || '0')
 
-            // Get school days (distinct dates with records for this course + section)
-            const daysResult = await db.query(`
-                SELECT COUNT(DISTINCT DATE(r.created_at)) as school_days
-                FROM record r
-                INNER JOIN course c ON r.course = c.id
-                INNER JOIN student_data sd ON r.student = sd.student
-                WHERE c.id = $1
-                  AND COALESCE(sd.section, 'Unassigned') = $2
-                  AND r.created_at IS NOT NULL
-            `, [courseId, section])
-            const schoolDays = parseInt(daysResult.rows[0]?.school_days || '0')
-
-            // Get present and late counts
+            // Get explicit attendance counts from DB only (no formula inference)
+            // absent = only rows with attendance=0 (camera pushes these at class end)
             const attendanceResult = await db.query(`
                 SELECT 
                     COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
-                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count
+                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
+                    COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
                 FROM record r
                 INNER JOIN course c ON r.course = c.id
                 INNER JOIN student_data sd ON r.student = sd.student
                 WHERE c.id = $1
                   AND COALESCE(sd.section, 'Unassigned') = $2
-                  AND r.created_at IS NOT NULL
+                  AND r.time IS NOT NULL
             `, [courseId, section])
 
             const presentCount = parseInt(attendanceResult.rows[0]?.present_count || '0')
             const lateCount = parseInt(attendanceResult.rows[0]?.late_count || '0')
-            const expectedTotal = enrolledCount * schoolDays
-            const absentCount = Math.max(0, expectedTotal - presentCount - lateCount)
-            const attendanceRate = expectedTotal > 0 
-                ? Math.round((presentCount / expectedTotal) * 100 * 10) / 10
+            const absentCount = parseInt(attendanceResult.rows[0]?.absent_count || '0')
+            const totalRecords = presentCount + lateCount + absentCount
+            const attendanceRate = totalRecords > 0
+                ? Math.round((presentCount / totalRecords) * 100 * 10) / 10
                 : 0
 
             return {
                 section,
                 studentCount: enrolledCount,
-                schoolDays,
                 presentCount,
                 lateCount,
                 absentCount,
@@ -107,25 +96,26 @@ export async function GET(req: Request) {
 
         // Calculate overall course average for reference
         const totalPresent = sectionStats.reduce((sum, s) => sum + s.presentCount, 0)
-        const totalExpected = sectionStats.reduce((sum, s) => sum + (s.studentCount * s.schoolDays), 0)
-        const courseAvgRate = totalExpected > 0
-            ? Math.round((totalPresent / totalExpected) * 100 * 10) / 10
+        const totalRecordsAll = sectionStats.reduce((sum, s) => sum + s.presentCount + s.lateCount + s.absentCount, 0)
+        const courseAvgRate = totalRecordsAll > 0
+            ? Math.round((totalPresent / totalRecordsAll) * 100 * 10) / 10
             : 0
 
         // Get monthly breakdown per section for trend chart
         const monthlyResult = await db.query(`
             SELECT 
                 COALESCE(sd.section, 'Unassigned') as section,
-                TO_CHAR(r.created_at, 'Mon') as month,
-                EXTRACT(MONTH FROM r.created_at) as month_num,
+                TO_CHAR(r.time, 'Mon') as month,
+                EXTRACT(MONTH FROM r.time) as month_num,
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
-                COUNT(*) as total_records
+                COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
+                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
             FROM record r
             INNER JOIN course c ON r.course = c.id
             INNER JOIN student_data sd ON r.student = sd.student
             WHERE c.id = $1
-              AND r.created_at IS NOT NULL
-            GROUP BY sd.section, TO_CHAR(r.created_at, 'Mon'), EXTRACT(MONTH FROM r.created_at)
+              AND r.time IS NOT NULL
+            GROUP BY sd.section, TO_CHAR(r.time, 'Mon'), EXTRACT(MONTH FROM r.time)
             ORDER BY month_num
         `, [courseId])
 
@@ -143,7 +133,9 @@ export async function GET(req: Request) {
                 )
                 if (sectionRow) {
                     const present = parseInt(sectionRow.present_count)
-                    const total = parseInt(sectionRow.total_records)
+                    const late = parseInt(sectionRow.late_count)
+                    const absent = parseInt(sectionRow.absent_count)
+                    const total = present + late + absent
                     entry[section] = total > 0 ? Math.round((present / total) * 100 * 10) / 10 : 0
                 } else {
                     entry[section] = 0

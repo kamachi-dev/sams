@@ -22,6 +22,14 @@ function getDayName(date: Date): string {
     return days[date.getDay()]
 }
 
+// Helper to get local date string (YYYY-MM-DD) without UTC offset shift
+function toLocalDateStr(date: Date): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+}
+
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
@@ -74,22 +82,19 @@ export async function GET(req: Request) {
             }
             
             const dailyData = await Promise.all(days.map(async (dayInfo) => {
-                const startStr = dayInfo.date.toISOString().split('T')[0]
-                const endDate = new Date(dayInfo.date)
-                endDate.setHours(23, 59, 59, 999)
-                const endStr = endDate.toISOString().split('T')[0]
+                const dateStr = toLocalDateStr(dayInfo.date)
                 
                 let query = `
                     SELECT 
                         COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
                         COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late,
-                        COUNT(CASE WHEN r.attendance = 0 OR r.attendance IS NULL THEN 1 END) as absent
+                        COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent
                     FROM record r
                     INNER JOIN enrollment_data e ON r.course = e.course AND r.student = e.student
                     WHERE e.student = $1
-                      AND DATE(r.created_at) = $2
+                      AND DATE(r.time) = $2
                 `
-                const params: any[] = [user.id, startStr]
+                const params: any[] = [user.id, dateStr]
                 
                 if (subjectFilter && subjectFilter !== 'all') {
                     query += ` AND r.course = $3`
@@ -150,19 +155,19 @@ export async function GET(req: Request) {
             }
             
             const weeklyData = await Promise.all(weeks.map(async (weekInfo) => {
-                const startStr = weekInfo.startDate.toISOString().split('T')[0]
-                const endStr = weekInfo.endDate.toISOString().split('T')[0]
+                const startStr = toLocalDateStr(weekInfo.startDate)
+                const endStr = toLocalDateStr(weekInfo.endDate)
                 
                 let query = `
                     SELECT 
                         COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
                         COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late,
-                        COUNT(CASE WHEN r.attendance = 0 OR r.attendance IS NULL THEN 1 END) as absent
+                        COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent
                     FROM record r
                     INNER JOIN enrollment_data e ON r.course = e.course AND r.student = e.student
                     WHERE e.student = $1
-                      AND DATE(r.created_at) >= $2
-                      AND DATE(r.created_at) <= $3
+                      AND DATE(r.time) >= $2
+                      AND DATE(r.time) <= $3
                 `
                 const params: any[] = [user.id, startStr, endStr]
                 
@@ -211,19 +216,19 @@ export async function GET(req: Request) {
             }
             
             const monthlyData = await Promise.all(months.map(async (monthInfo) => {
-                const startStr = monthInfo.startDate.toISOString().split('T')[0]
-                const endStr = monthInfo.endDate.toISOString().split('T')[0]
+                const startStr = toLocalDateStr(monthInfo.startDate)
+                const endStr = toLocalDateStr(monthInfo.endDate)
                 
                 let query = `
                     SELECT 
                         COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
                         COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late,
-                        COUNT(CASE WHEN r.attendance = 0 OR r.attendance IS NULL THEN 1 END) as absent
+                        COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent
                     FROM record r
                     INNER JOIN enrollment_data e ON r.course = e.course AND r.student = e.student
                     WHERE e.student = $1
-                      AND DATE(r.created_at) >= $2
-                      AND DATE(r.created_at) <= $3
+                      AND DATE(r.time) >= $2
+                      AND DATE(r.time) <= $3
                 `
                 const params: any[] = [user.id, startStr, endStr]
                 
@@ -295,19 +300,19 @@ export async function GET(req: Request) {
             ]
             
             const quarterlyData = await Promise.all(quarters.map(async (quarter) => {
-                const startStr = quarter.startDate.toISOString().split('T')[0]
-                const endStr = quarter.endDate.toISOString().split('T')[0]
+                const startStr = toLocalDateStr(quarter.startDate)
+                const endStr = toLocalDateStr(quarter.endDate)
                 
                 let query = `
                     SELECT 
                         COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
                         COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late,
-                        COUNT(CASE WHEN r.attendance = 0 OR r.attendance IS NULL THEN 1 END) as absent
+                        COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent
                     FROM record r
                     INNER JOIN enrollment_data e ON r.course = e.course AND r.student = e.student
                     WHERE e.student = $1
-                      AND DATE(r.created_at) >= $2
-                      AND DATE(r.created_at) <= $3
+                      AND DATE(r.time) >= $2
+                      AND DATE(r.time) <= $3
                 `
                 const params: any[] = [user.id, startStr, endStr]
                 

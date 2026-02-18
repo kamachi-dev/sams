@@ -16,7 +16,9 @@ export async function GET(req: Request) {
 
         // Get query parameters for filtering
         const { searchParams } = new URL(req.url)
-        const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
+        const _now = new Date()
+        const _localToday = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
+        const date = searchParams.get('date') || _localToday
         const startDate = searchParams.get('startDate')
         const endDate = searchParams.get('endDate')
         const courseFilter = searchParams.get('course') // Required course filter
@@ -53,9 +55,9 @@ export async function GET(req: Request) {
             INNER JOIN account a ON e.student = a.id
             ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = a.id' : ''}
             LEFT JOIN record r ON r.student = a.id 
-                AND r.created_at IS NOT NULL
-                AND DATE(r.created_at) >= $1
-                AND DATE(r.created_at) <= $2
+                AND r.time IS NOT NULL
+                AND DATE(r.time) >= $1
+                AND DATE(r.time) <= $2
                 AND r.course = c.id
             WHERE c.teacher = $3 AND c.id = $4
             ${sectionFilter ? 'AND sd.section = $5' : ''}
@@ -75,8 +77,8 @@ export async function GET(req: Request) {
             INNER JOIN account a ON e.student = a.id
             ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = a.id' : ''}
             LEFT JOIN record r ON r.student = a.id 
-                AND r.created_at IS NOT NULL
-                AND DATE(r.created_at) = $1
+                AND r.time IS NOT NULL
+                AND DATE(r.time) = $1
                 AND r.course = c.id
             WHERE c.teacher = $2 AND c.id = $3
             ${sectionFilter ? 'AND sd.section = $4' : ''}

@@ -415,17 +415,30 @@ export default function Teacher() {
 
     // Low Attendance Students State
     const [lowAttendanceStudents, setLowAttendanceStudents] = useState<LowAttendanceStudent[]>([]);
-    const [isLoadingLowAttendance, setIsLoadingLowAttendance] = useState(true);
+    const [isLoadingLowAttendance, setIsLoadingLowAttendance] = useState(false);
     const [lowAttendanceThreshold, setLowAttendanceThreshold] = useState(50);
-    const [lowAttendanceCourseFilter, setLowAttendanceCourseFilter] = useState("all");
+
+    // Students at Risk drill-down state
+    const [riskStep, setRiskStep] = useState<'courses' | 'sections' | 'list'>('courses');
+    const [riskCourse, setRiskCourse] = useState<{ id: string; name: string } | null>(null);
+    const [riskSection, setRiskSection] = useState<string>('');
+    const [riskSections, setRiskSections] = useState<Array<{ section: string; studentCount: number; students?: string[] }>>([]);
+    const [isLoadingRiskSections, setIsLoadingRiskSections] = useState(false);
 
     // Section Comparison Analytics State
-    const [selectedCourseForComparison, setSelectedCourseForComparison] = useState("");
     const [sectionComparisonData, setSectionComparisonData] = useState<SectionComparisonData | null>(null);
     const [isLoadingComparison, setIsLoadingComparison] = useState(false);
 
-    // Compute unique student count for Students at Risk
-    const uniqueLowAttendanceCount = new Set(lowAttendanceStudents.map(s => s.id)).size;
+    // Comparative Analytics drill-down state
+    const [compareStep, setCompareStep] = useState<'courses' | 'chart'>('courses');
+    const [compareCourse, setCompareCourse] = useState<{ id: string; name: string } | null>(null);
+
+    // Pinned card state (icon-click pinning, independent of navigation)
+    const [pinnedOverviewCourse, setPinnedOverviewCourse] = useState<string | null>(null);
+    const [pinnedOverviewSection, setPinnedOverviewSection] = useState<string | null>(null);
+    const [pinnedRiskCourse, setPinnedRiskCourse] = useState<string | null>(null);
+    const [pinnedRiskSection, setPinnedRiskSection] = useState<string | null>(null);
+    const [pinnedCompareCourse, setPinnedCompareCourse] = useState<string | null>(null);
 
     // Total sections count
     const totalSections = courses.reduce((sum, c) => sum + (c.sectionCount || 0), 0);
@@ -649,10 +662,6 @@ export default function Teacher() {
                     if (result.data.length > 0 && !selectedCourse) {
                         setSelectedCourse(result.data[0].id);
                     }
-                    // Set default course for comparison
-                    if (result.data.length > 0 && !selectedCourseForComparison) {
-                        setSelectedCourseForComparison(result.data[0].id);
-                    }
                 }
             } catch (error) {
                 console.error('Error fetching courses:', error);
@@ -693,13 +702,36 @@ export default function Teacher() {
         }
     }, [overviewStep, selectedOverviewCourse, selectedSection]);
 
-    // Fetch low attendance students
+    // Fetch sections for the selected risk course
+    useEffect(() => {
+        const fetchRiskSections = async () => {
+            if (!riskCourse) return;
+            setIsLoadingRiskSections(true);
+            try {
+                const response = await fetch(`/api/teacher/courses/sections?course=${riskCourse.id}`);
+                const result = await response.json();
+                if (result.success) {
+                    setRiskSections(result.data.sections);
+                }
+            } catch (error) {
+                console.error('Error fetching risk sections:', error);
+            } finally {
+                setIsLoadingRiskSections(false);
+            }
+        };
+        fetchRiskSections();
+    }, [riskCourse]);
+
+    // Fetch low attendance students (only once a course+section is selected)
     useEffect(() => {
         const fetchLowAttendanceStudents = async () => {
+            if (riskStep !== 'list' || !riskCourse) return;
             setIsLoadingLowAttendance(true);
             try {
-                const courseParam = lowAttendanceCourseFilter !== "all" ? `&course=${lowAttendanceCourseFilter}` : '';
-                const response = await fetch(`/api/teacher/students/low-attendance?threshold=${lowAttendanceThreshold}${courseParam}`);
+                const params = new URLSearchParams({ threshold: String(lowAttendanceThreshold) });
+                params.set('course', riskCourse.id);
+                if (riskSection) params.set('section', riskSection);
+                const response = await fetch(`/api/teacher/students/low-attendance?${params.toString()}`);
                 const result = await response.json();
                 if (result.success) {
                     setLowAttendanceStudents(result.data);
@@ -710,22 +742,20 @@ export default function Teacher() {
                 setIsLoadingLowAttendance(false);
             }
         };
-        
         fetchLowAttendanceStudents();
-    }, [lowAttendanceThreshold, lowAttendanceCourseFilter]);
+    }, [lowAttendanceThreshold, riskStep, riskCourse, riskSection]);
 
     // Fetch section comparison data
     useEffect(() => {
         const fetchSectionComparison = async () => {
-            if (!selectedCourseForComparison) {
+            if (compareStep !== 'chart' || !compareCourse) {
                 setSectionComparisonData(null);
                 return;
             }
-            
             setIsLoadingComparison(true);
             try {
                 const response = await fetch(
-                    `/api/teacher/analytics/compare/sections?course=${selectedCourseForComparison}`
+                    `/api/teacher/analytics/compare/sections?course=${compareCourse.id}`
                 );
                 const result = await response.json();
                 if (result.success) {
@@ -737,9 +767,8 @@ export default function Teacher() {
                 setIsLoadingComparison(false);
             }
         };
-        
         fetchSectionComparison();
-    }, [selectedCourseForComparison]);
+    }, [compareStep, compareCourse]);
 
     const handleExport = async () => {
         setIsExporting(true);
@@ -1066,7 +1095,7 @@ export default function Teacher() {
                             <div className="teacher-panel-label">Overall Attendance Rate</div>
                             <div className="teacher-panel-value">{semesterAttendance.attendanceRate}%</div>
                             <div className="teacher-panel-sub">
-                                {semesterAttendance.present} present out of {semesterAttendance.total} expected
+                                {semesterAttendance.present} present out of {semesterAttendance.total} records
                             </div>
                         </div>
                     </div>,
@@ -1099,7 +1128,7 @@ export default function Teacher() {
                             <div className="teacher-panel-label">Overall Attendance Rate</div>
                             <div className="teacher-panel-value">{semesterAttendance.attendanceRate}%</div>
                             <div className="teacher-panel-sub">
-                                {semesterAttendance.present} present out of {semesterAttendance.total} expected
+                                {semesterAttendance.present} present out of {semesterAttendance.total} records
                             </div>
                         </div>
                     </div>,
@@ -1130,17 +1159,28 @@ export default function Teacher() {
                                     <p className="overview-step-subtitle">Choose a subject to view attendance details</p>
                                 </div>
                                 <div className="overview-cards-grid">
-                                    {courses.map(course => (
+                                    {[...courses].sort((a, b) => {
+                                        const aPin = a.id === pinnedOverviewCourse ? -1 : 0;
+                                        const bPin = b.id === pinnedOverviewCourse ? -1 : 0;
+                                        return aPin - bPin;
+                                    }).map(course => {
+                                        const isPinned = course.id === pinnedOverviewCourse;
+                                        return (
                                         <div 
                                             key={course.id} 
-                                            className="overview-course-card"
+                                            className={`overview-course-card${isPinned ? ' overview-card-pinned' : ''}`}
                                             onClick={() => {
                                                 setSelectedOverviewCourse({ id: course.id, name: course.name });
                                                 setOverviewStep('sections');
                                             }}
                                         >
                                             <div className="overview-course-card-header">
-                                                <BookmarkIcon className="overview-course-card-icon" />
+                                                <BookmarkIcon
+                                                    className="overview-course-card-icon"
+                                                    onClick={(e) => { e.stopPropagation(); setPinnedOverviewCourse(isPinned ? null : course.id); }}
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                                {isPinned && <span className="overview-card-pinned-badge">Pinned</span>}
                                                 <ChevronRightIcon className="overview-course-card-arrow" />
                                             </div>
                                             <div className="overview-course-card-body">
@@ -1177,7 +1217,8 @@ export default function Teacher() {
                                                 )}
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -1206,17 +1247,28 @@ export default function Teacher() {
                                     <div className="overview-loading">Loading sections...</div>
                                 ) : (
                                     <div className="overview-cards-grid">
-                                        {courseSections.map(sec => (
+                                        {[...courseSections].sort((a, b) => {
+                                            const aPin = a.section === pinnedOverviewSection ? -1 : 0;
+                                            const bPin = b.section === pinnedOverviewSection ? -1 : 0;
+                                            return aPin - bPin;
+                                        }).map(sec => {
+                                            const isPinned = sec.section === pinnedOverviewSection;
+                                            return (
                                             <div 
                                                 key={sec.section} 
-                                                className="overview-section-card"
+                                                className={`overview-section-card${isPinned ? ' overview-card-pinned' : ''}`}
                                                 onClick={() => {
                                                     setSelectedSection(sec.section);
                                                     setOverviewStep('stats');
                                                 }}
                                             >
                                                 <div className="overview-section-card-header">
-                                                    <PersonIcon className="overview-section-card-icon" />
+                                                    <PersonIcon
+                                                        className="overview-section-card-icon"
+                                                        onClick={(e) => { e.stopPropagation(); setPinnedOverviewSection(isPinned ? null : sec.section); }}
+                                                        style={{ cursor: 'pointer' }}
+                                                    />
+                                                    {isPinned && <span className="overview-card-pinned-badge green">Pinned</span>}
                                                     <ChevronRightIcon className="overview-course-card-arrow" />
                                                 </div>
                                                 <div className="overview-section-card-body">
@@ -1239,7 +1291,8 @@ export default function Teacher() {
                                                     )}
                                                 </div>
                                             </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -1588,293 +1641,506 @@ export default function Teacher() {
             {
                 label: "Students at Risk",
                 Icon: ExclamationTriangleIcon,
-                panels: [
+                panels: riskStep === 'list' ? [
                     <div key="low-attendance-alert" className="teacher-panel-card low-attendance-alert">
                         <ExclamationTriangleIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Students Below {lowAttendanceThreshold}%</div>
-                            <div className="teacher-panel-value">{uniqueLowAttendanceCount}</div>
+                            <div className="teacher-panel-value">{new Set(lowAttendanceStudents.map(s => s.id)).size}</div>
                             <div className="teacher-panel-sub">Require immediate attention</div>
+                        </div>
+                    </div>,
+                    <div key="at-risk-section" className="teacher-panel-card enroll">
+                        <PersonIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Section</div>
+                            <div className="teacher-panel-value">{riskSection || 'All'}</div>
+                            <div className="teacher-panel-sub">{riskCourse?.name}</div>
+                        </div>
+                    </div>,
+                ] : [
+                    <div key="at-risk-courses" className="teacher-panel-card enroll">
+                        <BookmarkIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Total Subjects Handled</div>
+                            <div className="teacher-panel-value">{courses.length}</div>
+                            <div className="teacher-panel-sub">Select a course to start</div>
                         </div>
                     </div>,
                 ],
                 content: (
                     <div className="teacher-main-container">
-                        <div className="low-attendance-section">
-                            <div className="low-attendance-header">
-                                <h3 className="low-attendance-title">
-                                    <ExclamationTriangleIcon className="low-attendance-title-icon" />
-                                    Students with Low Attendance Rating
-                                </h3>
-                                <div className="low-attendance-controls">
-                                    <div className="threshold-control">
-                                        <label>Threshold:</label>
-                                        <select
-                                            value={lowAttendanceThreshold}
-                                            onChange={(e) => setLowAttendanceThreshold(parseInt(e.target.value))}
-                                            className="teacher-select"
+
+                        {/* STEP 1: Course Cards */}
+                        {riskStep === 'courses' && (
+                            <div className="overview-step-container">
+                                <div className="overview-step-header">
+                                    <h3 className="overview-step-title">
+                                        <ExclamationTriangleIcon className="overview-step-icon" />
+                                        Select a Course
+                                    </h3>
+                                    <p className="overview-step-subtitle">Choose a subject to view students at risk of low attendance</p>
+                                </div>
+                                <div className="overview-cards-grid">
+                                    {[...courses].sort((a, b) => {
+                                        const aPin = a.id === pinnedRiskCourse ? -1 : 0;
+                                        const bPin = b.id === pinnedRiskCourse ? -1 : 0;
+                                        return aPin - bPin;
+                                    }).map(course => {
+                                        const isPinned = course.id === pinnedRiskCourse;
+                                        return (
+                                        <div
+                                            key={course.id}
+                                            className={`overview-course-card${isPinned ? ' overview-card-pinned' : ''}`}
+                                            onClick={() => {
+                                                setRiskCourse({ id: course.id, name: course.name });
+                                                setRiskStep('sections');
+                                            }}
                                         >
-                                            <option value={30}>Below 30%</option>
-                                            <option value={40}>Below 40%</option>
-                                            <option value={50}>Below 50%</option>
-                                            <option value={60}>Below 60%</option>
-                                            <option value={70}>Below 70%</option>
-                                        </select>
-                                    </div>
-                                    <div className="course-filter-control">
-                                        <label>Course:</label>
-                                        <select
-                                            value={lowAttendanceCourseFilter}
-                                            onChange={(e) => setLowAttendanceCourseFilter(e.target.value)}
-                                            className="teacher-select"
-                                        >
-                                            <option value="all">All Courses</option>
-                                            {courses.map(course => (
-                                                <option key={course.id} value={course.id}>{course.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                            <div className="overview-course-card-header">
+                                                <BookmarkIcon
+                                                    className="overview-course-card-icon"
+                                                    onClick={(e) => { e.stopPropagation(); setPinnedRiskCourse(isPinned ? null : course.id); }}
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                                {isPinned && <span className="overview-card-pinned-badge">Pinned</span>}
+                                                <ChevronRightIcon className="overview-course-card-arrow" />
+                                            </div>
+                                            <div className="overview-course-card-body">
+                                                <h4 className="overview-course-card-name">{course.name}</h4>
+                                                {course.schedule && (
+                                                    <div className="overview-course-card-schedule">
+                                                        <CalendarIcon className="overview-course-schedule-icon" />
+                                                        <span>{formatSchedule(course.schedule)}</span>
+                                                    </div>
+                                                )}
+                                                <div className="overview-course-card-stats">
+                                                    <div className="overview-course-stat">
+                                                        <span className="overview-course-stat-value">{course.sectionCount || 0}</span>
+                                                        <span className="overview-course-stat-label">
+                                                            {(course.sectionCount || 0) === 1 ? 'Section' : 'Sections'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="overview-course-stat">
+                                                        <span className="overview-course-stat-value">{course.studentCount || 0}</span>
+                                                        <span className="overview-course-stat-label">Students</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                            
-                            <div className="low-attendance-table-container">
-                                <table className="low-attendance-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Student Name</th>
-                                            <th>Email</th>
-                                            <th>Course</th>
-                                            <th className="center">Present</th>
-                                            <th className="center">Absent</th>
-                                            <th className="center">Attendance Rate</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {isLoadingLowAttendance ? (
-                                            <tr>
-                                                <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
-                                                    Loading low attendance students...
-                                                </td>
-                                            </tr>
-                                        ) : lowAttendanceStudents.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
-                                                    <div className="no-low-attendance">
-                                                        <span className="success-icon">✓</span>
-                                                        <p>No students with attendance below {lowAttendanceThreshold}%</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            lowAttendanceStudents.map((student) => (
-                                                <tr key={`${student.id}-${student.courseId}`} className="low-attendance-row">
-                                                    <td className="student-name">{student.name}</td>
-                                                    <td className="student-email">{student.email}</td>
-                                                    <td className="course-name">{student.courseName}</td>
-                                                    <td className="center present-cell">{student.presentCount}</td>
-                                                    <td className="center absent-cell">{student.absentCount}</td>
-                                                    <td className="center">
-                                                        <span className={`attendance-rate-badge ${student.attendanceRate < 30 ? 'critical' : 'warning'}`}>
-                                                            {student.attendanceRate}%
+                        )}
+
+                        {/* STEP 2: Section Cards */}
+                        {riskStep === 'sections' && (
+                            <div className="overview-step-container">
+                                <div className="overview-step-header">
+                                    <button
+                                        className="overview-back-btn"
+                                        onClick={() => {
+                                            setRiskStep('courses');
+                                            setRiskCourse(null);
+                                            setRiskSections([]);
+                                        }}
+                                    >
+                                        <ChevronLeftIcon /> Back to Courses
+                                    </button>
+                                    <h3 className="overview-step-title">
+                                        <PersonIcon className="overview-step-icon" />
+                                        {riskCourse?.name} — Select a Section
+                                    </h3>
+                                    <p className="overview-step-subtitle">Choose a section to view students at risk</p>
+                                </div>
+                                {isLoadingRiskSections ? (
+                                    <div className="overview-loading">Loading sections...</div>
+                                ) : (
+                                    <div className="overview-cards-grid">
+                                        {[...riskSections].sort((a, b) => {
+                                            const aPin = a.section === pinnedRiskSection ? -1 : 0;
+                                            const bPin = b.section === pinnedRiskSection ? -1 : 0;
+                                            return aPin - bPin;
+                                        }).map(sec => {
+                                            const isPinned = sec.section === pinnedRiskSection;
+                                            return (
+                                            <div
+                                                key={sec.section}
+                                                className={`overview-section-card${isPinned ? ' overview-card-pinned' : ''}`}
+                                                onClick={() => {
+                                                    setRiskSection(sec.section);
+                                                    setLowAttendanceStudents([]);
+                                                    setRiskStep('list');
+                                                }}
+                                            >
+                                                <div className="overview-section-card-header">
+                                                    <PersonIcon
+                                                        className="overview-section-card-icon"
+                                                        onClick={(e) => { e.stopPropagation(); setPinnedRiskSection(isPinned ? null : sec.section); }}
+                                                        style={{ cursor: 'pointer' }}
+                                                    />
+                                                    {isPinned && <span className="overview-card-pinned-badge green">Pinned</span>}
+                                                    <ChevronRightIcon className="overview-course-card-arrow" />
+                                                </div>
+                                                <div className="overview-section-card-body">
+                                                    <h4 className="overview-section-card-name">{sec.section}</h4>
+                                                    <div className="overview-section-card-count">
+                                                        <span className="overview-course-stat-value">{sec.studentCount}</span>
+                                                        <span className="overview-course-stat-label">
+                                                            {sec.studentCount === 1 ? 'Student' : 'Students'}
                                                         </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* STEP 3: At-Risk Student List */}
+                        {riskStep === 'list' && (
+                            <div className="low-attendance-section">
+                                <div className="low-attendance-header">
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <button
+                                            className="overview-back-btn"
+                                            onClick={() => {
+                                                setRiskStep('sections');
+                                                setRiskSection('');
+                                                setLowAttendanceStudents([]);
+                                            }}
+                                        >
+                                            <ChevronLeftIcon /> Back to Sections
+                                        </button>
+                                        <h3 className="low-attendance-title">
+                                            <ExclamationTriangleIcon className="low-attendance-title-icon" />
+                                            {riskCourse?.name} — Section {riskSection}
+                                        </h3>
+                                    </div>
+                                    <div className="low-attendance-controls">
+                                        <div className="threshold-control">
+                                            <label>Threshold:</label>
+                                            <select
+                                                value={lowAttendanceThreshold}
+                                                onChange={(e) => setLowAttendanceThreshold(parseInt(e.target.value))}
+                                                className="teacher-select"
+                                            >
+                                                <option value={30}>Below 30%</option>
+                                                <option value={40}>Below 40%</option>
+                                                <option value={50}>Below 50%</option>
+                                                <option value={60}>Below 60%</option>
+                                                <option value={70}>Below 70%</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="low-attendance-table-container">
+                                    <table className="low-attendance-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Student Name</th>
+                                                <th>Email</th>
+                                                <th>Course</th>
+                                                <th className="center">Present</th>
+                                                <th className="center">Absent</th>
+                                                <th className="center">Attendance Rate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {isLoadingLowAttendance ? (
+                                                <tr>
+                                                    <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
+                                                        Loading at-risk students...
                                                     </td>
                                                 </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                            ) : lowAttendanceStudents.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
+                                                        <div className="no-low-attendance">
+                                                            <span className="success-icon">✓</span>
+                                                            <p>No students with attendance below {lowAttendanceThreshold}%</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                lowAttendanceStudents.map((student) => (
+                                                    <tr key={`${student.id}-${student.courseId}`} className="low-attendance-row">
+                                                        <td className="student-name">{student.name}</td>
+                                                        <td className="student-email">{student.email}</td>
+                                                        <td className="course-name">{student.courseName}</td>
+                                                        <td className="center present-cell">{student.presentCount}</td>
+                                                        <td className="center absent-cell">{student.absentCount}</td>
+                                                        <td className="center">
+                                                            <span className={`attendance-rate-badge ${student.attendanceRate < 30 ? 'critical' : 'warning'}`}>
+                                                                {student.attendanceRate}%
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )
             },
             {
                 label: "Comparative Analytics",
                 Icon: BarChartIcon,
-                panels: [
+                panels: compareStep === 'chart' ? [
                     <div key="sections-compared" className="teacher-panel-card enroll">
                         <BarChartIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Sections Compared</div>
                             <div className="teacher-panel-value">{sectionComparisonData?.sections.length ?? 0}</div>
-                            <div className="teacher-panel-sub">
-                                {selectedCourseForComparison 
-                                    ? courses.find(c => c.id === selectedCourseForComparison)?.name || 'Selected Course'
-                                    : 'Select a course'}
-                            </div>
+                            <div className="teacher-panel-sub">{compareCourse?.name}</div>
                         </div>
                     </div>,
-
                     <div key="course-avg" className="teacher-panel-card attendance">
                         <CalendarIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Course Average Rate</div>
                             <div className="teacher-panel-value">
-                                {sectionComparisonData?.courseAvgRate ?? "N/A"}%
+                                {sectionComparisonData?.courseAvgRate ?? 'N/A'}%
                             </div>
-                            <div className="teacher-panel-sub">
-                                Overall attendance across all sections
-                            </div>
+                            <div className="teacher-panel-sub">Overall attendance across all sections</div>
+                        </div>
+                    </div>,
+                ] : [
+                    <div key="compare-courses" className="teacher-panel-card enroll">
+                        <BarChartIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Total Subjects Handled</div>
+                            <div className="teacher-panel-value">{courses.length}</div>
+                            <div className="teacher-panel-sub">Select a course to compare sections</div>
                         </div>
                     </div>,
                 ],
                 content: (
                     <div className="teacher-main-container">
-                        <div className="comparative-analytics-section">
-                            <div className="comparative-controls">
-                                <div className="control-group">
-                                    <label>Select Course:</label>
-                                    <select
-                                        value={selectedCourseForComparison}
-                                        onChange={(e) => {
-                                            setSelectedCourseForComparison(e.target.value);
-                                            setSectionComparisonData(null);
-                                        }}
-                                        className="teacher-select"
-                                    >
-                                        <option value="">-- Select Course --</option>
-                                        {courses.map(course => (
-                                            <option key={course.id} value={course.id}>{course.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
 
-                            {isLoadingComparison ? (
-                                <div className="comparison-loading">
-                                    Loading section comparison data...
+                        {/* STEP 1: Course Cards */}
+                        {compareStep === 'courses' && (
+                            <div className="overview-step-container">
+                                <div className="overview-step-header">
+                                    <h3 className="overview-step-title">
+                                        <BarChartIcon className="overview-step-icon" />
+                                        Select a Course
+                                    </h3>
+                                    <p className="overview-step-subtitle">Choose a subject to compare attendance across its sections</p>
                                 </div>
-                            ) : sectionComparisonData ? (
-                                <div className="comparison-content">
-                                    {/* Section Cards Grid */}
-                                    <div className="section-comparison-grid">
-                                        {sectionComparisonData.sections.map((sec, idx) => {
-                                            const colors = ['#1DA1F2', '#0F9D58', '#F4B400', '#DB4437', '#9C27B0', '#00BCD4'];
-                                            const color = colors[idx % colors.length];
-                                            const isAbove = sec.attendanceRate >= sectionComparisonData.courseAvgRate;
-                                            return (
-                                                <div key={sec.section} className="section-comparison-card">
-                                                    <div className="section-comparison-card-header" style={{ borderLeftColor: color }}>
-                                                        <h4>{sec.section}</h4>
-                                                        <span className="section-student-count">{sec.studentCount} {sec.studentCount === 1 ? 'student' : 'students'}</span>
+                                <div className="overview-cards-grid">
+                                    {[...courses].sort((a, b) => {
+                                        const aPin = a.id === pinnedCompareCourse ? -1 : 0;
+                                        const bPin = b.id === pinnedCompareCourse ? -1 : 0;
+                                        return aPin - bPin;
+                                    }).map(course => {
+                                        const isPinned = course.id === pinnedCompareCourse;
+                                        return (
+                                        <div
+                                            key={course.id}
+                                            className={`overview-course-card${isPinned ? ' overview-card-pinned' : ''}`}
+                                            onClick={() => {
+                                                setCompareCourse({ id: course.id, name: course.name });
+                                                setCompareStep('chart');
+                                            }}
+                                        >
+                                            <div className="overview-course-card-header">
+                                                <BookmarkIcon
+                                                    className="overview-course-card-icon"
+                                                    onClick={(e) => { e.stopPropagation(); setPinnedCompareCourse(isPinned ? null : course.id); }}
+                                                    style={{ cursor: 'pointer' }}
+                                                />
+                                                {isPinned && <span className="overview-card-pinned-badge">Pinned</span>}
+                                                <ChevronRightIcon className="overview-course-card-arrow" />
+                                            </div>
+                                            <div className="overview-course-card-body">
+                                                <h4 className="overview-course-card-name">{course.name}</h4>
+                                                {course.schedule && (
+                                                    <div className="overview-course-card-schedule">
+                                                        <CalendarIcon className="overview-course-schedule-icon" />
+                                                        <span>{formatSchedule(course.schedule)}</span>
                                                     </div>
-                                                    <div className="section-comparison-card-body">
-                                                        <div className="section-rate-display">
-                                                            <span className="section-rate-value">{sec.attendanceRate}%</span>
-                                                            <span className={`section-rate-badge ${isAbove ? 'above' : 'below'}`}>
-                                                                {isAbove ? '▲' : '▼'} {Math.abs(sec.attendanceRate - sectionComparisonData.courseAvgRate).toFixed(1)}%
-                                                            </span>
-                                                        </div>
-                                                        <div className="section-breakdown-row">
-                                                            <div className="section-breakdown-item">
-                                                                <span className="section-breakdown-val present">{sec.presentCount}</span>
-                                                                <span className="section-breakdown-lbl">Present</span>
-                                                            </div>
-                                                            <div className="section-breakdown-item">
-                                                                <span className="section-breakdown-val late">{sec.lateCount}</span>
-                                                                <span className="section-breakdown-lbl">Late</span>
-                                                            </div>
-                                                            <div className="section-breakdown-item">
-                                                                <span className="section-breakdown-val absent">{sec.absentCount}</span>
-                                                                <span className="section-breakdown-lbl">Absent</span>
-                                                            </div>
-                                                        </div>
+                                                )}
+                                                <div className="overview-course-card-stats">
+                                                    <div className="overview-course-stat">
+                                                        <span className="overview-course-stat-value">{course.sectionCount || 0}</span>
+                                                        <span className="overview-course-stat-label">
+                                                            {(course.sectionCount || 0) === 1 ? 'Section' : 'Sections'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="overview-course-stat">
+                                                        <span className="overview-course-stat-value">{course.studentCount || 0}</span>
+                                                        <span className="overview-course-stat-label">Students</span>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* Charts Row - Side by Side */}
-                                    <div className="comparison-charts-row">
-                                        {/* Bar Chart - Section Attendance Rates */}
-                                        <div className="comparison-chart-section">
-                                        <h4 className="chart-section-title">Section Attendance Rate Comparison</h4>
-                                        <div className="comparison-chart-container">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart 
-                                                    data={sectionComparisonData.sections.map(sec => ({
-                                                        section: sec.section,
-                                                        attendanceRate: sec.attendanceRate,
-                                                        courseAvg: sectionComparisonData.courseAvgRate
-                                                    }))}
-                                                    margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
-                                                >
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-                                                    <XAxis dataKey="section" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
-                                                    <YAxis domain={[0, 100]} tick={{ fill: '#4F4F4F', fontSize: 11 }} />
-                                                    <Tooltip 
-                                                        contentStyle={{ 
-                                                            backgroundColor: '#fff', 
-                                                            border: '1px solid #E0E0E0',
-                                                            borderRadius: '8px',
-                                                            fontSize: '12px'
-                                                        }}
-                                                        formatter={(value: any, name: any) => [
-                                                            `${value}%`, 
-                                                            name === 'attendanceRate' ? 'Attendance Rate' : 'Course Average'
-                                                        ]}
-                                                    />
-                                                    <Legend 
-                                                        wrapperStyle={{ fontSize: '12px' }}
-                                                        formatter={(value) => value === 'attendanceRate' ? 'Section Rate' : 'Course Average'}
-                                                    />
-                                                    <Bar dataKey="attendanceRate" fill="#1DA1F2" name="attendanceRate" radius={[4, 4, 0, 0]} />
-                                                    <Bar dataKey="courseAvg" fill="#E0E0E0" name="courseAvg" radius={[4, 4, 0, 0]} />
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-
-                                    {/* Monthly Trend Comparison */}
-                                    {sectionComparisonData.monthlyComparison.length > 0 && (
-                                        <div className="comparison-chart-section">
-                                            <h4 className="chart-section-title">Monthly Attendance Trend by Section</h4>
-                                            <div className="comparison-chart-container">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <LineChart data={sectionComparisonData.monthlyComparison} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-                                                        <XAxis dataKey="month" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
-                                                        <YAxis domain={[0, 100]} tick={{ fill: '#4F4F4F', fontSize: 11 }} />
-                                                        <Tooltip 
-                                                            contentStyle={{ 
-                                                                backgroundColor: '#fff', 
-                                                                border: '1px solid #E0E0E0',
-                                                                borderRadius: '8px',
-                                                                fontSize: '12px'
-                                                            }}
-                                                            formatter={(value: any) => [`${value}%`, '']}
-                                                        />
-                                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                                        {sectionComparisonData.sectionNames.map((section, idx) => {
-                                                            const colors = ['#1DA1F2', '#0F9D58', '#F4B400', '#DB4437', '#9C27B0', '#00BCD4'];
-                                                            return (
-                                                                <Line 
-                                                                    key={section}
-                                                                    type="monotone"
-                                                                    dataKey={section}
-                                                                    name={section}
-                                                                    stroke={colors[idx % colors.length]}
-                                                                    strokeWidth={2}
-                                                                    dot={{ fill: colors[idx % colors.length], r: 3 }}
-                                                                    activeDot={{ r: 5 }}
-                                                                />
-                                                            );
-                                                        })}
-                                                    </LineChart>
-                                                </ResponsiveContainer>
                                             </div>
                                         </div>
-                                        )}
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* STEP 2: Section Comparison Charts */}
+                        {compareStep === 'chart' && (
+                            <div className="comparative-analytics-section">
+                                <div className="overview-step-header" style={{ marginBottom: '12px' }}>
+                                    <button
+                                        className="overview-back-btn"
+                                        onClick={() => {
+                                            setCompareStep('courses');
+                                            setCompareCourse(null);
+                                            setSectionComparisonData(null);
+                                        }}
+                                    >
+                                        <ChevronLeftIcon /> Back to Courses
+                                    </button>
+                                    <h3 className="overview-step-title">
+                                        <BarChartIcon className="overview-step-icon" />
+                                        {compareCourse?.name} — Section Comparison
+                                    </h3>
+                                </div>
+
+                                {isLoadingComparison ? (
+                                    <div className="comparison-loading">Loading section comparison data...</div>
+                                ) : sectionComparisonData ? (
+                                    <div className="comparison-content">
+                                        {/* Section Cards Grid */}
+                                        <div className="section-comparison-grid">
+                                            {sectionComparisonData.sections.map((sec, idx) => {
+                                                const colors = ['#1DA1F2', '#0F9D58', '#F4B400', '#DB4437', '#9C27B0', '#00BCD4'];
+                                                const color = colors[idx % colors.length];
+                                                const isAbove = sec.attendanceRate >= sectionComparisonData.courseAvgRate;
+                                                return (
+                                                    <div key={sec.section} className="section-comparison-card">
+                                                        <div className="section-comparison-card-header" style={{ borderLeftColor: color }}>
+                                                            <h4>{sec.section}</h4>
+                                                            <span className="section-student-count">{sec.studentCount} {sec.studentCount === 1 ? 'student' : 'students'}</span>
+                                                        </div>
+                                                        <div className="section-comparison-card-body">
+                                                            <div className="section-rate-display">
+                                                                <span className="section-rate-value">{sec.attendanceRate}%</span>
+                                                                <span className={`section-rate-badge ${isAbove ? 'above' : 'below'}`}>
+                                                                    {isAbove ? '▲' : '▼'} {Math.abs(sec.attendanceRate - sectionComparisonData.courseAvgRate).toFixed(1)}%
+                                                                </span>
+                                                            </div>
+                                                            <div className="section-breakdown-row">
+                                                                <div className="section-breakdown-item">
+                                                                    <span className="section-breakdown-val present">{sec.presentCount}</span>
+                                                                    <span className="section-breakdown-lbl">Present</span>
+                                                                </div>
+                                                                <div className="section-breakdown-item">
+                                                                    <span className="section-breakdown-val late">{sec.lateCount}</span>
+                                                                    <span className="section-breakdown-lbl">Late</span>
+                                                                </div>
+                                                                <div className="section-breakdown-item">
+                                                                    <span className="section-breakdown-val absent">{sec.absentCount}</span>
+                                                                    <span className="section-breakdown-lbl">Absent</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Charts Row - Side by Side */}
+                                        <div className="comparison-charts-row">
+                                            {/* Bar Chart - Section Attendance Rates */}
+                                            <div className="comparison-chart-section">
+                                                <h4 className="chart-section-title">Section Attendance Rate Comparison</h4>
+                                                <div className="comparison-chart-container">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <BarChart
+                                                            data={sectionComparisonData.sections.map(sec => ({
+                                                                section: sec.section,
+                                                                attendanceRate: sec.attendanceRate,
+                                                                courseAvg: sectionComparisonData.courseAvgRate
+                                                            }))}
+                                                            margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+                                                        >
+                                                            <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                                                            <XAxis dataKey="section" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                            <YAxis domain={[0, 100]} tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                            <Tooltip
+                                                                contentStyle={{
+                                                                    backgroundColor: '#fff',
+                                                                    border: '1px solid #E0E0E0',
+                                                                    borderRadius: '8px',
+                                                                    fontSize: '12px'
+                                                                }}
+                                                                formatter={(value: any, name: any) => [
+                                                                    `${value}%`,
+                                                                    name === 'attendanceRate' ? 'Attendance Rate' : 'Course Average'
+                                                                ]}
+                                                            />
+                                                            <Legend
+                                                                wrapperStyle={{ fontSize: '12px' }}
+                                                                formatter={(value) => value === 'attendanceRate' ? 'Section Rate' : 'Course Average'}
+                                                            />
+                                                            <Bar dataKey="attendanceRate" fill="#1DA1F2" name="attendanceRate" radius={[4, 4, 0, 0]} />
+                                                            <Bar dataKey="courseAvg" fill="#E0E0E0" name="courseAvg" radius={[4, 4, 0, 0]} />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+
+                                            {/* Monthly Trend Comparison */}
+                                            {sectionComparisonData.monthlyComparison.length > 0 && (
+                                                <div className="comparison-chart-section">
+                                                    <h4 className="chart-section-title">Monthly Attendance Trend by Section</h4>
+                                                    <div className="comparison-chart-container">
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <LineChart data={sectionComparisonData.monthlyComparison} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                                                <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                                                                <XAxis dataKey="month" tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                                <YAxis domain={[0, 100]} tick={{ fill: '#4F4F4F', fontSize: 11 }} />
+                                                                <Tooltip
+                                                                    contentStyle={{
+                                                                        backgroundColor: '#fff',
+                                                                        border: '1px solid #E0E0E0',
+                                                                        borderRadius: '8px',
+                                                                        fontSize: '12px'
+                                                                    }}
+                                                                    formatter={(value: any) => [`${value}%`, '']}
+                                                                />
+                                                                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                                                {sectionComparisonData.sectionNames.map((section, idx) => {
+                                                                    const colors = ['#1DA1F2', '#0F9D58', '#F4B400', '#DB4437', '#9C27B0', '#00BCD4'];
+                                                                    return (
+                                                                        <Line
+                                                                            key={section}
+                                                                            type="monotone"
+                                                                            dataKey={section}
+                                                                            name={section}
+                                                                            stroke={colors[idx % colors.length]}
+                                                                            strokeWidth={2}
+                                                                            dot={{ fill: colors[idx % colors.length], r: 3 }}
+                                                                            activeDot={{ r: 5 }}
+                                                                        />
+                                                                    );
+                                                                })}
+                                                            </LineChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="comparison-placeholder">
-                                    <BarChartIcon className="placeholder-icon" />
-                                    <p>Select a course to compare section attendance rates</p>
-                                </div>
-                            )}
-                        </div>
+                                ) : (
+                                    <div className="comparison-placeholder">
+                                        <BarChartIcon className="placeholder-icon" />
+                                        <p>Loading comparison data...</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )
             },

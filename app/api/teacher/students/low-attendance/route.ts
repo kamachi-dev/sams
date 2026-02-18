@@ -7,92 +7,89 @@ export async function GET(req: Request) {
     try {
         const user = await currentUser()
         
-        console.log('Low Attendance API - User:', user ? { id: user.id, email: user.emailAddresses?.[0]?.emailAddress } : 'NULL')
-        
         if (!user) {
-            console.error('Low Attendance API - Authentication failed: No user found')
             return NextResponse.json({ 
                 success: false, 
                 error: 'Not authenticated' 
             }, { status: 401 })
         }
 
-        // Get query parameters for filtering
         const { searchParams } = new URL(req.url)
-        const courseFilter = searchParams.get('course') // Optional course filter
-        const threshold = parseFloat(searchParams.get('threshold') || '50') // Default 50%
+        const courseFilter = searchParams.get('course')
+        const sectionFilter = searchParams.get('section')
+        const threshold = parseFloat(searchParams.get('threshold') || '50')
 
-        // Query to get students with attendance rate below threshold
-        // Attendance rate = (present_count / school_days) * 100
-        // Only present counts toward attendance rate
-        // Absent count = (expected records) - (present + late)
-        let query = `
-            WITH course_school_days AS (
-                -- Get the number of distinct school days per course (days with any attendance records)
-                SELECT 
-                    c.id as course_id,
-                    COUNT(DISTINCT DATE(r.created_at)) as school_days
-                FROM course c
-                LEFT JOIN record r ON r.course = c.id AND r.created_at IS NOT NULL
-                WHERE c.teacher = $1
-                ${courseFilter ? 'AND c.id = $2' : ''}
-                GROUP BY c.id
-            ),
-            student_attendance AS (
-                SELECT 
-                    a.id as student_id,
-                    a.username as student_name,
-                    a.email as student_email,
-                    c.id as course_id,
-                    c.name as course_name,
-                    csd.school_days,
-                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
-                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count
+        // Build dynamic WHERE clauses based on filters
+        const conditions: string[] = ['c.teacher = $1']
+        const params: any[] = [user.id]
+        let paramIdx = 2
+
+        if (courseFilter) {
+            conditions.push(`c.id = $${paramIdx++}`)
+            params.push(courseFilter)
+        }
+        if (sectionFilter) {
+            conditions.push(`sd.section = $${paramIdx++}`)
+            params.push(sectionFilter)
+        }
+        // threshold param added last
+        const thresholdIdx = paramIdx
+
+        const whereClause = conditions.join(' AND ')
+
+        // Per-student attendance counts using explicit DB records only.
+        // school_days = distinct days this student has ANY record (present/late/absent).
+        // absent_count = explicit attendance=0 records only (camera pushes these at class end).
+        // attendance_rate = present / school_days (only present counts toward the rate).
+        const query = `
+            WITH student_attendance AS (
+                SELECT
+                    a.id           AS student_id,
+                    a.username     AS student_name,
+                    a.email        AS student_email,
+                    c.id           AS course_id,
+                    c.name         AS course_name,
+                    COUNT(DISTINCT CASE WHEN r.attendance IS NOT NULL THEN DATE(r.time) END) AS school_days,
+                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) AS present_count,
+                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) AS late_count,
+                    COUNT(CASE WHEN r.attendance = 0 THEN 1 END) AS absent_count
                 FROM enrollment_data e
                 INNER JOIN course c ON e.course = c.id
                 INNER JOIN account a ON e.student = a.id
-                LEFT JOIN course_school_days csd ON csd.course_id = c.id
-                LEFT JOIN record r ON r.student = a.id AND r.course = c.id AND r.created_at IS NOT NULL
-                WHERE c.teacher = $1
-                ${courseFilter ? 'AND c.id = $2' : ''}
-                GROUP BY a.id, a.username, a.email, c.id, c.name, csd.school_days
+                INNER JOIN student_data sd ON sd.student = a.id
+                LEFT JOIN record r ON r.student = a.id
+                    AND r.course = c.id
+                    AND r.time IS NOT NULL
+                WHERE ${whereClause}
+                GROUP BY a.id, a.username, a.email, c.id, c.name
             )
-            SELECT 
+            SELECT
                 student_id,
                 student_name,
                 student_email,
                 course_id,
                 course_name,
-                school_days as total_records,
+                school_days      AS total_records,
                 present_count,
                 late_count,
-                GREATEST(0, school_days - present_count - late_count) as absent_count,
-                CASE 
-                    WHEN school_days > 0 THEN 
+                absent_count,
+                CASE
+                    WHEN school_days > 0 THEN
                         ROUND((present_count * 1.0 / school_days * 100)::numeric, 1)
                     ELSE 0
-                END as attendance_rate
+                END AS attendance_rate
             FROM student_attendance
             WHERE school_days > 0
-              AND CASE 
-                WHEN school_days > 0 THEN 
-                    (present_count * 1.0 / school_days * 100)
-                ELSE 0
-            END < $${courseFilter ? '3' : '2'}
+              AND CASE
+                    WHEN school_days > 0 THEN (present_count * 1.0 / school_days * 100)
+                    ELSE 0
+                  END < $${thresholdIdx}
             ORDER BY attendance_rate ASC, student_name ASC
         `
 
-        const params = courseFilter 
-            ? [user.id, courseFilter, threshold]
-            : [user.id, threshold]
+        params.push(threshold)
 
-        console.log('Low Attendance Query Params:', { userId: user.id, courseFilter, threshold, params })
-        console.log('SQL Query:', query)
-        
         const result = await db.query(query, params)
-        
-        console.log('Query Results:', result.rows.length, 'students found')
-        console.log('Raw data:', result.rows)
 
         const students = result.rows.map(row => ({
             id: row.student_id,
@@ -110,7 +107,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ 
             success: true, 
             data: students,
-            threshold: threshold
+            threshold
         })
     } catch (error) {
         console.error('Error fetching low attendance students:', error)
