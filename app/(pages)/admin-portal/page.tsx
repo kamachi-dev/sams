@@ -424,7 +424,22 @@ export default function Admin() {
             Object.entries(c.schedule).forEach(([day, slot]) => {
                 const d = day.toLowerCase();
                 if (grid[d] && slot && typeof slot === 'object' && 'start' in slot && 'end' in slot) {
-                    const timeStr = `${slot.start} - ${slot.end}`;
+                    // Helper to format time in 12-hour format
+                    const format12Hour = (t: string) => {
+                        const [h, m] = t.split(':').map(Number);
+                        let hour = h;
+                        let ampm = 'AM';
+                        if (hour === 0) {
+                            hour = 12;
+                        } else if (hour === 12) {
+                            ampm = 'PM';
+                        } else if (hour > 12) {
+                            hour = hour - 12;
+                            ampm = 'PM';
+                        }
+                        return `${hour}:${m.toString().padStart(2, '0')} ${ampm}`;
+                    };
+                    const timeStr = `${format12Hour(slot.start)} - ${format12Hour(slot.end)}`;
                     grid[d].push({
                         course: c.name,
                         time: timeStr,
@@ -1426,8 +1441,8 @@ export default function Admin() {
                                             const slotMinutes = idx * TIME_SLOT_INTERVAL;
                                             const topPercent = (slotMinutes / totalMinutes) * 100;
                                             return (
-                                                <div 
-                                                    key={idx} 
+                                                <div
+                                                    key={idx}
                                                     className="schedule-time-label"
                                                     style={{ top: `${topPercent}%` }}
                                                 >
@@ -1452,9 +1467,9 @@ export default function Admin() {
                                                     const slotMinutes = idx * TIME_SLOT_INTERVAL;
                                                     const topPercent = (slotMinutes / totalMinutes) * 100;
                                                     return (
-                                                        <div 
-                                                            key={idx} 
-                                                            className="schedule-grid-line" 
+                                                        <div
+                                                            key={idx}
+                                                            className="schedule-grid-line"
                                                             style={{ top: `${topPercent}%` }}
                                                         />
                                                     );
