@@ -689,6 +689,13 @@
     color: #1DA1F2;
 }
 
+.overview-course-card.overview-card-pinned .overview-course-card-icon {
+    color: #1DA1F2;
+    background: rgba(29, 161, 242, 0.2);
+    font-weight: 900 !important;
+    filter: brightness(1.1) saturate(1.2);
+}
+
 .overview-section-card.overview-card-pinned {
     border-color: #0F9D58;
     box-shadow: 0 0 0 3px rgba(15, 157, 88, 0.15), 0 4px 16px rgba(15, 157, 88, 0.12);
@@ -698,6 +705,13 @@
 
 .overview-section-card.overview-card-pinned .overview-course-card-arrow {
     color: #0F9D58;
+}
+
+.overview-section-card.overview-card-pinned .overview-section-card-icon {
+    color: #0F9D58;
+    background: rgba(15, 157, 88, 0.2);
+    font-weight: 900 !important;
+    filter: brightness(1.1) saturate(1.2);
 }
 
 .overview-card-pinned-badge {

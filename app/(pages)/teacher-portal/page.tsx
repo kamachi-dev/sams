@@ -509,6 +509,62 @@ export default function Teacher() {
 
     const currentSemesterInfo = getCurrentSemester();
 
+    // Load pinned card state from localStorage on mount
+    useEffect(() => {
+        const pinnedOverviewCourseStored = localStorage.getItem('pinnedOverviewCourse');
+        const pinnedOverviewSectionStored = localStorage.getItem('pinnedOverviewSection');
+        const pinnedRiskCourseStored = localStorage.getItem('pinnedRiskCourse');
+        const pinnedRiskSectionStored = localStorage.getItem('pinnedRiskSection');
+        const pinnedCompareCourseStored = localStorage.getItem('pinnedCompareCourse');
+
+        if (pinnedOverviewCourseStored) setPinnedOverviewCourse(pinnedOverviewCourseStored);
+        if (pinnedOverviewSectionStored) setPinnedOverviewSection(pinnedOverviewSectionStored);
+        if (pinnedRiskCourseStored) setPinnedRiskCourse(pinnedRiskCourseStored);
+        if (pinnedRiskSectionStored) setPinnedRiskSection(pinnedRiskSectionStored);
+        if (pinnedCompareCourseStored) setPinnedCompareCourse(pinnedCompareCourseStored);
+    }, []);
+
+    // Save pinned card states to localStorage whenever they change
+    useEffect(() => {
+        if (pinnedOverviewCourse) {
+            localStorage.setItem('pinnedOverviewCourse', pinnedOverviewCourse);
+        } else {
+            localStorage.removeItem('pinnedOverviewCourse');
+        }
+    }, [pinnedOverviewCourse]);
+
+    useEffect(() => {
+        if (pinnedOverviewSection) {
+            localStorage.setItem('pinnedOverviewSection', pinnedOverviewSection);
+        } else {
+            localStorage.removeItem('pinnedOverviewSection');
+        }
+    }, [pinnedOverviewSection]);
+
+    useEffect(() => {
+        if (pinnedRiskCourse) {
+            localStorage.setItem('pinnedRiskCourse', pinnedRiskCourse);
+        } else {
+            localStorage.removeItem('pinnedRiskCourse');
+        }
+    }, [pinnedRiskCourse]);
+
+    useEffect(() => {
+        if (pinnedRiskSection) {
+            localStorage.setItem('pinnedRiskSection', pinnedRiskSection);
+        } else {
+            localStorage.removeItem('pinnedRiskSection');
+        }
+    }, [pinnedRiskSection]);
+
+    useEffect(() => {
+        if (pinnedCompareCourse) {
+            localStorage.setItem('pinnedCompareCourse', pinnedCompareCourse);
+        } else {
+            localStorage.removeItem('pinnedCompareCourse');
+        }
+    }, [pinnedCompareCourse]);
+
     // Fetch total students count from database
     useEffect(() => {
         const fetchStudentCount = async () => {
@@ -1178,7 +1234,10 @@ export default function Teacher() {
                                                 <BookmarkIcon
                                                     className="overview-course-card-icon"
                                                     onClick={(e) => { e.stopPropagation(); setPinnedOverviewCourse(isPinned ? null : course.id); }}
-                                                    style={{ cursor: 'pointer' }}
+                                                    style={{ 
+                                                        cursor: 'pointer',
+                                                        ...(isPinned && { fontWeight: 900, opacity: 1 })
+                                                    }}
                                                 />
                                                 {isPinned && <span className="overview-card-pinned-badge">Pinned</span>}
                                                 <ChevronRightIcon className="overview-course-card-arrow" />
@@ -1266,7 +1325,10 @@ export default function Teacher() {
                                                     <PersonIcon
                                                         className="overview-section-card-icon"
                                                         onClick={(e) => { e.stopPropagation(); setPinnedOverviewSection(isPinned ? null : sec.section); }}
-                                                        style={{ cursor: 'pointer' }}
+                                                        style={{ 
+                                                            cursor: 'pointer',
+                                                            ...(isPinned && { fontWeight: 900, opacity: 1 })
+                                                        }}
                                                     />
                                                     {isPinned && <span className="overview-card-pinned-badge green">Pinned</span>}
                                                     <ChevronRightIcon className="overview-course-card-arrow" />
@@ -1701,7 +1763,10 @@ export default function Teacher() {
                                                 <BookmarkIcon
                                                     className="overview-course-card-icon"
                                                     onClick={(e) => { e.stopPropagation(); setPinnedRiskCourse(isPinned ? null : course.id); }}
-                                                    style={{ cursor: 'pointer' }}
+                                                    style={{ 
+                                                        cursor: 'pointer',
+                                                        ...(isPinned && { fontWeight: 900, opacity: 1 })
+                                                    }}
                                                 />
                                                 {isPinned && <span className="overview-card-pinned-badge">Pinned</span>}
                                                 <ChevronRightIcon className="overview-course-card-arrow" />
@@ -1778,7 +1843,10 @@ export default function Teacher() {
                                                     <PersonIcon
                                                         className="overview-section-card-icon"
                                                         onClick={(e) => { e.stopPropagation(); setPinnedRiskSection(isPinned ? null : sec.section); }}
-                                                        style={{ cursor: 'pointer' }}
+                                                        style={{ 
+                                                            cursor: 'pointer',
+                                                            ...(isPinned && { fontWeight: 900, opacity: 1 })
+                                                        }}
                                                     />
                                                     {isPinned && <span className="overview-card-pinned-badge green">Pinned</span>}
                                                     <ChevronRightIcon className="overview-course-card-arrow" />
@@ -1954,7 +2022,10 @@ export default function Teacher() {
                                                 <BookmarkIcon
                                                     className="overview-course-card-icon"
                                                     onClick={(e) => { e.stopPropagation(); setPinnedCompareCourse(isPinned ? null : course.id); }}
-                                                    style={{ cursor: 'pointer' }}
+                                                    style={{ 
+                                                        cursor: 'pointer',
+                                                        ...(isPinned && { fontWeight: 900, opacity: 1 })
+                                                    }}
                                                 />
                                                 {isPinned && <span className="overview-card-pinned-badge">Pinned</span>}
                                                 <ChevronRightIcon className="overview-course-card-arrow" />
