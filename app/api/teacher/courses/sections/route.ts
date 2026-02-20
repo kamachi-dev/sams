@@ -6,11 +6,11 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -71,8 +71,8 @@ export async function GET(req: Request) {
             studentsBySection[row.section].push(row.name)
         }
 
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             data: {
                 course: courseCheck.rows[0],
                 sections: result.rows.map(row => ({

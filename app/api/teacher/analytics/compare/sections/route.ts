@@ -6,11 +6,11 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -126,7 +126,7 @@ export async function GET(req: Request) {
             const entry: Record<string, any> = {
                 month: monthRow?.month || '',
             }
-            
+
             for (const section of sections) {
                 const sectionRow = monthlyResult.rows.find(
                     r => parseInt(r.month_num) === monthNum && r.section === section
@@ -141,12 +141,12 @@ export async function GET(req: Request) {
                     entry[section] = 0
                 }
             }
-            
+
             return entry
         })
 
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             data: {
                 courseName: courseCheck.rows[0].name,
                 sections: sectionStats,

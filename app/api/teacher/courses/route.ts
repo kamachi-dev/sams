@@ -6,11 +6,11 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET() {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -59,8 +59,8 @@ export async function GET() {
             }
         }))
 
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             data: coursesWithSections
         })
     } catch (error) {

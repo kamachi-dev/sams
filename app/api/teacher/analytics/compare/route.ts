@@ -6,11 +6,11 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -136,7 +136,7 @@ export async function GET(req: Request) {
             const classMonth = monthlyClassResult.rows.find(
                 cm => cm.month_num === studentMonth.month_num
             )
-            
+
             return {
                 month: studentMonth.month,
                 studentRate: calculateRate(
@@ -153,8 +153,8 @@ export async function GET(req: Request) {
         })
 
         // If student has no records, use class months
-        const finalMonthlyComparison = monthlyComparison.length > 0 
-            ? monthlyComparison 
+        const finalMonthlyComparison = monthlyComparison.length > 0
+            ? monthlyComparison
             : monthlyClassResult.rows.map(classMonth => ({
                 month: classMonth.month,
                 studentRate: 0,
@@ -165,19 +165,19 @@ export async function GET(req: Request) {
                 )
             }))
 
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             data: {
                 student: studentStats,
                 class: classStats,
                 monthlyComparison: finalMonthlyComparison,
                 comparison: {
-                    rateVsClass: studentStats 
+                    rateVsClass: studentStats
                         ? (studentStats.attendanceRate - classStats.attendanceRate).toFixed(1)
                         : null,
-                    status: studentStats 
-                        ? studentStats.attendanceRate >= classStats.attendanceRate 
-                            ? 'above' 
+                    status: studentStats
+                        ? studentStats.attendanceRate >= classStats.attendanceRate
+                            ? 'above'
                             : 'below'
                         : 'unknown'
                 }

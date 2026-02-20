@@ -6,11 +6,11 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
         // Get today's date in YYYY-MM-DD format using local time (not UTC)
         const _now = new Date()
         const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
-        
+
         console.log('=== TODAY API DEBUG ===')
         console.log('Today:', today)
         console.log('Course:', courseFilter)
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
         // Get total enrolled students
         let totalQuery: string
         let totalParams: string[]
-        
+
         if (courseFilter && sectionFilter) {
             totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
                FROM enrollment_data e
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
                  AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
             totalParams = [user.id]
         }
-        
+
         const totalResult = await db.query(totalQuery, totalParams)
 
         // Get today's attendance for students in this teacher's courses
@@ -123,12 +123,12 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN best_attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN best_attendance = 0 THEN 1 END) as absent_count
             FROM student_best_attendance`
-        
-        const attendanceParams = courseFilter 
+
+        const attendanceParams = courseFilter
             ? (sectionFilter ? [today, user.id, courseFilter, sectionFilter] : [today, user.id, courseFilter])
             : [today, user.id]
         const result = await db.query(attendanceQuery, attendanceParams)
-        
+
         console.log('Query params:', attendanceParams)
         console.log('Result:', result.rows[0])
 
@@ -139,12 +139,12 @@ export async function GET(req: Request) {
         const absent = parseInt(data.absent_count || '0')
 
         // Attendance rate = (present / total) * 100 — only present counts
-        const attendanceRate = total > 0 
+        const attendanceRate = total > 0
             ? ((present / total) * 100).toFixed(1)
             : '0.0'
 
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             data: {
                 present: present,
                 late: late,

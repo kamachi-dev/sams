@@ -6,11 +6,11 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
         // Get overall attendance summary for students in this teacher's courses
         // This is for the semester-wide "Average Attendance Rate"
         // We need to count all attendance including absences for students without records
-        
+
         // Build queries based on filters
         let attendanceQuery: string
         let params: string[]
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY r.student, DATE(r.time), r.time ASC
             ) AS first_records`
-            
+
             params = [user.id, courseFilter, sectionFilter]
         } else if (courseFilter) {
             attendanceQuery = `SELECT 
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY r.student, DATE(r.time), r.time ASC
             ) AS first_records`
-            
+
             params = [user.id, courseFilter]
         } else {
             attendanceQuery = `SELECT 
@@ -75,13 +75,13 @@ export async function GET(req: Request) {
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY r.student, DATE(r.time), r.time ASC
             ) AS first_records`
-            
+
             params = [user.id]
         }
-        
+
         const attendanceResult = await db.query(attendanceQuery, params)
         const attendanceData = attendanceResult.rows[0]
-        
+
         const present = parseInt(attendanceData.present_count || '0')
         const late = parseInt(attendanceData.late_count || '0')
         const absent = parseInt(attendanceData.explicit_absent_count || '0')
@@ -95,8 +95,8 @@ export async function GET(req: Request) {
             ? ((present / total) * 100).toFixed(1)
             : '0.0'
 
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             data: {
                 present,
                 late,

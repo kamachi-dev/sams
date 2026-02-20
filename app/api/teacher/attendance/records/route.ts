@@ -6,11 +6,11 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -33,11 +33,11 @@ export async function GET(req: Request) {
 
         // Determine if we're querying a single date or a date range
         const useDateRange = startDate && endDate
-        
+
         console.log('=== RECORDS API DEBUG ===')
         console.log('Date:', date, 'StartDate:', startDate, 'EndDate:', endDate)
         console.log('Course:', courseFilter, 'UserId:', user.id)
-        
+
         // Get ALL students enrolled in the specified course, with their FIRST attendance record only (earliest detection)
         // Note: attendance column is smallint (1=present, 2=late, 0/NULL=absent)
         // Using DISTINCT ON to get only one record per student (the earliest detection)
@@ -87,15 +87,15 @@ export async function GET(req: Request) {
             ORDER BY 
                 a.id,
                 r.created_at ASC NULLS LAST`
-        
-        const params = useDateRange 
-            ? (sectionFilter 
+
+        const params = useDateRange
+            ? (sectionFilter
                 ? [startDate, endDate, user.id, courseFilter, sectionFilter]
                 : [startDate, endDate, user.id, courseFilter])
             : (sectionFilter
                 ? [date, user.id, courseFilter, sectionFilter]
                 : [date, user.id, courseFilter])
-        
+
         console.log('Query params:', params)
         const result = await db.query(query, params)
         console.log('Result rows:', result.rows.length)
@@ -115,7 +115,7 @@ export async function GET(req: Request) {
             // The camera module inserts these with confidence=0 and no meaningful timestamp.
             // For 'no record' students, also show no time/confidence as no record exists yet.
             const isAbsentOrNoRecord = status === 'absent' || status === 'no record'
-            
+
             return {
                 id: row.id,
                 name: row.username,
@@ -123,17 +123,17 @@ export async function GET(req: Request) {
                 course: row.course_name,
                 status: status,
                 date: row.created_at ? new Date(row.created_at).toLocaleDateString('en-US') : '-',
-                time: isAbsentOrNoRecord ? '-' : (row.created_at ? new Date(row.created_at).toLocaleTimeString('en-US', { 
-                    hour: 'numeric', 
+                time: isAbsentOrNoRecord ? '-' : (row.created_at ? new Date(row.created_at).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
                     minute: '2-digit',
-                    hour12: true 
+                    hour12: true
                 }) : '-'),
                 confidence: isAbsentOrNoRecord ? 'No Detection' : (row.confidence ? `${Math.round(row.confidence * 100)}%` : 'No Detection')
             }
         })
 
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             data: records
         })
     } catch (error) {

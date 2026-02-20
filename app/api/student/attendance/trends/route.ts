@@ -11,8 +11,8 @@ function formatDate(date: Date): string {
 
 // Helper to get full month name
 function getMonthName(monthIndex: number): string {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                    'July', 'August', 'September', 'October', 'November', 'December']
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December']
     return months[monthIndex]
 }
 
@@ -33,11 +33,11 @@ function toLocalDateStr(date: Date): string {
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -52,9 +52,9 @@ export async function GET(req: Request) {
         )
 
         if (studentResult.rows.length === 0) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Student not found' 
+            return NextResponse.json({
+                success: false,
+                error: 'Student not found'
             }, { status: 404 })
         }
 
@@ -68,22 +68,22 @@ export async function GET(req: Request) {
                 dayName: string
                 dateLabel: string
             }> = []
-            
+
             for (let i = 6; i >= 0; i--) {
                 const day = new Date(now)
                 day.setDate(now.getDate() - i)
                 day.setHours(0, 0, 0, 0)
-                
+
                 days.push({
                     date: day,
                     dayName: getDayName(day),
                     dateLabel: formatDate(day)
                 })
             }
-            
+
             const dailyData = await Promise.all(days.map(async (dayInfo) => {
                 const dateStr = toLocalDateStr(dayInfo.date)
-                
+
                 let query = `
                     SELECT 
                         COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
@@ -96,15 +96,15 @@ export async function GET(req: Request) {
                       AND e.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
                 `
                 const params: any[] = [user.id, dateStr]
-                
+
                 if (subjectFilter && subjectFilter !== 'all') {
                     query += ` AND r.course = $3`
                     params.push(subjectFilter)
                 }
-                
+
                 const result = await db.query(query, params)
                 const row = result.rows[0] || { present: 0, late: 0, absent: 0 }
-                
+
                 return {
                     day: dayInfo.dayName,
                     date: dayInfo.dateLabel,
@@ -113,40 +113,40 @@ export async function GET(req: Request) {
                     absent: parseInt(row.absent || '0')
                 }
             }))
-            
-            return NextResponse.json({ 
-                success: true, 
+
+            return NextResponse.json({
+                success: true,
                 data: dailyData
             })
-            
+
         } else if (view === 'weekly') {
             // Get 4 weeks of the current month
             const now = new Date()
             const currentMonth = now.getMonth()
             const currentYear = now.getFullYear()
-            
+
             // Find the first Monday of the month
             const firstOfMonth = new Date(currentYear, currentMonth, 1)
             const dayOfWeek = firstOfMonth.getDay()
             let daysUntilMonday = (dayOfWeek === 0) ? 1 : (dayOfWeek === 1) ? 0 : (8 - dayOfWeek)
             const firstMonday = new Date(currentYear, currentMonth, 1 + daysUntilMonday)
-            
+
             const weeks: Array<{
                 week: string
                 dateRange: string
                 startDate: Date
                 endDate: Date
             }> = []
-            
+
             for (let i = 0; i < 4; i++) {
                 const monday = new Date(firstMonday)
                 monday.setDate(firstMonday.getDate() + (i * 7))
                 monday.setHours(0, 0, 0, 0)
-                
+
                 const friday = new Date(monday)
                 friday.setDate(monday.getDate() + 4)
                 friday.setHours(23, 59, 59, 999)
-                
+
                 weeks.push({
                     week: `Week ${i + 1}`,
                     dateRange: `${formatDate(monday)} - ${formatDate(friday)}`,
@@ -154,11 +154,11 @@ export async function GET(req: Request) {
                     endDate: friday
                 })
             }
-            
+
             const weeklyData = await Promise.all(weeks.map(async (weekInfo) => {
                 const startStr = toLocalDateStr(weekInfo.startDate)
                 const endStr = toLocalDateStr(weekInfo.endDate)
-                
+
                 let query = `
                     SELECT 
                         COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
@@ -172,15 +172,15 @@ export async function GET(req: Request) {
                       AND e.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
                 `
                 const params: any[] = [user.id, startStr, endStr]
-                
+
                 if (subjectFilter && subjectFilter !== 'all') {
                     query += ` AND r.course = $4`
                     params.push(subjectFilter)
                 }
-                
+
                 const result = await db.query(query, params)
                 const row = result.rows[0] || { present: 0, late: 0, absent: 0 }
-                
+
                 return {
                     week: weekInfo.week,
                     dateRange: weekInfo.dateRange,
@@ -189,12 +189,12 @@ export async function GET(req: Request) {
                     absent: parseInt(row.absent || '0')
                 }
             }))
-            
-            return NextResponse.json({ 
-                success: true, 
+
+            return NextResponse.json({
+                success: true,
                 data: weeklyData
             })
-            
+
         } else if (view === 'monthly') {
             // Get last 6 months
             const now = new Date()
@@ -204,11 +204,11 @@ export async function GET(req: Request) {
                 startDate: Date
                 endDate: Date
             }> = []
-            
+
             for (let i = 5; i >= 0; i--) {
                 const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
                 const lastDay = new Date(now.getFullYear(), now.getMonth() - i + 1, 0)
-                
+
                 months.push({
                     name: getMonthName(monthDate.getMonth()),
                     shortName: getMonthName(monthDate.getMonth()).substring(0, 3),
@@ -216,11 +216,11 @@ export async function GET(req: Request) {
                     endDate: lastDay
                 })
             }
-            
+
             const monthlyData = await Promise.all(months.map(async (monthInfo) => {
                 const startStr = toLocalDateStr(monthInfo.startDate)
                 const endStr = toLocalDateStr(monthInfo.endDate)
-                
+
                 let query = `
                     SELECT 
                         COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
@@ -234,25 +234,25 @@ export async function GET(req: Request) {
                       AND e.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
                 `
                 const params: any[] = [user.id, startStr, endStr]
-                
+
                 if (subjectFilter && subjectFilter !== 'all') {
                     query += ` AND r.course = $4`
                     params.push(subjectFilter)
                 }
-                
+
                 const result = await db.query(query, params)
                 const row = result.rows[0] || { present: 0, late: 0, absent: 0 }
-                
+
                 const present = parseInt(row.present || '0')
                 const late = parseInt(row.late || '0')
                 const absent = parseInt(row.absent || '0')
                 const total = present + late + absent
-                
+
                 // Calculate attendance rate: only present counts
-                const attendanceRate = total > 0 
+                const attendanceRate = total > 0
                     ? parseFloat(((present / total) * 100).toFixed(1))
                     : 0
-                
+
                 return {
                     month: monthInfo.shortName,
                     fullMonth: monthInfo.name,
@@ -263,12 +263,12 @@ export async function GET(req: Request) {
                     attendanceRate
                 }
             }))
-            
-            return NextResponse.json({ 
-                success: true, 
+
+            return NextResponse.json({
+                success: true,
                 data: monthlyData
             })
-            
+
         } else if (view === 'quarterly') {
             // Academic quarters (semesters):
             const quarters = [
@@ -301,11 +301,11 @@ export async function GET(req: Request) {
                     endDate: new Date(2026, 3, 14)     // Apr 14, 2026
                 }
             ]
-            
+
             const quarterlyData = await Promise.all(quarters.map(async (quarter) => {
                 const startStr = toLocalDateStr(quarter.startDate)
                 const endStr = toLocalDateStr(quarter.endDate)
-                
+
                 let query = `
                     SELECT 
                         COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
@@ -319,21 +319,21 @@ export async function GET(req: Request) {
                       AND e.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
                 `
                 const params: any[] = [user.id, startStr, endStr]
-                
+
                 if (subjectFilter && subjectFilter !== 'all') {
                     query += ` AND r.course = $4`
                     params.push(subjectFilter)
                 }
-                
+
                 const result = await db.query(query, params)
                 const row = result.rows[0] || { present: 0, late: 0, absent: 0 }
-                
+
                 const formatQuarterDate = (d: Date) => {
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
                     return `${months[d.getMonth()]} ${d.getDate()}`
                 }
-                
+
                 return {
                     name: quarter.name,
                     label: quarter.label,
@@ -344,18 +344,18 @@ export async function GET(req: Request) {
                     absent: parseInt(row.absent || '0')
                 }
             }))
-            
-            return NextResponse.json({ 
-                success: true, 
+
+            return NextResponse.json({
+                success: true,
                 data: quarterlyData
             })
         }
-        
-        return NextResponse.json({ 
-            success: false, 
-            error: 'Invalid view parameter' 
+
+        return NextResponse.json({
+            success: false,
+            error: 'Invalid view parameter'
         }, { status: 400 })
-        
+
     } catch (error) {
         console.error('Error fetching student attendance trends:', error)
         return NextResponse.json({

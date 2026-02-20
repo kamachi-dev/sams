@@ -29,8 +29,8 @@ function formatDate(date: Date): string {
 
 // Helper to get full month name
 function getMonthName(monthIndex: number): string {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                    'July', 'August', 'September', 'October', 'November', 'December']
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December']
     return months[monthIndex]
 }
 
@@ -207,11 +207,11 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -228,24 +228,24 @@ export async function GET(req: Request) {
                 dayName: string
                 dateLabel: string
             }> = []
-            
+
             for (let i = 6; i >= 0; i--) {
                 const day = new Date(now)
                 day.setDate(now.getDate() - i)
                 day.setHours(0, 0, 0, 0)
-                
+
                 days.push({
                     date: day,
                     dayName: getDayName(day),
                     dateLabel: formatDate(day)
                 })
             }
-            
+
             const dailyData = await Promise.all(days.map(async (dayInfo) => {
                 const dateStr = toLocalDateStr(dayInfo.date)
-                
+
                 const { present, late, absent } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, dateStr, dateStr)
-                
+
                 return {
                     day: dayInfo.dayName,
                     date: dayInfo.dateLabel,
@@ -254,30 +254,30 @@ export async function GET(req: Request) {
                     absent
                 }
             }))
-            
-            return NextResponse.json({ 
-                success: true, 
+
+            return NextResponse.json({
+                success: true,
                 data: dailyData
             })
-            
+
         } else if (view === 'weekly') {
             // Get 4 weeks of the current month with date ranges (school days Mon-Fri)
             const now = new Date()
             const currentMonth = now.getMonth()
             const currentYear = now.getFullYear()
-            
+
             // Find the first Monday of the month
             const firstOfMonth = new Date(currentYear, currentMonth, 1)
             const dayOfWeek = firstOfMonth.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
-            
+
             // Calculate days until the first Monday
             // If Feb 1 is Sunday (0), we need to add 1 day to get to Monday
             // If Feb 1 is Monday (1), we add 0 days
             // If Feb 1 is Saturday (6), we need to add 2 days
             let daysUntilMonday = (dayOfWeek === 0) ? 1 : (dayOfWeek === 1) ? 0 : (8 - dayOfWeek)
-            
+
             const firstMonday = new Date(currentYear, currentMonth, 1 + daysUntilMonday)
-            
+
             // Generate 4 weeks
             const weeks: Array<{
                 week: string
@@ -285,16 +285,16 @@ export async function GET(req: Request) {
                 startDate: Date
                 endDate: Date
             }> = []
-            
+
             for (let i = 0; i < 4; i++) {
                 const monday = new Date(firstMonday)
                 monday.setDate(firstMonday.getDate() + (i * 7))
                 monday.setHours(0, 0, 0, 0)
-                
+
                 const friday = new Date(monday)
                 friday.setDate(monday.getDate() + 4)
                 friday.setHours(23, 59, 59, 999)
-                
+
                 weeks.push({
                     week: `Week ${i + 1}`,
                     dateRange: `${formatDate(monday)} - ${formatDate(friday)}`,
@@ -302,14 +302,14 @@ export async function GET(req: Request) {
                     endDate: friday
                 })
             }
-            
+
             // Query attendance for each week
             const weeklyData = await Promise.all(weeks.map(async (weekInfo) => {
                 const startStr = toLocalDateStr(weekInfo.startDate)
                 const endStr = toLocalDateStr(weekInfo.endDate)
-                
+
                 const { present, late, absent } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
-                
+
                 return {
                     week: weekInfo.week,
                     dateRange: weekInfo.dateRange,
@@ -318,12 +318,12 @@ export async function GET(req: Request) {
                     absent
                 }
             }))
-            
-            return NextResponse.json({ 
-                success: true, 
+
+            return NextResponse.json({
+                success: true,
                 data: weeklyData
             })
-            
+
         } else if (view === 'monthly') {
             // Get last 6 months with actual month names
             const now = new Date()
@@ -333,11 +333,11 @@ export async function GET(req: Request) {
                 startDate: Date
                 endDate: Date
             }> = []
-            
+
             for (let i = 5; i >= 0; i--) {
                 const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
                 const lastDay = new Date(now.getFullYear(), now.getMonth() - i + 1, 0)
-                
+
                 months.push({
                     name: getMonthName(monthDate.getMonth()),
                     shortName: getMonthName(monthDate.getMonth()).substring(0, 3),
@@ -345,20 +345,20 @@ export async function GET(req: Request) {
                     endDate: lastDay
                 })
             }
-            
+
             const monthlyData = await Promise.all(months.map(async (monthInfo) => {
                 const startStr = toLocalDateStr(monthInfo.startDate)
                 const endStr = toLocalDateStr(monthInfo.endDate)
-                
+
                 const { present, late, absent } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
-                
+
                 const total = present + late + absent
-                
+
                 // Calculate attendance rate: only present counts
-                const attendanceRate = total > 0 
+                const attendanceRate = total > 0
                     ? parseFloat(((present / total) * 100).toFixed(1))
                     : 0
-                
+
                 return {
                     month: monthInfo.shortName,
                     fullMonth: monthInfo.name,
@@ -369,19 +369,19 @@ export async function GET(req: Request) {
                     attendanceRate
                 }
             }))
-            
-            return NextResponse.json({ 
-                success: true, 
+
+            return NextResponse.json({
+                success: true,
                 data: monthlyData
             })
-            
+
         } else if (view === 'quarterly') {
             // Academic quarters (semesters):
             // Q1 (1st Sem): July 7 - September 30
             // Q2 (1st Sem): October 1 - November 30
             // Q3 (2nd Sem): December 1 - February 28
             // Q4 (2nd Sem): March 1 - April 14
-            
+
             // Note: Using academic year 2025-2026
             const quarters = [
                 {
@@ -413,20 +413,20 @@ export async function GET(req: Request) {
                     endDate: new Date(2026, 3, 14)     // Apr 14, 2026
                 }
             ]
-            
+
             const quarterlyData = await Promise.all(quarters.map(async (quarter) => {
                 const startStr = toLocalDateStr(quarter.startDate)
                 const endStr = toLocalDateStr(quarter.endDate)
-                
+
                 const { present, late, absent } = await getAttendanceCounts(user.id, courseFilter, sectionFilter, startStr, endStr)
-                
+
                 // Format date range for tooltip
                 const formatQuarterDate = (d: Date) => {
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
                     return `${months[d.getMonth()]} ${d.getDate()}`
                 }
-                
+
                 return {
                     name: quarter.name,
                     label: quarter.label,
@@ -437,18 +437,18 @@ export async function GET(req: Request) {
                     absent: absent
                 }
             }))
-            
-            return NextResponse.json({ 
-                success: true, 
+
+            return NextResponse.json({
+                success: true,
                 data: quarterlyData
             })
         }
-        
-        return NextResponse.json({ 
-            success: false, 
-            error: 'Invalid view parameter' 
+
+        return NextResponse.json({
+            success: false,
+            error: 'Invalid view parameter'
         }, { status: 400 })
-        
+
     } catch (error) {
         console.error('Error fetching attendance trends:', error)
         return NextResponse.json({

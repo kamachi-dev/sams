@@ -6,11 +6,11 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET() {
     try {
         const user = await currentUser()
-        
+
         if (!user) {
-            return NextResponse.json({ 
-                success: false, 
-                error: 'Not authenticated' 
+            return NextResponse.json({
+                success: false,
+                error: 'Not authenticated'
             }, { status: 401 })
         }
 
@@ -37,10 +37,10 @@ export async function GET() {
             const late = parseInt(row.late || '0')
             const absent = parseInt(row.absent || '0')
             const total = parseInt(row.total_records || '0')
-            
+
             // New attendance rate calculation:
             // Present = 1 (100%), Late = 0.5 (50%), Absent = 0 (0%)
-            const percentage = total > 0 
+            const percentage = total > 0
                 ? (((present * 1) + (late * 0.5) + (absent * 0)) / total * 100).toFixed(1)
                 : '0.0'
 
@@ -53,8 +53,8 @@ export async function GET() {
             }
         })
 
-        return NextResponse.json({ 
-            success: true, 
+        return NextResponse.json({
+            success: true,
             data: subjects
         })
     } catch (error) {

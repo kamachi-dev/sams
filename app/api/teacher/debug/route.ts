@@ -6,7 +6,7 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET() {
     try {
         const user = await currentUser()
-        
+
         // Get all courses for this teacher
         const coursesResult = await db.query(`
             SELECT id, name, teacher, archive 
