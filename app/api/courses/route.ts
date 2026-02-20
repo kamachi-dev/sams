@@ -42,8 +42,8 @@ export async function GET() {
         const result = await db.query(`SELECT id, name, schedule, teacher FROM course ORDER BY name`)
         return NextResponse.json({ success: true, status: 200, data: result.rows, error: null })
     } catch (error) {
-        console.error('Error fetching courses:', error)
-        return NextResponse.json({ success: false, status: 500, data: { message: String(error) }, error: 'Courses fetch failed' })
+        console.error('Error fetching courses:', error);
+        return NextResponse.json({ success: false, status: 500, data: { message: String(error) }, error: 'Courses fetch failed' });
     }
 }
 

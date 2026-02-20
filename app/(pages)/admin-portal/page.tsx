@@ -8,23 +8,23 @@ import './styles.css';
 import { PersonIcon, TrashIcon, CalendarIcon } from "@radix-ui/react-icons";
 
 export default function Admin() {
-    type ArchiveItem = {
+    type SchoolYearItem = {
         created_at: string;
         school_year: string;
         id: string;
         notes: string;
     };
 
-    type ArchiveResponse = {
+    type SchoolYearResponse = {
         success: boolean;
         status: number;
-        data: ArchiveItem[];
+        data: SchoolYearItem[];
         error: unknown | null;
     };
 
     const groupSize = 4;
 
-    const [archive, setArchive] = useState<ArchiveResponse | null>(null);
+    const [schoolYearList, setSchoolYearList] = useState<SchoolYearResponse | null>(null);
     const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
     const [importStatus, setImportStatus] = useState<string | null>(null);
 
@@ -33,15 +33,15 @@ export default function Admin() {
     const [classCount, setClassCount] = useState<number | null>(null);
 
     const [schoolYear, setSchoolYear] = useState<string>('');
-    const [archiveNotes, setArchiveNotes] = useState<string>('');
-    const [archiveLoading, setArchiveLoading] = useState<boolean>(false);
+    const [schoolYearNotes, setSchoolYearNotes] = useState<string>('');
+    const [schoolYearLoading, setSchoolYearLoading] = useState<boolean>(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-    const [archiveToDelete, setArchiveToDelete] = useState<string | null>(null);
+    const [schoolYearToDelete, setSchoolYearToDelete] = useState<string | null>(null);
     const [deleteConfirmText, setDeleteConfirmText] = useState<string>('');
     const [activateDialogOpen, setActivateDialogOpen] = useState<boolean>(false);
-    const [archiveToActivate, setArchiveToActivate] = useState<string | null>(null);
+    const [schoolYearToActivate, setSchoolYearToActivate] = useState<string | null>(null);
     const [activateConfirmText, setActivateConfirmText] = useState<string>('');
-    const [activeArchiveId, setActiveArchiveId] = useState<string | null>(null);
+    const [activeSchoolYearId, setActiveSchoolYearId] = useState<string | null>(null);
 
     const studentFileRef = useRef<HTMLInputElement | null>(null);
     const teacherFileRef = useRef<HTMLInputElement | null>(null);
@@ -121,37 +121,37 @@ export default function Admin() {
         }
     }
 
-    async function handleCreateArchive() {
-        if (!schoolYear.trim() || !archiveNotes.trim()) {
+    async function handleCreateSchoolYear() {
+        if (!schoolYear.trim() || !schoolYearNotes.trim()) {
             setImportStatus('School year and notes are required');
             setTimeout(() => setImportStatus(null), 5000);
             return;
         }
 
         try {
-            setArchiveLoading(true);
+            setSchoolYearLoading(true);
             const form = new FormData();
             form.append('school_year', schoolYear);
-            form.append('notes', archiveNotes);
+            form.append('notes', schoolYearNotes);
 
-            const res = await fetch('/api/archive', { method: 'POST', body: form });
+            const res = await fetch('/api/school_year', { method: 'POST', body: form });
             const json = await res.json();
 
             if (!res.ok || json?.success === false) {
-                setImportStatus(`Archive creation failed: ${json?.error ?? res.statusText}`);
+                setImportStatus(`School year creation failed: ${json?.error ?? res.statusText}`);
                 setTimeout(() => setImportStatus(null), 5000);
                 return;
             }
 
-            setImportStatus('Archive created successfully');
+            setImportStatus('School year created successfully');
             setSchoolYear('');
-            setArchiveNotes('');
+            setSchoolYearNotes('');
             setTimeout(() => setImportStatus(null), 5000);
 
-            // Refresh archive list
-            const archiveRes: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
-            setArchive(archiveRes);
-            if (archiveRes?.data?.length) {
+            // Refresh school year list
+            const schoolYearRes: SchoolYearResponse = await fetch('/api/school_year').then(res => res.json());
+            setSchoolYearList(schoolYearRes);
+            if (schoolYearRes?.data?.length) {
                 setSelectedGroup(0);
             }
         } catch (err: unknown) {
@@ -160,28 +160,28 @@ export default function Admin() {
                 const error = err as Error;
                 message = error.message;
             }
-            setImportStatus(`Archive creation error: ${message}`);
+            setImportStatus(`School year creation error: ${message}`);
             setTimeout(() => setImportStatus(null), 5000);
         } finally {
-            setArchiveLoading(false);
+            setSchoolYearLoading(false);
         }
     }
 
-    function openDeleteDialog(archiveId: string) {
-        setArchiveToDelete(archiveId);
+    function openDeleteDialog(schoolYearId: string) {
+        setSchoolYearToDelete(schoolYearId);
         setDeleteConfirmText('');
         setDeleteDialogOpen(true);
     }
 
-    function openActivateDialog(archiveId: string) {
-        setArchiveToActivate(archiveId);
+    function openActivateDialog(schoolYearId: string) {
+        setSchoolYearToActivate(schoolYearId);
         setActivateConfirmText('');
         setActivateDialogOpen(true);
     }
 
     function closeDeleteDialog() {
         setDeleteDialogOpen(false);
-        setArchiveToDelete(null);
+        setSchoolYearToDelete(null);
         setDeleteConfirmText('');
     }
 
@@ -529,36 +529,36 @@ export default function Admin() {
         }
     }
 
-    async function handleDeleteArchive() {
-        if (!archiveToDelete || deleteConfirmText !== 'delete') {
+    async function handleDeleteSchoolYear() {
+        if (!schoolYearToDelete || deleteConfirmText !== 'delete') {
             return;
         }
 
         try {
             const form = new FormData();
-            form.append('id', archiveToDelete);
+            form.append('id', schoolYearToDelete);
 
-            const res = await fetch('/api/archive', {
+            const res = await fetch('/api/school_year', {
                 method: 'DELETE',
                 body: form
             });
             const json = await res.json();
 
             if (!res.ok || json?.success === false) {
-                setImportStatus(`Archive deletion failed: ${json?.error ?? res.statusText}`);
+                setImportStatus(`School year deletion failed: ${json?.error ?? res.statusText}`);
                 setTimeout(() => setImportStatus(null), 5000);
                 closeDeleteDialog();
                 return;
             }
 
-            setImportStatus('Archive deleted successfully');
+            setImportStatus('School year deleted successfully');
             setTimeout(() => setImportStatus(null), 5000);
 
-            if (archiveToDelete === activeArchiveId) setActiveArchiveId(null);
-            // Refresh archive list
-            const archiveRes: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
-            setArchive(archiveRes);
-            if (archiveRes?.data?.length) setSelectedGroup(Math.max(0, (selectedGroup ?? 0) - 1));
+            if (schoolYearToDelete === activeSchoolYearId) setActiveSchoolYearId(null);
+            // Refresh school year list
+            const schoolYearRes: SchoolYearResponse = await fetch('/api/school_year').then(res => res.json());
+            setSchoolYearList(schoolYearRes);
+            if (schoolYearRes?.data?.length) setSelectedGroup(Math.max(0, (selectedGroup ?? 0) - 1));
             else setSelectedGroup(null);
 
             closeDeleteDialog();
@@ -568,22 +568,22 @@ export default function Admin() {
                 const error = err as Error;
                 message = error.message;
             }
-            setImportStatus(`Archive deletion error: ${message}`);
+            setImportStatus(`School year deletion error: ${message}`);
             setTimeout(() => setImportStatus(null), 5000);
             closeDeleteDialog();
         }
     }
 
-    async function handleSetActiveArchive() {
-        if (!archiveToActivate || activateConfirmText !== 'activate') {
+    async function handleSetActiveSchoolYear() {
+        if (!schoolYearToActivate || activateConfirmText !== 'activate') {
             return;
         }
 
         try {
             const form = new FormData();
-            form.append('id', archiveToActivate);
+            form.append('id', schoolYearToActivate);
 
-            const res = await fetch('/api/archive/active', {
+            const res = await fetch('/api/school_year/active', {
                 method: 'POST',
                 body: form
             });
@@ -596,13 +596,13 @@ export default function Admin() {
                 return;
             }
 
-            setImportStatus('Active archive set successfully');
-            setActiveArchiveId(archiveToActivate);
+            setImportStatus('Active school year set successfully');
+            setActiveSchoolYearId(schoolYearToActivate);
             setTimeout(() => setImportStatus(null), 5000);
 
-            // Refresh archive list
-            const archiveRes: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
-            setArchive(archiveRes);
+            // Refresh school year list
+            const schoolYearRes: SchoolYearResponse = await fetch('/api/school_year').then(res => res.json());
+            setSchoolYearList(schoolYearRes);
 
             setActivateDialogOpen(false);
         } catch (err: unknown) {
@@ -618,8 +618,8 @@ export default function Admin() {
     }
     useEffect(() => {
         (async () => {
-            const res: ArchiveResponse = await fetch('/api/archive').then(res => res.json());
-            setArchive(res);
+            const res: SchoolYearResponse = await fetch('/api/school_year').then(res => res.json());
+            setSchoolYearList(res);
             // Set first group as selected
             if (res?.data?.length) {
                 setSelectedGroup(0);
@@ -631,9 +631,9 @@ export default function Admin() {
             const classCountRes = await fetch('/api/classes/count').then(res => res.json());
             if (classCountRes?.success) setClassCount(Number(classCountRes.data.count));
             try {
-                const activeRes = await fetch('/api/archive/active').then(res => res.json());
+                const activeRes = await fetch('/api/school_year/active').then(res => res.json());
                 if (activeRes?.success && Array.isArray(activeRes.data) && activeRes.data[0]) {
-                    setActiveArchiveId(String(activeRes.data[0].active_archive));
+                    setActiveSchoolYearId(String(activeRes.data[0].active_school_year));
                 }
             } catch {
                 // ignore
@@ -663,151 +663,6 @@ export default function Admin() {
     return (
         <>
             <SamsTemplate links={[
-                {
-                    label: "Archives",
-                    Icon: () => <Image src="/icons/sheet.svg" alt="" width={20} height={20} style={{ filter: "brightness(0)" }} />,
-                    panels: [
-                        <div key={1} className="stats-card">
-                            <Image src="/icons/people.svg" alt="" width={40} height={40} />
-                            <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Students</Label.Root>
-                                <span>{studentCount ?? 'Loading...'}</span>
-                            </div>
-                        </div>,
-                        <div key={2} className="stats-card">
-                            <Image src="/icons/people.svg" alt="" width={40} height={40} />
-                            <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Teachers</Label.Root>
-                                <span>{teacherCount ?? 'Loading...'}</span>
-                            </div>
-                        </div>,
-                        <div key={3} className="stats-card">
-                            <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
-                            <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Classes</Label.Root>
-                                <span>{classCount ?? 'Loading...'}</span>
-                            </div>
-                        </div>
-                    ],
-                    content: <>
-                        <div className="admin-content">
-                            <div className="archive-form">
-                                <Label.Root className="archive-form-title">Create Archive</Label.Root>
-                                <div className="archive-form-container w-full">
-                                    <div className="form-field-group">
-                                        <Label.Root className="form-field-label">School Year</Label.Root>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g., 2024"
-                                            value={schoolYear}
-                                            onChange={(e) => setSchoolYear(e.target.value)}
-                                            className="school-year-input"
-                                        />
-                                    </div>
-                                    <div className="form-field-group">
-                                        <Label.Root className="form-field-label">Notes</Label.Root>
-                                        <textarea
-                                            placeholder="Add notes about this archive..."
-                                            value={archiveNotes}
-                                            onChange={(e) => setArchiveNotes(e.target.value)}
-                                            className="archive-notes-textarea"
-                                            rows={3}
-                                        />
-                                    </div>
-                                    <button
-                                        onClick={handleCreateArchive}
-                                        disabled={archiveLoading}
-                                        className="import-button" style={{ marginTop: '0.5rem' }}
-                                    >
-                                        <Label.Root>{archiveLoading ? 'Creating...' : 'Create Archive'}</Label.Root>
-                                    </button>
-                                </div>
-                            </div>
-                            <div>
-                                <section>
-                                    <ToggleGroup.Root
-                                        type="single"
-                                        className="archive-group"
-                                        value={selectedGroup?.toString() ?? ''}
-                                        onValueChange={(val) => setSelectedGroup(val ? parseInt(val) : null)}
-                                    >
-                                        {(() => {
-                                            const totalArchives = archive?.data?.length ?? 0;
-                                            const numGroups = Math.ceil(totalArchives / groupSize);
-                                            return Array.from({ length: numGroups }, (_, i) => (
-                                                <ToggleGroup.Item key={i} value={i.toString()} className="archive-group-item">
-                                                    {i + 1}
-                                                </ToggleGroup.Item>
-                                            ));
-                                        })()}
-                                    </ToggleGroup.Root>
-                                </section>
-                                <section>
-                                    <div className="archive">
-                                        {(() => {
-                                            const allArchives = archive?.data
-                                                ?.sort((a, b) => {
-                                                    // First sort by school year (descending)
-                                                    if (a.school_year !== b.school_year) {
-                                                        return parseInt(b.school_year) - parseInt(a.school_year);
-                                                    }
-                                                    // Then sort by creation date (descending)
-                                                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                                                });
-                                            if (!allArchives?.length || selectedGroup === null) return null;
-
-                                            // Divide archives into groups of 6
-                                            const startIdx = selectedGroup * groupSize;
-                                            const endIdx = startIdx + groupSize;
-                                            const selectedArchives = allArchives.slice(startIdx, endIdx);
-
-                                            return selectedArchives.map((selected) => (
-                                                <div
-                                                    key={selected.id}
-                                                    className="archive-item"
-                                                    style={{
-                                                        border: selected.id === activeArchiveId ? '2px solid #059669' : undefined,
-                                                        backgroundColor: selected.id === activeArchiveId ? '#ecfdf5' : undefined
-                                                    }}
-                                                >
-                                                    <div className="archive-item-header">
-                                                        <div className="archive-metadata">
-                                                            <span className="archive-year-info">School Year: {selected.school_year} - {parseInt(selected.school_year) + 1}</span>
-                                                            <span className="archive-created-info">Created: {new Date(selected.created_at).toLocaleString()}</span>
-                                                        </div>
-                                                        <div className="archive-item-actions">
-                                                            {selected.id === activeArchiveId ? (
-                                                                <button className="archive-active-indicator import-button" disabled style={{ backgroundColor: '#059669' }}>
-                                                                    <Label.Root>Active</Label.Root>
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => openActivateDialog(selected.id)}
-                                                                    className="archive-activate-button"
-                                                                >
-                                                                    <Label.Root>Inactive</Label.Root>
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                onClick={() => openDeleteDialog(selected.id)}
-                                                                className="archive-delete-button"
-                                                            >
-                                                                <TrashIcon />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="archive-item-content">
-                                                        {selected.notes}
-                                                    </div>
-                                                </div>
-                                            ));
-                                        })()}
-                                    </div>
-                                </section>
-                            </div>
-                        </div>
-                    </>
-                },
                 {
                     label: "User Management",
                     Icon: () => <PersonIcon width={20} height={20} />,
@@ -988,6 +843,151 @@ export default function Admin() {
                     </section>
                 },
                 {
+                    label: "School year",
+                    Icon: () => <Image src="/icons/sheet.svg" alt="" width={20} height={20} style={{ filter: "brightness(0)" }} />,
+                    panels: [
+                        <div key={1} className="stats-card">
+                            <Image src="/icons/people.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Students</Label.Root>
+                                <span>{studentCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>,
+                        <div key={2} className="stats-card">
+                            <Image src="/icons/people.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Teachers</Label.Root>
+                                <span>{teacherCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>,
+                        <div key={3} className="stats-card">
+                            <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Classes</Label.Root>
+                                <span>{classCount ?? 'Loading...'}</span>
+                            </div>
+                        </div>
+                    ],
+                    content: <>
+                        <div className="admin-content">
+                            <div className="school-year-form">
+                                <Label.Root className="school-year-form-title">Create School Year</Label.Root>
+                                <div className="school-year-form-container w-full">
+                                    <div className="form-field-group">
+                                        <Label.Root className="form-field-label">School Year</Label.Root>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g., 2024"
+                                            value={schoolYear}
+                                            onChange={(e) => setSchoolYear(e.target.value)}
+                                            className="school-year-input"
+                                        />
+                                    </div>
+                                    <div className="form-field-group">
+                                        <Label.Root className="form-field-label">Notes</Label.Root>
+                                        <textarea
+                                            placeholder="Add notes about this school year..."
+                                            value={schoolYearNotes}
+                                            onChange={(e) => setSchoolYearNotes(e.target.value)}
+                                            className="school-year-notes-textarea"
+                                            rows={3}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleCreateSchoolYear}
+                                        disabled={schoolYearLoading}
+                                        className="import-button" style={{ marginTop: '0.5rem' }}
+                                    >
+                                        <Label.Root>{schoolYearLoading ? 'Creating...' : 'Create School Year'}</Label.Root>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <section>
+                                    <ToggleGroup.Root
+                                        type="single"
+                                        className="school-year-group"
+                                        value={selectedGroup?.toString() ?? ''}
+                                        onValueChange={(val) => setSelectedGroup(val ? parseInt(val) : null)}
+                                    >
+                                        {(() => {
+                                            const totalSchoolYears = schoolYearList?.data?.length ?? 0;
+                                            const numGroups = Math.ceil(totalSchoolYears / groupSize);
+                                            return Array.from({ length: numGroups }, (_, i) => (
+                                                <ToggleGroup.Item key={i} value={i.toString()} className="school-year-group-item">
+                                                    {i + 1}
+                                                </ToggleGroup.Item>
+                                            ));
+                                        })()}
+                                    </ToggleGroup.Root>
+                                </section>
+                                <section>
+                                    <div className="school-year">
+                                        {(() => {
+                                            const allSchoolYears = schoolYearList?.data
+                                                ?.sort((a, b) => {
+                                                    // First sort by school year (descending)
+                                                    if (a.school_year !== b.school_year) {
+                                                        return parseInt(b.school_year) - parseInt(a.school_year);
+                                                    }
+                                                    // Then sort by creation date (descending)
+                                                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                                                });
+                                            if (!allSchoolYears?.length || selectedGroup === null) return null;
+
+                                            // Divide school years into groups of 6
+                                            const startIdx = selectedGroup * groupSize;
+                                            const endIdx = startIdx + groupSize;
+                                            const selectedSchoolYears = allSchoolYears.slice(startIdx, endIdx);
+
+                                            return selectedSchoolYears.map((selected) => (
+                                                <div
+                                                    key={selected.id}
+                                                    className="school-year-item"
+                                                    style={{
+                                                        border: selected.id === activeSchoolYearId ? '2px solid #059669' : undefined,
+                                                        backgroundColor: selected.id === activeSchoolYearId ? '#ecfdf5' : undefined
+                                                    }}
+                                                >
+                                                    <div className="school-year-item-header">
+                                                        <div className="school-year-metadata">
+                                                            <span className="school-year-year-info">School Year: {selected.school_year} - {parseInt(selected.school_year) + 1}</span>
+                                                            <span className="school-year-created-info">Created: {new Date(selected.created_at).toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="school-year-item-actions">
+                                                            {selected.id === activeSchoolYearId ? (
+                                                                <button className="school-year-active-indicator import-button" disabled style={{ backgroundColor: '#059669' }}>
+                                                                    <Label.Root>Active</Label.Root>
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => openActivateDialog(selected.id)}
+                                                                    className="school-year-activate-button"
+                                                                >
+                                                                    <Label.Root>Inactive</Label.Root>
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => openDeleteDialog(selected.id)}
+                                                                className="school-year-delete-button"
+                                                            >
+                                                                <TrashIcon />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="school-year-item-content">
+                                                        {selected.notes}
+                                                    </div>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    </>
+                },
+                {
                     label: "Courses",
                     Icon: () => <Image src="/icons/notebook.svg" alt="" width={20} height={20} style={{ filter: "brightness(0)" }} />,
                     panels: [
@@ -1163,7 +1163,7 @@ export default function Admin() {
                 <Dialog.Portal>
                     <Dialog.Overlay className="dialog-overlay" />
                     <Dialog.Content className="dialog-content">
-                        <Dialog.Title className="dialog-title">Confirm Archive Deletion</Dialog.Title>
+                        <Dialog.Title className="dialog-title">Confirm School Year Deletion</Dialog.Title>
                         <Dialog.Description className="dialog-description">
                             This action cannot be undone. Type <strong>delete</strong> to confirm.
                         </Dialog.Description>
@@ -1186,7 +1186,7 @@ export default function Admin() {
                                 <Label.Root>Cancel</Label.Root>
                             </button>
                             <button
-                                onClick={handleDeleteArchive}
+                                onClick={handleDeleteSchoolYear}
                                 disabled={deleteConfirmText !== 'delete'}
                                 className="import-button"
                                 style={{
@@ -1195,7 +1195,7 @@ export default function Admin() {
                                     cursor: deleteConfirmText === 'delete' ? 'pointer' : 'not-allowed'
                                 }}
                             >
-                                <Label.Root>Delete Archive</Label.Root>
+                                <Label.Root>Delete School Year</Label.Root>
                             </button>
                         </div>
                         <Dialog.Close asChild>
@@ -1257,9 +1257,9 @@ export default function Admin() {
                 <Dialog.Portal>
                     <Dialog.Overlay className="dialog-overlay" />
                     <Dialog.Content className="dialog-content">
-                        <Dialog.Title className="dialog-title">Confirm Set Active Archive</Dialog.Title>
+                        <Dialog.Title className="dialog-title">Confirm Set Active School Year</Dialog.Title>
                         <Dialog.Description className="dialog-description">
-                            This will mark the selected archive as the active archive. Type <strong>activate</strong> to confirm.
+                            This will mark the selected school year as the active school year. Type <strong>activate</strong> to confirm.
                         </Dialog.Description>
                         <div className="form-field-group" style={{ marginTop: '1rem' }}>
                             <Label.Root className="form-field-label">Type &apos;activate&apos; to confirm</Label.Root>
@@ -1280,7 +1280,7 @@ export default function Admin() {
                                 <Label.Root>Cancel</Label.Root>
                             </button>
                             <button
-                                onClick={handleSetActiveArchive}
+                                onClick={handleSetActiveSchoolYear}
                                 disabled={activateConfirmText !== 'activate'}
                                 className="import-button"
                                 style={{
