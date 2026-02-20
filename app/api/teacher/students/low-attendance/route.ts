@@ -49,6 +49,7 @@ export async function GET(req: Request) {
                     a.email        AS student_email,
                     c.id           AS course_id,
                     c.name         AS course_name,
+                    sd.section     AS student_section,
                     COUNT(DISTINCT CASE WHEN r.attendance IS NOT NULL THEN DATE(r.time) END) AS school_days,
                     COUNT(CASE WHEN r.attendance = 1 THEN 1 END) AS present_count,
                     COUNT(CASE WHEN r.attendance = 2 THEN 1 END) AS late_count,
@@ -61,7 +62,7 @@ export async function GET(req: Request) {
                     AND r.course = c.id
                     AND r.time IS NOT NULL
                 WHERE ${whereClause}
-                GROUP BY a.id, a.username, a.email, c.id, c.name
+                GROUP BY a.id, a.username, a.email, c.id, c.name, sd.section
             )
             SELECT
                 student_id,
@@ -69,6 +70,7 @@ export async function GET(req: Request) {
                 student_email,
                 course_id,
                 course_name,
+                student_section,
                 school_days      AS total_records,
                 present_count,
                 late_count,
@@ -97,6 +99,7 @@ export async function GET(req: Request) {
             email: row.student_email,
             courseId: row.course_id,
             courseName: row.course_name,
+            section: row.student_section || '',
             totalRecords: parseInt(row.total_records),
             presentCount: parseInt(row.present_count),
             lateCount: parseInt(row.late_count),

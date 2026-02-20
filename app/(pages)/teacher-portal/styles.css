@@ -1641,3 +1641,80 @@
     font-size: 14px;
     font-weight: 500;
 }
+
+/* At-Risk Badge on Course Cards */
+.at-risk-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 6px 10px;
+    background: #FFF3E0;
+    border: 1px solid #FFB74D;
+    border-radius: 6px;
+}
+
+.at-risk-badge-icon {
+    width: 14px;
+    height: 14px;
+    color: #E65100;
+    flex-shrink: 0;
+}
+
+.at-risk-badge-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #E65100;
+}
+
+/* At-Risk Students List on Section Cards */
+.at-risk-students-list {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #E0E0E0;
+}
+
+.at-risk-students-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.at-risk-students-names {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.at-risk-student-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: #FFF8E1;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.at-risk-student-icon {
+    width: 12px;
+    height: 12px;
+    color: #F57C00;
+    flex-shrink: 0;
+}
+
+.at-risk-student-name {
+    flex: 1;
+    color: #333;
+    font-weight: 500;
+}
+
+.at-risk-student-rate {
+    font-weight: 700;
+    color: #D84315;
+    font-size: 11px;
+}

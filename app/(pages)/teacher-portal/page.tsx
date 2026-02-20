@@ -46,6 +46,7 @@ interface LowAttendanceStudent {
     email: string;
     courseId: string;
     courseName: string;
+    section: string;
     totalRecords: number;
     presentCount: number;
     lateCount: number;
@@ -418,6 +419,9 @@ export default function Teacher() {
     const [isLoadingLowAttendance, setIsLoadingLowAttendance] = useState(false);
     const [lowAttendanceThreshold, setLowAttendanceThreshold] = useState(50);
 
+    // All at-risk students across all courses (for overview card + course/section annotations)
+    const [allAtRiskStudents, setAllAtRiskStudents] = useState<LowAttendanceStudent[]>([]);
+
     // Students at Risk drill-down state
     const [riskStep, setRiskStep] = useState<'courses' | 'sections' | 'list'>('courses');
     const [riskCourse, setRiskCourse] = useState<{ id: string; name: string } | null>(null);
@@ -442,6 +446,13 @@ export default function Teacher() {
 
     // Total sections count
     const totalSections = courses.reduce((sum, c) => sum + (c.sectionCount || 0), 0);
+
+    // Computed at-risk values from allAtRiskStudents
+    const totalAtRiskStudents = new Set(allAtRiskStudents.map(s => s.id)).size;
+    const sectionsWithAtRisk = new Set(allAtRiskStudents.map(s => `${s.courseId}:${s.section}`).filter(Boolean)).size;
+    const atRiskCountByCourse = (courseId: string) => allAtRiskStudents.filter(s => s.courseId === courseId).length;
+    const atRiskStudentsForSection = (courseId: string, section: string) =>
+        allAtRiskStudents.filter(s => s.courseId === courseId && s.section === section);
 
     // Trend Data State
     const [dailyTrendData, setDailyTrendData] = useState<Array<{
@@ -583,6 +594,23 @@ export default function Teacher() {
         
         fetchStudentCount();
     }, []);
+
+    // Fetch all at-risk students across all courses (for overview card + annotations)
+    useEffect(() => {
+        const fetchAllAtRisk = async () => {
+            try {
+                const params = new URLSearchParams({ threshold: String(lowAttendanceThreshold) });
+                const response = await fetch(`/api/teacher/students/low-attendance?${params.toString()}`);
+                const result = await response.json();
+                if (result.success) {
+                    setAllAtRiskStudents(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching all at-risk students:', error);
+            }
+        };
+        fetchAllAtRisk();
+    }, [lowAttendanceThreshold]);
 
     // Fetch today's attendance data
     useEffect(() => {
@@ -1168,6 +1196,17 @@ export default function Teacher() {
                             </div>
                         </div>
                     </div>,
+
+                    <div key="at-risk-sections" className="teacher-panel-card low-attendance-alert">
+                        <ExclamationTriangleIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Sections with Students at Risk</div>
+                            <div className="teacher-panel-value">
+                                {new Set(allAtRiskStudents.filter(s => s.courseId === selectedOverviewCourse?.id).map(s => s.section)).size}
+                            </div>
+                            <div className="teacher-panel-sub">Below {lowAttendanceThreshold}% attendance</div>
+                        </div>
+                    </div>,
                 ] : [
                     <div key="total-courses" className="teacher-panel-card enroll">
                         <BookmarkIcon className="teacher-panel-icon" />
@@ -1199,6 +1238,15 @@ export default function Teacher() {
                             <div className="teacher-panel-sub">
                                 Across all your courses
                             </div>
+                        </div>
+                    </div>,
+
+                    <div key="at-risk-sections" className="teacher-panel-card low-attendance-alert">
+                        <ExclamationTriangleIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Sections with Students at Risk</div>
+                            <div className="teacher-panel-value">{sectionsWithAtRisk}</div>
+                            <div className="teacher-panel-sub">Below {lowAttendanceThreshold}% attendance</div>
                         </div>
                     </div>,
                 ],
@@ -1721,12 +1769,12 @@ export default function Teacher() {
                         </div>
                     </div>,
                 ] : [
-                    <div key="at-risk-courses" className="teacher-panel-card enroll">
-                        <BookmarkIcon className="teacher-panel-icon" />
+                    <div key="at-risk-total" className="teacher-panel-card low-attendance-alert">
+                        <ExclamationTriangleIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Courses Handled</div>
-                            <div className="teacher-panel-value">{courses.length}</div>
-                            <div className="teacher-panel-sub">Select a course to start</div>
+                            <div className="teacher-panel-label">Total Students at Risk</div>
+                            <div className="teacher-panel-value">{totalAtRiskStudents}</div>
+                            <div className="teacher-panel-sub">Below {lowAttendanceThreshold}% attendance</div>
                         </div>
                     </div>,
                 ],
@@ -1750,6 +1798,7 @@ export default function Teacher() {
                                         return aPin - bPin;
                                     }).map(course => {
                                         const isPinned = course.id === pinnedRiskCourse;
+                                        const courseAtRiskCount = atRiskCountByCourse(course.id);
                                         return (
                                         <div
                                             key={course.id}
@@ -1791,6 +1840,14 @@ export default function Teacher() {
                                                         <span className="overview-course-stat-label">Students</span>
                                                     </div>
                                                 </div>
+                                                {courseAtRiskCount > 0 && (
+                                                    <div className="at-risk-badge-row">
+                                                        <ExclamationTriangleIcon className="at-risk-badge-icon" />
+                                                        <span className="at-risk-badge-text">
+                                                            {courseAtRiskCount} {courseAtRiskCount === 1 ? 'student' : 'students'} at risk
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                         );
@@ -1829,6 +1886,7 @@ export default function Teacher() {
                                             return aPin - bPin;
                                         }).map(sec => {
                                             const isPinned = sec.section === pinnedRiskSection;
+                                            const sectionAtRisk = riskCourse ? atRiskStudentsForSection(riskCourse.id, sec.section) : [];
                                             return (
                                             <div
                                                 key={sec.section}
@@ -1859,6 +1917,25 @@ export default function Teacher() {
                                                             {sec.studentCount === 1 ? 'Student' : 'Students'}
                                                         </span>
                                                     </div>
+                                                    {sectionAtRisk.length > 0 && (
+                                                        <div className="at-risk-students-list">
+                                                            <div className="at-risk-students-header">
+                                                                <ExclamationTriangleIcon className="at-risk-badge-icon" />
+                                                                <span className="at-risk-badge-text">
+                                                                    {sectionAtRisk.length} {sectionAtRisk.length === 1 ? 'student' : 'students'} at risk
+                                                                </span>
+                                                            </div>
+                                                            <ul className="at-risk-students-names">
+                                                                {sectionAtRisk.map((student) => (
+                                                                    <li key={student.id} className="at-risk-student-item">
+                                                                        <ExclamationTriangleIcon className="at-risk-student-icon" />
+                                                                        <span className="at-risk-student-name">{student.name}</span>
+                                                                        <span className="at-risk-student-rate">{student.attendanceRate}%</span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             );
