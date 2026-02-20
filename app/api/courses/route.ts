@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
 export async function GET() {
     try {
-        const result = await db.query(`SELECT id, name, schedule, teacher FROM course ORDER BY name`)
+        const result = await db.query(`SELECT id, name, schedule, teacher FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1') ORDER BY name`)
         return NextResponse.json({ success: true, status: 200, data: result.rows, error: null })
     } catch (error) {
         console.error('Error fetching courses:', error);

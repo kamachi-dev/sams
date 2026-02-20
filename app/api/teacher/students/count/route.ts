@@ -28,6 +28,7 @@ export async function GET(req: Request) {
             FROM enrollment_data e
             INNER JOIN course c ON e.course = c.id
             WHERE c.teacher = $1
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user.id])
 
         console.log('Query result:', result.rows)

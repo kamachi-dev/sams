@@ -58,19 +58,22 @@ async function getEnrolledCount(userId: string, courseFilter: string | null, sec
                  FROM enrollment_data e
                  INNER JOIN course c ON e.course = c.id
                  INNER JOIN student_data sd ON e.student = sd.student
-                 WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3`
+                 WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3
+                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
         params = [userId, courseFilter, sectionFilter]
     } else if (courseFilter) {
         query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
                  FROM enrollment_data e
                  INNER JOIN course c ON e.course = c.id
-                 WHERE c.teacher = $1 AND c.id = $2`
+                 WHERE c.teacher = $1 AND c.id = $2
+                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
         params = [userId, courseFilter]
     } else {
         query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
                  FROM enrollment_data e
                  INNER JOIN course c ON e.course = c.id
-                 WHERE c.teacher = $1`
+                 WHERE c.teacher = $1
+                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
         params = [userId]
     }
 
@@ -93,7 +96,8 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
                    AND sd.section = $3
                    AND r.time IS NOT NULL
                    AND DATE(r.time) >= $4
-                   AND DATE(r.time) <= $5`
+                   AND DATE(r.time) <= $5
+                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
         params = [userId, courseFilter, sectionFilter, startStr, endStr]
     } else if (courseFilter) {
         query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
@@ -103,7 +107,8 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
                    AND c.id = $2
                    AND r.time IS NOT NULL
                    AND DATE(r.time) >= $3
-                   AND DATE(r.time) <= $4`
+                   AND DATE(r.time) <= $4
+                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
         params = [userId, courseFilter, startStr, endStr]
     } else {
         query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
@@ -112,7 +117,8 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
                  WHERE c.teacher = $1
                    AND r.time IS NOT NULL
                    AND DATE(r.time) >= $2
-                   AND DATE(r.time) <= $3`
+                   AND DATE(r.time) <= $3
+                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
         params = [userId, startStr, endStr]
     }
 
@@ -146,6 +152,7 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                       AND r.time IS NOT NULL
                       AND DATE(r.time) >= $4
                       AND DATE(r.time) <= $5
+                      AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                     ORDER BY r.student, DATE(r.time), r.time ASC
                  ) AS first_records`
         params = [userId, courseFilter, sectionFilter, startStr, endStr]
@@ -164,6 +171,7 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                       AND r.time IS NOT NULL
                       AND DATE(r.time) >= $3
                       AND DATE(r.time) <= $4
+                      AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                     ORDER BY r.student, DATE(r.time), r.time ASC
                  ) AS first_records`
         params = [userId, courseFilter, startStr, endStr]
@@ -181,6 +189,7 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                       AND r.time IS NOT NULL
                       AND DATE(r.time) >= $2
                       AND DATE(r.time) <= $3
+                      AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                     ORDER BY r.student, DATE(r.time), r.time ASC
                  ) AS first_records`
         params = [userId, startStr, endStr]

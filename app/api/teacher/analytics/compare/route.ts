@@ -40,6 +40,7 @@ export async function GET(req: Request) {
             INNER JOIN account a ON e.student = a.id
             LEFT JOIN record r ON r.student = a.id AND r.course = c.id
             WHERE c.teacher = $1 AND a.id = $2 AND c.id = $3
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             GROUP BY a.id, a.username, c.name
         `, [user.id, studentId, courseId])
 
@@ -55,6 +56,7 @@ export async function GET(req: Request) {
             INNER JOIN course c ON e.course = c.id
             LEFT JOIN record r ON r.student = e.student AND r.course = c.id
             WHERE c.teacher = $1 AND c.id = $2
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user.id, courseId])
 
         // Get monthly breakdown for both student and class
@@ -69,6 +71,7 @@ export async function GET(req: Request) {
             FROM record r
             INNER JOIN course c ON r.course = c.id
             WHERE c.teacher = $1 AND r.student = $2 AND c.id = $3
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             GROUP BY TO_CHAR(r.time, 'Mon'), EXTRACT(MONTH FROM r.time)
             ORDER BY month_num
         `, [user.id, studentId, courseId])
@@ -84,6 +87,7 @@ export async function GET(req: Request) {
             FROM record r
             INNER JOIN course c ON r.course = c.id
             WHERE c.teacher = $1 AND c.id = $2
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             GROUP BY TO_CHAR(r.time, 'Mon'), EXTRACT(MONTH FROM r.time)
             ORDER BY month_num
         `, [user.id, courseId])

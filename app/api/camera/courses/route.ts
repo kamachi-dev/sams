@@ -14,7 +14,7 @@ export async function GET(req: Request) {
         if (courseId) {
             // Get course info
             const courseResult = await db.query(
-                `SELECT id, name, schedule, teacher FROM course WHERE id = $1`,
+                `SELECT id, name, schedule, teacher FROM course WHERE id = $1 AND school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
                 [courseId]
             )
             if (courseResult.rows.length === 0) {
@@ -49,6 +49,7 @@ export async function GET(req: Request) {
             const result = await db.query(`
                 SELECT id, name, schedule, teacher
                 FROM course
+                WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY name
             `)
             return NextResponse.json({

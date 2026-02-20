@@ -27,6 +27,7 @@ export async function GET() {
             INNER JOIN course c ON e.course = c.id
             LEFT JOIN record r ON r.course = c.id AND r.student = e.student
             WHERE e.student = $1
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             GROUP BY c.id, c.name
             ORDER BY c.name
         `, [user.id])

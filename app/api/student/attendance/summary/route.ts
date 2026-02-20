@@ -24,6 +24,7 @@ export async function GET() {
                 COUNT(*) as total_days
             FROM record r
             WHERE r.student = $1
+              AND r.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
         `, [user.id])
 
         const data = result.rows[0]
@@ -44,6 +45,7 @@ export async function GET() {
             SELECT COUNT(DISTINCT course) as total_subjects
             FROM enrollment_data
             WHERE student = $1
+              AND course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
         `, [user.id])
 
         const totalSubjects = parseInt(enrollmentResult.rows[0]?.total_subjects || '0')

@@ -37,19 +37,22 @@ export async function GET(req: Request) {
                FROM enrollment_data e
                INNER JOIN course c ON e.course = c.id
                LEFT JOIN student_data sd ON sd.student = e.student
-               WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3`
+               WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3
+                 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
             totalParams = [user.id, courseFilter, sectionFilter]
         } else if (courseFilter) {
             totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
                FROM enrollment_data e
                INNER JOIN course c ON e.course = c.id
-               WHERE c.teacher = $1 AND c.id = $2`
+               WHERE c.teacher = $1 AND c.id = $2
+                 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
             totalParams = [user.id, courseFilter]
         } else {
             totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
                FROM enrollment_data e
                INNER JOIN course c ON e.course = c.id
-               WHERE c.teacher = $1`
+               WHERE c.teacher = $1
+                 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
             totalParams = [user.id]
         }
         
@@ -68,6 +71,7 @@ export async function GET(req: Request) {
                 ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = e.student' : ''}
                 WHERE c.teacher = $2 AND c.id = $3
                 ${sectionFilter ? 'AND sd.section = $4' : ''}
+                AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ),
             student_best_attendance AS (
                 -- For each student, get their BEST attendance for THIS SPECIFIC COURSE today
@@ -94,10 +98,12 @@ export async function GET(req: Request) {
                 FROM enrollment_data e
                 INNER JOIN course c ON e.course = c.id
                 WHERE c.teacher = $2
+                  AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ),
             teacher_courses AS (
                 -- Get all course IDs taught by this teacher
                 SELECT id FROM course WHERE teacher = $2
+                  AND school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ),
             student_best_attendance AS (
                 -- For each student, get their BEST attendance across all courses today

@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
         // Verify teacher owns this course
         const courseCheck = await db.query(
-            `SELECT id, name FROM course WHERE id = $1 AND teacher = $2`,
+            `SELECT id, name FROM course WHERE id = $1 AND teacher = $2 AND school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
             [courseId, user.id]
         )
 

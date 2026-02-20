@@ -60,6 +60,7 @@ export async function GET(req: Request) {
                 AND DATE(r.time) <= $2
                 AND r.course = c.id
             WHERE c.teacher = $3 AND c.id = $4
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ${sectionFilter ? 'AND sd.section = $5' : ''}
             ORDER BY 
                 a.id,
@@ -81,6 +82,7 @@ export async function GET(req: Request) {
                 AND DATE(r.time) = $1
                 AND r.course = c.id
             WHERE c.teacher = $2 AND c.id = $3
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ${sectionFilter ? 'AND sd.section = $4' : ''}
             ORDER BY 
                 a.id,

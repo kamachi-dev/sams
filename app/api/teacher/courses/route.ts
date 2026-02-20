@@ -27,6 +27,7 @@ export async function GET() {
             LEFT JOIN enrollment_data e ON e.course = c.id
             LEFT JOIN student_data sd ON sd.student = e.student
             WHERE c.teacher = $1
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             GROUP BY c.id, c.name, c.schedule
             ORDER BY c.name
         `, [user.id])

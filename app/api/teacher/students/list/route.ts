@@ -34,6 +34,7 @@ export async function GET(req: Request) {
             INNER JOIN course c ON e.course = c.id
             INNER JOIN account a ON e.student = a.id
             WHERE c.teacher = $1 AND c.id = $2
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ORDER BY a.username ASC
         `, [user.id, courseId])
 

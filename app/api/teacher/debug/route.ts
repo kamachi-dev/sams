@@ -12,6 +12,7 @@ export async function GET() {
             SELECT id, name, teacher, archive 
             FROM course 
             WHERE teacher = $1
+              AND school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user?.id])
 
         // Get all enrollments for these courses
@@ -20,6 +21,7 @@ export async function GET() {
             FROM enrollment_data e
             INNER JOIN course c ON e.course = c.id
             WHERE c.teacher = $1
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user?.id])
 
         // Try to get account information for enrolled students (using SELECT * to see all columns)
@@ -36,6 +38,7 @@ export async function GET() {
             FROM enrollment_data e
             INNER JOIN course c ON e.course = c.id
             WHERE c.teacher = $1 
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user?.id])
 
         return NextResponse.json({

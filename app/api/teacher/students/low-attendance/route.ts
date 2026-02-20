@@ -20,7 +20,7 @@ export async function GET(req: Request) {
         const threshold = parseFloat(searchParams.get('threshold') || '50')
 
         // Build dynamic WHERE clauses based on filters
-        const conditions: string[] = ['c.teacher = $1']
+        const conditions: string[] = ['c.teacher = $1', `c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`]
         const params: any[] = [user.id]
         let paramIdx = 2
 

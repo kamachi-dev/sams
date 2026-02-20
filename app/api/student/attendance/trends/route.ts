@@ -93,6 +93,7 @@ export async function GET(req: Request) {
                     INNER JOIN enrollment_data e ON r.course = e.course AND r.student = e.student
                     WHERE e.student = $1
                       AND DATE(r.time) = $2
+                      AND e.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
                 `
                 const params: any[] = [user.id, dateStr]
                 
@@ -168,6 +169,7 @@ export async function GET(req: Request) {
                     WHERE e.student = $1
                       AND DATE(r.time) >= $2
                       AND DATE(r.time) <= $3
+                      AND e.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
                 `
                 const params: any[] = [user.id, startStr, endStr]
                 
@@ -229,6 +231,7 @@ export async function GET(req: Request) {
                     WHERE e.student = $1
                       AND DATE(r.time) >= $2
                       AND DATE(r.time) <= $3
+                      AND e.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
                 `
                 const params: any[] = [user.id, startStr, endStr]
                 
@@ -313,6 +316,7 @@ export async function GET(req: Request) {
                     WHERE e.student = $1
                       AND DATE(r.time) >= $2
                       AND DATE(r.time) <= $3
+                      AND e.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
                 `
                 const params: any[] = [user.id, startStr, endStr]
                 

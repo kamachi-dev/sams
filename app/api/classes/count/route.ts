@@ -4,7 +4,7 @@ import db from '@/app/services/database'
 export async function GET() {
     try {
         const data = (await db.query(
-            "SELECT COUNT(*) FROM course"
+            "SELECT COUNT(*) FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1')"
         )).rows[0];
 
         return NextResponse.json({
