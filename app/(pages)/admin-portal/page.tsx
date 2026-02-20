@@ -1051,8 +1051,8 @@ export default function Admin() {
                                         {selectedViewCourse ? (
                                             <>
                                                 <div className="course-header-row">
-                                                    <Label.Root className="archive-form-title">{selectedViewCourse.name}</Label.Root>
-                                                    <button className="archive-delete-button" onClick={() => openCourseDeleteDialog(selectedViewCourse)} title="Delete course">
+                                                    <Label.Root className="school-year-form-title">{selectedViewCourse.name}</Label.Root>
+                                                    <button className="school-year-delete-button" onClick={() => openCourseDeleteDialog(selectedViewCourse)} title="Delete course">
                                                         <TrashIcon />
                                                     </button>
                                                 </div>
@@ -1100,9 +1100,9 @@ export default function Admin() {
                             </Tabs.Content>
 
                             <Tabs.Content value="create" className="tab-content">
-                                <div className="archive-form full-form">
-                                    <Label.Root className="archive-form-title">Create Course</Label.Root>
-                                    <div className="archive-form-container w-full">
+                                <div className="school-year-form full-form">
+                                    <Label.Root className="school-year-form-title">Create Course</Label.Root>
+                                    <div className="school-year-form-container w-full">
                                         <div className="form-field-group">
                                             <Label.Root className="form-field-label">Course Name</Label.Root>
                                             <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} className="school-year-input" placeholder="e.g., Algebra 1" />

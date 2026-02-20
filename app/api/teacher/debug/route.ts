@@ -9,7 +9,7 @@ export async function GET() {
 
         // Get all courses for this teacher
         const coursesResult = await db.query(`
-            SELECT id, name, teacher, archive 
+            SELECT id, name, teacher, school_year 
             FROM course 
             WHERE teacher = $1
               AND school_year = (SELECT active_school_year FROM meta WHERE id='1')
