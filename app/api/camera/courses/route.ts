@@ -14,7 +14,7 @@ export async function GET(req: Request) {
         if (courseId) {
             // Get course info
             const courseResult = await db.query(
-                `SELECT id, name, schedule, teacher FROM course WHERE id = $1 AND school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
+                `SELECT id, name, schedule, teacher FROM course WHERE id = $1`,
                 [courseId]
             )
             if (courseResult.rows.length === 0) {
@@ -22,12 +22,12 @@ export async function GET(req: Request) {
             }
             const course = courseResult.rows[0]
 
-            // Get enrolled students
+            // Get enrolled students filtered by section
             const studentsQuery = `
                 SELECT a.id, a.username as name, a.email, sd.section
                 FROM enrollment_data e
                 INNER JOIN account a ON e.student = a.id
-                LEFT JOIN student_data sd ON sd.student = a.id
+                INNER JOIN student_data sd ON sd.student = a.id
                 WHERE e.course = $1
                 ${section ? 'AND sd.section = $2' : ''}
                 ORDER BY a.username ASC
@@ -49,7 +49,6 @@ export async function GET(req: Request) {
             const result = await db.query(`
                 SELECT id, name, schedule, teacher
                 FROM course
-                WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY name
             `)
             return NextResponse.json({
