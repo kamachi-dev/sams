@@ -14,11 +14,11 @@ export async function GET() {
             }, { status: 401 })
         }
 
-        // Get attendance by subject for enrolled courses only
+        // Get attendance by course for enrolled courses only
         // attendance: 1=present, 2=late, 0=absent
         const result = await db.query(`
             SELECT 
-                c.name as subject,
+                c.name as course_name,
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late,
                 COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent,
@@ -32,7 +32,7 @@ export async function GET() {
             ORDER BY c.name
         `, [user.id])
 
-        const subjects = result.rows.map(row => {
+        const courses = result.rows.map(row => {
             const present = parseInt(row.present || '0')
             const late = parseInt(row.late || '0')
             const absent = parseInt(row.absent || '0')
@@ -45,7 +45,7 @@ export async function GET() {
                 : '0.0'
 
             return {
-                subject: row.subject,
+                course: row.course_name,
                 present,
                 late,
                 absent,
@@ -55,13 +55,13 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
-            data: subjects
+            data: courses
         })
     } catch (error) {
-        console.error('Error fetching subject attendance:', error)
+        console.error('Error fetching course attendance:', error)
         return NextResponse.json({
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to fetch subject attendance'
+            error: error instanceof Error ? error.message : 'Failed to fetch course attendance'
         }, { status: 500 })
     }
 }

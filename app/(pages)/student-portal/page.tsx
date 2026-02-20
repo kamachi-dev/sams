@@ -37,7 +37,7 @@ import {
   monthlyData,
   quarterlyData,
   notifications,
-  subjectAttendance,
+  courseAttendance,
   chartColors,
   attendanceAppeals,
 } from "./constants";
@@ -49,7 +49,7 @@ const absentDays = 1;
 const warnings = 4;
 const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
 const attendanceAlerts = (presentDays + lateDays);
-const totalSubjects = subjectAttendance.length;
+const totalCourses = courseAttendance.length;
 
 function getLateReason(record: any) {
   if (record.status !== "LATE") return "";
@@ -63,10 +63,10 @@ export default function Student() {
     "daily" | "weekly" | "monthly" | "quarterly"
   >("weekly");
 
-  const [selectedSubject, setSelectedSubject] = useState("all");
+  const [selectedCourse, setSelectedCourse] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "analytics" | "subjects"
+    "overview" | "analytics" | "courses"
   >("overview");
 
   // 👉 notifications specific
@@ -88,11 +88,11 @@ export default function Student() {
     absentDays: 0,
     totalDays: 0,
     attendanceRate: 0,
-    totalSubjects: 0
+    totalCourses: 0
   });
 
-  const [subjectAttendance, setSubjectAttendance] = useState<Array<{
-    subject: string;
+  const [courseAttendance, setCourseAttendance] = useState<Array<{
+    course: string;
     present: number;
     late: number;
     absent: number;
@@ -133,7 +133,7 @@ export default function Student() {
     if (!selectedRecord || !appealReason.trim()) return;
     const newAppeal = {
       id: Date.now(),
-      subject: selectedRecord.subject,
+      course: selectedRecord.course,
       date: selectedRecord.date,
       recordedStatus: selectedRecord.status,
       requestedStatus: "Present",
@@ -148,7 +148,7 @@ export default function Student() {
     // remove from LEFT (issues)
     setRecords(prev =>
       prev.filter(r =>
-        !(r.subject === selectedRecord.subject && 
+        !(r.course === selectedRecord.course && 
           r.date === selectedRecord.date)
       )
     );
@@ -161,16 +161,16 @@ export default function Student() {
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        const [infoRes, summaryRes, subjectsRes] = await Promise.all([
+        const [infoRes, summaryRes, coursesRes] = await Promise.all([
           fetch('/api/student/info'),
           fetch('/api/student/attendance/summary'),
-          fetch('/api/student/attendance/subjects')
+          fetch('/api/student/attendance/courses')
         ]);
 
-        const [infoData, summaryData, subjectsData] = await Promise.all([
+        const [infoData, summaryData, coursesData] = await Promise.all([
           infoRes.json(),
           summaryRes.json(),
-          subjectsRes.json()
+          coursesRes.json()
         ]);
 
         if (infoData.success) {
@@ -181,8 +181,8 @@ export default function Student() {
           setAttendanceSummary(summaryData.data);
         }
 
-        if (subjectsData.success) {
-          setSubjectAttendance(subjectsData.data);
+        if (coursesData.success) {
+          setCourseAttendance(coursesData.data);
         }
       } catch (error) {
         console.error('Error fetching student data:', error);
@@ -203,8 +203,8 @@ export default function Student() {
           view: selectedView
         });
         
-        if (selectedSubject && selectedSubject !== 'all') {
-          params.append('subject', selectedSubject);
+        if (selectedCourse && selectedCourse !== 'all') {
+          params.append('course', selectedCourse);
         }
         
         const response = await fetch(`/api/student/attendance/trends?${params}`);
@@ -221,9 +221,9 @@ export default function Student() {
     };
 
     fetchTrendsData();
-  }, [selectedView, selectedSubject]);
+  }, [selectedView, selectedCourse]);
 
-  const { presentDays, lateDays, absentDays, totalDays, attendanceRate, totalSubjects } = attendanceSummary;
+  const { presentDays, lateDays, absentDays, totalDays, attendanceRate, totalCourses } = attendanceSummary;
 
   const pieData = [
     { name: "Present", value: presentDays, color: "var(--present)" },
@@ -257,11 +257,11 @@ export default function Student() {
           label: "Overview",
           Icon: DashboardIcon,
           panels: [
-            <div key="total-subjects" className="student-panel-card enroll">
+            <div key="total-courses" className="student-panel-card enroll">
               <BookmarkIcon className="student-panel-icon" />
               <div className="student-panel-content">
-                <div className="student-panel-label">Total Number of Subjects Enrolled</div>
-                <div className="student-panel-value">{totalSubjects}</div>
+                <div className="student-panel-label">Total Number of Courses Enrolled</div>
+                <div className="student-panel-value">{totalCourses}</div>
                 <div className="student-panel-sub">Active this semester</div>
               </div>
             </div>,
@@ -305,7 +305,7 @@ export default function Student() {
               <div className="student-split-layout">
 
                 {/* LEFT 40% */}
-                <div className="student-subjects-card-left">
+                <div className="student-courses-card-left">
                   <div className="student-info-card">
                     <div className="student-info-header">
                       <h3 className="student-info-title">Student Information</h3>
@@ -411,13 +411,13 @@ export default function Student() {
                       </select>
 
                       <select
-                        value={selectedSubject}
-                        onChange={(e) => setSelectedSubject(e.target.value)}
+                        value={selectedCourse}
+                        onChange={(e) => setSelectedCourse(e.target.value)}
                         className="teacher-select"
                       >
-                        <option value="all">All Subjects</option>
-                        {subjectAttendance.map((subject, index) => (
-                          <option key={index} value={subject.subject}>{subject.subject}</option>
+                        <option value="all">All Courses</option>
+                        {courseAttendance.map((courseItem, index) => (
+                          <option key={index} value={courseItem.course}>{courseItem.course}</option>
                         ))}
                       </select>
                     </div>
@@ -589,13 +589,13 @@ export default function Student() {
                 </div>
 
                 {/* RIGHT 60% */}
-                <div className="student-subjects-card-right">
-                  <h3 className="student-subjects-title">Attendance by Subject</h3>
-                  <div className="student-subjects-scroll">
-                    <table className="student-subjects-table">
+                <div className="student-courses-card-right">
+                  <h3 className="student-courses-title">Attendance by Course</h3>
+                  <div className="student-courses-scroll">
+                    <table className="student-courses-table">
                       <thead>
                         <tr>
-                          <th>Subject</th>
+                          <th>Course</th>
                           <th className="center">Present</th>
                           <th className="center">Late</th>
                           <th className="center">Absent</th>
@@ -606,44 +606,44 @@ export default function Student() {
                         {isLoading ? (
                           <tr>
                             <td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>
-                              Loading subjects...
+                              Loading courses...
                             </td>
                           </tr>
-                        ) : subjectAttendance.length === 0 ? (
+                        ) : courseAttendance.length === 0 ? (
                           <tr>
                             <td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>
-                              No enrolled subjects found
+                              No enrolled courses found
                             </td>
                           </tr>
                         ) : (
-                          subjectAttendance.map((subject, index) => (
+                          courseAttendance.map((courseItem, index) => (
                             <tr key={index}>
-                              <td className="subject-name">{subject.subject}</td>
+                              <td className="course-name">{courseItem.course}</td>
                               <td className="center">
-                                <span className="student-status-badge present">{subject.present}</span>
+                                <span className="student-status-badge present">{courseItem.present}</span>
                               </td>
                               <td className="center">
-                                <span className="student-status-badge late">{subject.late}</span>
+                                <span className="student-status-badge late">{courseItem.late}</span>
                               </td>
                               <td className="center">
-                                <span className="student-status-badge absent">{subject.absent}</span>
+                                <span className="student-status-badge absent">{courseItem.absent}</span>
                               </td>
                               <td className="center">
                                 <div className="student-progress-container">
                                   <div className="student-progress-bar">
                                     <div
                                       className={`student-progress-fill ${
-                                        subject.percentage >= 95
+                                        courseItem.percentage >= 95
                                           ? "good"
-                                          : subject.percentage >= 85
+                                          : courseItem.percentage >= 85
                                           ? "warning"
                                           : "danger"
                                       }`}
-                                      style={{ width: `${subject.percentage}%` }}
+                                      style={{ width: `${courseItem.percentage}%` }}
                                     ></div>
                                   </div>
                                   <span className="student-progress-text">
-                                    {subject.percentage}%
+                                    {courseItem.percentage}%
                                   </span>
                                 </div>
                               </td>
@@ -670,7 +670,7 @@ export default function Student() {
               <div className="student-panel-content">
                 <div className="student-panel-label">Available Appeals</div>
                 <div className="student-panel-value">{availableAppealsCount}</div>
-                <div className="student-panel-sub">Subjects eligible for appeal</div>
+                <div className="student-panel-sub">Courses eligible for appeal</div>
               </div>
             </div>,
 
@@ -724,8 +724,8 @@ export default function Student() {
                           >
 
                             <div className="appeal-item-header">
-                              <div className="appeal-item-subject">
-                                {record.subject}
+                              <div className="appeal-item-course">
+                                {record.course}
                               </div>
 
                               <div className="appeal-item-status">
@@ -786,8 +786,8 @@ export default function Student() {
                           </div>
 
                           <div className="appeal-field">
-                            <label>Subject</label>
-                            <input type="text" value={selectedRecord?.subject || ""} readOnly />
+                            <label>Course</label>
+                            <input type="text" value={selectedRecord?.course || ""} readOnly />
                           </div>
 
                           <div className="appeal-field">
@@ -841,8 +841,8 @@ export default function Student() {
                             >
                               <div className="appeal-history-header">
 
-                                <div className="appeal-history-subject">
-                                  {appeal.subject}
+                                <div className="appeal-history-course">
+                                  {appeal.course}
                                 </div>
 
                                 <div className="appeal-history-status">
@@ -890,11 +890,11 @@ export default function Student() {
             label: "Notifications",
             Icon: BellIcon,
             panels: [
-                <div key="total-subjects" className="student-panel-card notifications">
+                <div key="total-courses" className="student-panel-card notifications">
                 <BookmarkIcon className="student-panel-icon" />
                 <div className="student-panel-content">
                     <div className="student-panel-label">Total Unread Notifications</div>
-                    <div className="student-panel-value">{totalSubjects}</div>
+                    <div className="student-panel-value">{totalCourses}</div>
                     <div className="student-panel-sub">From current semester</div>
                 </div>
                 </div>,
@@ -964,7 +964,7 @@ export default function Student() {
                                 </div>
 
                                 <div className="notification-title-row">
-                                <span className="notification-title">{n.subject}</span>
+                                <span className="notification-title">{n.course}</span>
                                 <span className="notification-prof">{n.prof}</span>
                                 </div>
 
@@ -1007,8 +1007,8 @@ export default function Student() {
                         {selectedNotification.type.toUpperCase()}
                     </h2>
 
-                    <div className="preview-subject">
-                        {selectedNotification.subject}
+                    <div className="preview-course">
+                        {selectedNotification.course}
                     </div>
 
                     <div className="preview-prof">

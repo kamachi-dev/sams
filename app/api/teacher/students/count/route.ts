@@ -22,7 +22,7 @@ export async function GET(req: Request) {
         console.log('Querying for teacher:', user.id)
 
         // Count distinct students enrolled in courses taught by this teacher
-        // Note: To only count students in active (non-archived) courses, add: AND c.archive IS NULL
+        // Only counts students in courses for the active school year
         const result = await db.query(`
             SELECT COUNT(DISTINCT e.student) as count
             FROM enrollment_data e

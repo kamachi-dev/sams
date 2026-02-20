@@ -1,7 +1,7 @@
 /* Student Portal Styles */
 
 /* Left Side */
-.student-subjects-card-left {
+.student-courses-card-left {
     margin: 0;
     height: 100%;
     display: flex;
@@ -346,8 +346,8 @@
     color: #BDBDBD;
 }
 
-/* Subject Table */
-.student-subject-table-container {
+/* Course Table */
+.student-course-table-container {
     background: var(--background1);
     padding: 8px;
     border-radius: 6px;
@@ -358,14 +358,14 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.student-subject-table-title {
+.student-course-table-title {
     color: #1F2F57;
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 8px;
 }
 
-.student-subject-table-scroll {
+.student-course-table-scroll {
     width: 100%;
     max-width: 100%;
     overflow-x: auto;
@@ -373,16 +373,16 @@
     overflow-y: auto;
 }
 
-.student-subject-table {
+.student-course-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.student-subject-table thead tr {
+.student-course-table thead tr {
     border-bottom: 2px solid #F2F2F2;
 }
 
-.student-subject-table th {
+.student-course-table th {
     text-align: left;
     padding: 8px 6px;
     color: #1F2F57;
@@ -391,49 +391,49 @@
     text-transform: uppercase;
 }
 
-.student-subject-table th.center {
+.student-course-table th.center {
     text-align: center;
 }
 
-.student-subject-table tbody tr {
+.student-course-table tbody tr {
     border-bottom: 1px solid #F2F2F2;
     transition: background 0.2s ease;
 }
 
-.student-subject-table tbody tr:hover {
+.student-course-table tbody tr:hover {
     background: #EAF4FF;
 }
 
-.student-subject-table td {
+.student-course-table td {
     padding: 10px 6px;
     color: #4F4F4F;
     font-size: 12px;
     font-weight: 500;
 }
 
-.student-subject-table td.center {
+.student-course-table td.center {
     text-align: center;
 }
 
-/* Subject Status Badges */
-.subject-badge {
+/* Course Status Badges */
+.course-badge {
     padding: 3px 8px;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 500;
 }
 
-.subject-badge.present {
+.course-badge.present {
     background: rgba(15, 157, 88, 0.15);
     color: #0F9D58;
 }
 
-.subject-badge.late {
+.course-badge.late {
     background: rgba(244, 180, 0, 0.15);
     color: #F4B400;
 }
 
-.subject-badge.absent {
+.course-badge.absent {
     background: rgba(219, 68, 55, 0.15);
     color: #DB4437;
 }
@@ -501,8 +501,8 @@
     font-size: 14px;
 }
 /*Right Side*/
-/* Subject Breakdown Table */
-.student-subjects-card-right {
+/* Course Breakdown Table */
+.student-courses-card-right {
     background: var(--background1);
     padding: 8px;
     border-radius: 6px;
@@ -516,14 +516,14 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.student-subjects-title {
+.student-courses-title {
     color: #1F2F57;
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 8px;
 }
 
-.student-subjects-scroll {
+.student-courses-scroll {
     width: 100%;
     flex: 1;
     max-width: 100%;
@@ -531,16 +531,16 @@
     overflow-y: auto;
 }
 
-.student-subjects-table {
+.student-courses-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.student-subjects-table thead tr {
+.student-courses-table thead tr {
     border-bottom: 2px solid #F2F2F2;
 }
 
-.student-subjects-table th {
+.student-courses-table th {
     text-align: left;
     padding: 8px 6px;
     color: #1F2F57;
@@ -549,31 +549,31 @@
     text-transform: uppercase;
 }
 
-.student-subjects-table th.center {
+.student-courses-table th.center {
     text-align: center;
 }
 
-.student-subjects-table tbody tr {
+.student-courses-table tbody tr {
     border-bottom: 1px solid #F2F2F2;
     transition: background 0.2s ease;
     cursor: pointer;
 }
 
-.student-subjects-table tbody tr:hover {
+.student-courses-table tbody tr:hover {
     background: #EAF4FF;
 }
 
-.student-subjects-table td {
+.student-courses-table td {
     padding: 10px 6px;
 }
 
-.student-subjects-table td.subject-name {
+.student-courses-table td.course-name {
     color: #4F4F4F;
     font-size: 1.1rem;
     font-weight: 500;
 }
 
-.student-subjects-table td.center {
+.student-courses-table td.center {
     text-align: center;
 }
 
@@ -807,7 +807,7 @@
   align-items: baseline;
   color: var(--accent1);
   font-weight: bold;
-  gap: 6px; /* 👈 controls space between subject and prof */
+  gap: 6px; /* 👈 controls space between course and prof */
 }
 
 /* RIGHT */
@@ -836,7 +836,7 @@
   margin-bottom: 6px;
 }
 
-.preview-subject {
+.preview-course {
   font-size: 16px;
   font-weight: 600;
 }
@@ -1055,7 +1055,7 @@
   font-weight: 600;
 }
 
-.appeal-item-subject {
+.appeal-item-course {
   font-size: 14px;
   color: var(--accent1);
 }

@@ -4,7 +4,7 @@ export const attendanceAppeals = [
     studentName: "Juan Carlos Ilano",
     section: "STEM-A",
     courseId: "CS105",
-    subject: "Computer Science",
+    course: "Computer Science",
 
     date: "2026-02-10",
     recordedStatus: "Absent",
@@ -25,7 +25,7 @@ export const attendanceAppeals = [
     studentName: "Juan Carlos Ilano",
     section: "STEM-A",
     courseId: "CIS241",
-    subject: "Mathematics",
+    course: "Mathematics",
 
     date: "2026-02-08",
     recordedStatus: "Late",
@@ -48,7 +48,7 @@ export const attendanceAppeals = [
     studentName: "Juan Carlos Ilano",
     section: "STEM-A",
     courseId: "ENG101",
-    subject: "English",
+    course: "English",
 
     date: "2026-02-05",
     recordedStatus: "Absent",
@@ -71,7 +71,7 @@ export const attendanceAppeals = [
     studentName: "Maria Santos",
     section: "STEM-B",
     courseId: "PHY101",
-    subject: "Physics",
+    course: "Physics",
 
     date: "2026-02-03",
     recordedStatus: "Late",
@@ -92,7 +92,7 @@ export const attendanceAppeals = [
     studentName: "Carlos Reyes",
     section: "STEM-A",
     courseId: "CHEM101",
-    subject: "Chemistry",
+    course: "Chemistry",
 
     date: "2026-02-01",
     recordedStatus: "Absent",

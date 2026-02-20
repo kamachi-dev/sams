@@ -14,7 +14,7 @@ export const studentInfo = {
 export const dailyAttendance = [
   {
     date: "Jan 2",
-    subject: "Computer Science",
+    course: "Computer Science",
     prof: "Prof. Navarro",
     classStart: "7:30 AM",
     classEnd: "8:30 AM",
@@ -23,7 +23,7 @@ export const dailyAttendance = [
   },
   {
     date: "Jan 4",
-    subject: "Mathematics",
+    course: "Mathematics",
     prof: "Prof. Rizal",
     classStart: "7:30 AM",
     classEnd: "8:30 AM",
@@ -32,7 +32,7 @@ export const dailyAttendance = [
   },
   {
     date: "Jan 7",
-    subject: "English",
+    course: "English",
     prof: "Prof. Santos",
     classStart: "9:00 AM",
     classEnd: "10:00 AM",
@@ -64,9 +64,9 @@ export const quarterlyData = [
 ];
 
 // ==========================
-// SUBJECT ATTENDANCE
+// COURSE ATTENDANCE
 // ==========================
-export const subjectAttendance = [
+export const courseAttendance = [
   { subject: "Mathematics", present: 38, late: 2, absent: 0, percentage: 95 },
   { subject: "Science", present: 36, late: 3, absent: 1, percentage: 90 },
   { subject: "English", present: 39, late: 1, absent: 0, percentage: 97.5 },
@@ -91,7 +91,7 @@ export const notifications = [
   {
     semester: "first",
     type: "late",
-    subject: "Computer Science",
+    course: "Computer Science",
     code: "CS105_P",
     prof: "Prof. Navarro",
     time: "Mon 7:45 AM",
@@ -101,7 +101,7 @@ export const notifications = [
   {
     semester: "first",
     type: "absent",
-    subject: "Mathematics",
+    course: "Mathematics",
     code: "CIS241_P",
     prof: "Prof. Rizal",
     time: "Tue 9:00 AM",
@@ -111,7 +111,7 @@ export const notifications = [
   {
     semester: "first",
     type: "warning",
-    subject: "English",
+    course: "English",
     code: "ENG101_P",
     prof: "Prof. Santos",
     time: "Wed 10:30 AM",
@@ -121,7 +121,7 @@ export const notifications = [
   {
     semester: "first",
     type: "warning",
-    subject: "Physical Education",
+    course: "Physical Education",
     code: "PE101_P",
     prof: "Prof. Garcia",
     time: "Thu 7:15 AM",
@@ -131,7 +131,7 @@ export const notifications = [
   {
     semester: "first",
     type: "warning",
-    subject: "Ethics",
+    course: "Ethics",
     code: "ETH201_P",
     prof: "Prof. Morales",
     time: "Fri 2:00 PM",
@@ -141,17 +141,17 @@ export const notifications = [
   {
     semester: "first",
     type: "late",
-    subject: "Statistics",
+    course: "Statistics",
     code: "STAT201_P",
     prof: "Prof. Lim",
     time: "Mon 3:10 PM",
     message:
-      "You arrived late to your Statistics class. Please be mindful of punctuality, as repeated late arrivals may disrupt the lesson and impact your attendance standing for this subject."
+      "You arrived late to your Statistics class. Please be mindful of punctuality, as repeated late arrivals may disrupt the lesson and impact your attendance standing for this course."
   },
   {
     semester: "first",
     type: "warning",
-    subject: "Research",
+    course: "Research",
     code: "RES301_P",
     prof: "Prof. Villanueva",
     time: "Tue 11:45 AM",
@@ -161,7 +161,7 @@ export const notifications = [
   {
     semester: "first",
     type: "late",
-    subject: "Filipino",
+    course: "Filipino",
     code: "FIL102_P",
     prof: "Prof. Dela Cruz",
     time: "Wed 8:00 AM",
@@ -171,7 +171,7 @@ export const notifications = [
   {
     semester: "first",
     type: "absent",
-    subject: "Entrepreneurship",
+    course: "Entrepreneurship",
     code: "ENT101_P",
     prof: "Prof. Bautista",
     time: "Thu 10:00 AM",
@@ -181,7 +181,7 @@ export const notifications = [
   {
     semester: "first",
     type: "late",
-    subject: "Social Sciences",
+    course: "Social Sciences",
     code: "CIS243_P",
     prof: "Prof. Kamachi",
     time: "Fri 12:15 PM",
@@ -195,7 +195,7 @@ export const notifications = [
   {
     semester: "second",
     type: "late",
-    subject: "English",
+    course: "English",
     code: "ENG102_P",
     prof: "Prof. Santos",
     time: "Mon 10:30 AM",
@@ -205,7 +205,7 @@ export const notifications = [
   {
     semester: "second",
     type: "absent",
-    subject: "Computer Science",
+    course: "Computer Science",
     code: "CS205_P",
     prof: "Prof. Navarro",
     time: "Tue 1:15 PM",
@@ -215,7 +215,7 @@ export const notifications = [
   {
     semester: "second",
     type: "warning",
-    subject: "Research",
+    course: "Research",
     code: "RES302_P",
     prof: "Prof. Villanueva",
     time: "Wed 11:45 AM",
@@ -225,7 +225,7 @@ export const notifications = [
   {
     semester: "second",
     type: "late",
-    subject: "Statistics",
+    course: "Statistics",
     code: "STAT202_P",
     prof: "Prof. Lim",
     time: "Thu 3:00 PM",
@@ -235,7 +235,7 @@ export const notifications = [
   {
     semester: "second",
     type: "absent",
-    subject: "Ethics",
+    course: "Ethics",
     code: "ETH202_P",
     prof: "Prof. Morales",
     time: "Fri 2:00 PM",
@@ -245,7 +245,7 @@ export const notifications = [
   {
     semester: "second",
     type: "late",
-    subject: "Filipino",
+    course: "Filipino",
     code: "FIL103_P",
     prof: "Prof. Dela Cruz",
     time: "Mon 8:00 AM",
@@ -255,7 +255,7 @@ export const notifications = [
   {
     semester: "second",
     type: "warning",
-    subject: "Entrepreneurship",
+    course: "Entrepreneurship",
     code: "ENT102_P",
     prof: "Prof. Bautista",
     time: "Tue 10:00 AM",
@@ -265,7 +265,7 @@ export const notifications = [
   {
     semester: "second",
     type: "late",
-    subject: "Physical Education",
+    course: "Physical Education",
     code: "PE102_P",
     prof: "Prof. Garcia",
     time: "Wed 7:30 AM",
@@ -275,7 +275,7 @@ export const notifications = [
   {
     semester: "second",
     type: "absent",
-    subject: "Mathematics",
+    course: "Mathematics",
     code: "CIS242_P",
     prof: "Prof. Rizal",
     time: "Thu 9:00 AM",
@@ -285,7 +285,7 @@ export const notifications = [
   {
     semester: "second",
     type: "late",
-    subject: "Social Sciences",
+    course: "Social Sciences",
     code: "CIS244_P",
     prof: "Prof. Kamachi",
     time: "Fri 12:30 PM",
@@ -307,7 +307,7 @@ export const attendanceAppeals = [
   {
     id: 1,
     date: "2026-02-10",
-    subject: "Computer Science",
+    course: "Computer Science",
     recordedStatus: "Absent",
     requestedStatus: "Present",
     reason: "I was present but the AI failed to recognize my face.",
@@ -319,7 +319,7 @@ export const attendanceAppeals = [
   {
     id: 2,
     date: "2026-02-08",
-    subject: "Mathematics",
+    course: "Mathematics",
     recordedStatus: "Late",
     requestedStatus: "Present",
     reason: "I arrived on time but camera detection was delayed.",
@@ -332,7 +332,7 @@ export const attendanceAppeals = [
   {
     id: 3,
     date: "2026-02-05",
-    subject: "English",
+    course: "English",
     recordedStatus: "Absent",
     requestedStatus: "Present",
     reason: "System error during attendance capture.",
@@ -345,7 +345,7 @@ export const attendanceAppeals = [
   {
     id: 4,
     date: "2026-02-03",
-    subject: "Physics",
+    course: "Physics",
     recordedStatus: "Late",
     requestedStatus: "Present",
     reason: "I entered the classroom on time but the camera detected me late.",
@@ -357,7 +357,7 @@ export const attendanceAppeals = [
   {
     id: 5,
     date: "2026-02-01",
-    subject: "Chemistry",
+    course: "Chemistry",
     recordedStatus: "Absent",
     requestedStatus: "Present",
     reason: "I believe the system failed to detect my attendance.",
@@ -369,7 +369,7 @@ export const attendanceAppeals = [
   {
     id: 6,
     date: "2026-02-01",
-    subject: "Chemistry",
+    course: "Chemistry",
     recordedStatus: "Absent",
     requestedStatus: "Present",
     reason: "I believe the system failed to detect my attendance.",

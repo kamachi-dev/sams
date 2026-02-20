@@ -40,15 +40,15 @@ export async function GET() {
             ? (((presentDays * 1) + (lateDays * 0.5) + (absentDays * 0)) / totalDays * 100).toFixed(1)
             : '0.0'
 
-        // Get total subjects enrolled
+        // Get total courses enrolled
         const enrollmentResult = await db.query(`
-            SELECT COUNT(DISTINCT course) as total_subjects
+            SELECT COUNT(DISTINCT course) as total_courses
             FROM enrollment_data
             WHERE student = $1
               AND course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
         `, [user.id])
 
-        const totalSubjects = parseInt(enrollmentResult.rows[0]?.total_subjects || '0')
+        const totalCourses = parseInt(enrollmentResult.rows[0]?.total_courses || '0')
 
         return NextResponse.json({
             success: true,
@@ -58,7 +58,7 @@ export async function GET() {
                 absentDays,
                 totalDays,
                 attendanceRate: parseFloat(attendanceRate),
-                totalSubjects
+                totalCourses
             }
         })
     } catch (error) {

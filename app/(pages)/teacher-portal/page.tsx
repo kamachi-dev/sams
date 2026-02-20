@@ -140,7 +140,7 @@ function TeacherAppealsSection({ courses }: any) {
                             value={selectedCourseFilter}
                             onChange={(e) => setSelectedCourseFilter(e.target.value)}
                         >
-                            <option value="all">All Subjects</option>
+                            <option value="all">All Courses</option>
                             {courses.map((c: any) => (
                                 <option key={c.id} value={c.id}>
                                     {c.name}
@@ -175,7 +175,7 @@ function TeacherAppealsSection({ courses }: any) {
                                     onClick={() => setSelectedAppeal(appeal)}
                                 >
                                     <div className="appeal-item-header">
-                                        <div className="appeal-item-subject">
+                                        <div className="appeal-item-course">
                                             {appeal.studentName}
                                         </div>
                                         <div className={`appeal-item-status ${appeal.status}`}>
@@ -183,7 +183,7 @@ function TeacherAppealsSection({ courses }: any) {
                                         </div>
                                     </div>
                                     <div className="appeal-item-prof">
-                                        {appeal.subject}
+                                        {appeal.course}
                                     </div>
                                     <div className="appeal-item-time-range">
                                         {appeal.date}
@@ -207,8 +207,8 @@ function TeacherAppealsSection({ courses }: any) {
                                         <input value={selectedAppeal?.studentName || ""} readOnly />
                                     </div>
                                     <div className="appeal-field">
-                                        <label>Subject</label>
-                                        <input value={selectedAppeal?.subject || ""} readOnly />
+                                        <label>Course</label>
+                                        <input value={selectedAppeal?.course || ""} readOnly />
                                     </div>
                                     <div className="appeal-field">
                                         <label>Date</label>
@@ -270,7 +270,7 @@ function TeacherAppealsSection({ courses }: any) {
                                     >
                                         <div className="appeal-history-header">
 
-                                            <div className="appeal-history-subject">
+                                            <div className="appeal-history-course">
                                                 {appeal.studentName}
                                             </div>
                                             <div className="appeal-history-status">
@@ -278,7 +278,7 @@ function TeacherAppealsSection({ courses }: any) {
                                             </div>
                                         </div>
                                         <div className="appeal-history-meta">
-                                            {appeal.subject} • {appeal.date}
+                                            {appeal.course} • {appeal.date}
                                         </div>
                                         <div className="appeal-history-reason">
                                             <strong>Student:</strong> {appeal.reason}
@@ -834,7 +834,7 @@ export default function Teacher() {
             let fileName = '';
             
             const courseLabel = selectedChartCourse === 'all' 
-                ? 'All Subjects' 
+                ? 'All Courses' 
                 : courses.find(c => c.id === selectedChartCourse)?.name || 'Selected Course';
             
             const sanitizedCourseLabel = courseLabel.replace(/[^a-z0-9]/gi, '_');
@@ -1169,10 +1169,10 @@ export default function Teacher() {
                         </div>
                     </div>,
                 ] : [
-                    <div key="total-subjects" className="teacher-panel-card enroll">
+                    <div key="total-courses" className="teacher-panel-card enroll">
                         <BookmarkIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Number of Subjects Handled</div>
+                            <div className="teacher-panel-label">Total Number of Courses Handled</div>
                             <div className="teacher-panel-value">{courses.length}</div>
                             <div className="teacher-panel-sub">Active this semester</div>
                         </div>
@@ -1212,7 +1212,7 @@ export default function Teacher() {
                                         <BookmarkIcon className="overview-step-icon" />
                                         Select a Course
                                     </h3>
-                                    <p className="overview-step-subtitle">Choose a subject to view attendance details</p>
+                                    <p className="overview-step-subtitle">Choose a course to view attendance details</p>
                                 </div>
                                 <div className="overview-cards-grid">
                                     {[...courses].sort((a, b) => {
@@ -1724,7 +1724,7 @@ export default function Teacher() {
                     <div key="at-risk-courses" className="teacher-panel-card enroll">
                         <BookmarkIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Subjects Handled</div>
+                            <div className="teacher-panel-label">Total Courses Handled</div>
                             <div className="teacher-panel-value">{courses.length}</div>
                             <div className="teacher-panel-sub">Select a course to start</div>
                         </div>
@@ -1741,7 +1741,7 @@ export default function Teacher() {
                                         <ExclamationTriangleIcon className="overview-step-icon" />
                                         Select a Course
                                     </h3>
-                                    <p className="overview-step-subtitle">Choose a subject to view students at risk of low attendance</p>
+                                    <p className="overview-step-subtitle">Choose a course to view students at risk of low attendance</p>
                                 </div>
                                 <div className="overview-cards-grid">
                                     {[...courses].sort((a, b) => {
@@ -1983,7 +1983,7 @@ export default function Teacher() {
                     <div key="compare-courses" className="teacher-panel-card enroll">
                         <BarChartIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Subjects Handled</div>
+                            <div className="teacher-panel-label">Total Courses Handled</div>
                             <div className="teacher-panel-value">{courses.length}</div>
                             <div className="teacher-panel-sub">Select a course to compare sections</div>
                         </div>
@@ -2000,7 +2000,7 @@ export default function Teacher() {
                                         <BarChartIcon className="overview-step-icon" />
                                         Select a Course
                                     </h3>
-                                    <p className="overview-step-subtitle">Choose a subject to compare attendance across its sections</p>
+                                    <p className="overview-step-subtitle">Choose a course to compare attendance across its sections</p>
                                 </div>
                                 <div className="overview-cards-grid">
                                     {[...courses].sort((a, b) => {

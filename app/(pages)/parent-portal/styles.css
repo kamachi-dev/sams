@@ -1,7 +1,7 @@
 /* Student Portal Styles */
 
 /* Left Side */
-.student-subjects-card-left {
+.student-courses-card-left {
     margin: 0;
     height: 100%;
     display: flex;
@@ -356,7 +356,7 @@
     color: #BDBDBD;
 }
 
-/* Subject Table */
+/* Course Table */
 .student-subject-table-container {
     background: var(--background1);
     padding: 8px;
@@ -425,25 +425,25 @@
     text-align: center;
 }
 
-/* Subject Status Badges */
-.subject-badge {
+/* Course Status Badges */
+.course-badge {
     padding: 3px 8px;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 500;
 }
 
-.subject-badge.present {
+.course-badge.present {
     background: rgba(15, 157, 88, 0.15);
     color: var(--present);
 }
 
-.subject-badge.late {
+.course-badge.late {
     background: rgba(244, 180, 0, 0.15);
     color: var(--late);
 }
 
-.subject-badge.absent {
+.course-badge.absent {
     background: rgba(219, 68, 55, 0.15);
     color: var(--absent);
 }
@@ -511,8 +511,8 @@
     font-size: 14px;
 }
 /*Right Side*/
-/* Subject Breakdown Table */
-.student-subjects-card-right {
+/* Course Breakdown Table */
+.student-courses-card-right {
     background: var(--background1);
     padding: 8px;
     border-radius: 6px;
@@ -526,14 +526,14 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.student-subjects-title {
+.student-courses-title {
     color: var(--accent1);
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 8px;
 }
 
-.student-subjects-scroll {
+.student-courses-scroll {
     width: 100%;
     flex: 1;
     max-width: 100%;
@@ -541,16 +541,16 @@
     overflow-y: auto;
 }
 
-.student-subjects-table {
+.student-courses-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.student-subjects-table thead tr {
+.student-courses-table thead tr {
     border-bottom: 2px solid #F2F2F2;
 }
 
-.student-subjects-table th {
+.student-courses-table th {
     text-align: left;
     padding: 8px 6px;
     color: var(--accent1);
@@ -559,31 +559,31 @@
     text-transform: uppercase;
 }
 
-.student-subjects-table th.center {
+.student-courses-table th.center {
     text-align: center;
 }
 
-.student-subjects-table tbody tr {
+.student-courses-table tbody tr {
     border-bottom: 1px solid #F2F2F2;
     transition: background 0.2s ease;
     cursor: pointer;
 }
 
-.student-subjects-table tbody tr:hover {
+.student-courses-table tbody tr:hover {
     background: #EAF4FF;
 }
 
-.student-subjects-table td {
+.student-courses-table td {
     padding: 10px 6px;
 }
 
-.student-subjects-table td.subject-name {
+.student-courses-table td.course-name {
     color: #4F4F4F;
     font-size: 1.1rem;
     font-weight: 500;
 }
 
-.student-subjects-table td.center {
+.student-courses-table td.center {
     text-align: center;
 }
 
@@ -883,7 +883,7 @@
   margin-bottom: 6px;
 }
 
-.preview-subject {
+.preview-course {
   font-size: 16px;
   font-weight: 600;
 }

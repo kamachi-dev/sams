@@ -38,7 +38,7 @@ import {
   weeklyTrend,
   monthlyData,
   quarterlyData,
-  subjectAttendance,
+  courseAttendance,
   notifications,
   children,
   chartColors,
@@ -52,7 +52,7 @@ const absentDays = 1;
 const warnings = 4;
 const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
 const attendanceAlerts = (presentDays + lateDays);
-const totalSubjects = subjectAttendance.length;
+const totalCourses = courseAttendance.length;
 const pieData = [
   { name: "Present", value: presentDays, color: "var(--present)" },
   { name: "Late", value: lateDays, color: "var(--late)" },
@@ -68,10 +68,10 @@ export default function Parent() {
   const [view, setView] = useState<"records" | "dashboard">("records");
   const [selectedChild, setSelectedChild] = useState<any>(null);
 
-  const [selectedSubject, setSelectedSubject] = useState("all");
+  const [selectedCourse, setSelectedCourse] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "analytics" | "subjects"
+    "overview" | "analytics" | "courses"
   >("overview");
 
   // 👉 notifications specific
@@ -292,7 +292,7 @@ export default function Parent() {
                       <div className="today-info">
                         <div><strong>Class:</strong> {child.today.classTime}</div>
                         <div><strong>Teacher:</strong> {child.today.teacher}</div>
-                        <div><strong>Subject:</strong> {child.today.subject}</div>
+                        <div><strong>Course:</strong> {child.today.course}</div>
                         <div><strong>Last Checked:</strong> {child.today.lastChecked}</div>
                       </div>
 
@@ -384,7 +384,7 @@ export default function Parent() {
               <div className="student-split-layout">
 
                 {/* LEFT */}
-                <div className="student-subjects-card-left">
+                <div className="student-courses-card-left">
                   <div className="student-info-card">
                     <div className="student-info-header">
                       <h3 className="student-info-title">Student Information</h3>
@@ -511,13 +511,13 @@ export default function Parent() {
                       </select>
 
                       <select
-                        value={selectedSubject}
+                        value={selectedCourse}
                         onChange={(e) =>
-                          setSelectedSubject(e.target.value)
+                          setSelectedCourse(e.target.value)
                         }
                         className="student-select"
                       >
-                        <option value="all">All Subjects</option>
+                        <option value="all">All Courses</option>
                         <option value="mathematics">Mathematics</option>
                         <option value="science">Science</option>
                         <option value="english">English</option>
@@ -608,16 +608,16 @@ export default function Parent() {
                 </div>
 
                 {/* RIGHT */}
-                <div className="student-subjects-card-right">
-                  <h3 className="student-subjects-title">
-                    Attendance by Subject
+                <div className="student-courses-card-right">
+                  <h3 className="student-courses-title">
+                    Attendance by Course
                   </h3>
 
-                  <div className="student-subjects-scroll">
-                    <table className="student-subjects-table">
+                  <div className="student-courses-scroll">
+                    <table className="student-courses-table">
                       <thead>
                         <tr>
-                          <th>Subject</th>
+                          <th>Course</th>
                           <th className="center">Present</th>
                           <th className="center">Late</th>
                           <th className="center">Absent</th>
@@ -625,24 +625,24 @@ export default function Parent() {
                         </tr>
                       </thead>
                       <tbody>
-                        {subjectAttendance.map((subject, index) => (
+                        {courseAttendance.map((courseItem, index) => (
                           <tr key={index}>
-                            <td className="subject-name">
-                              {subject.subject}
+                            <td className="course-name">
+                              {courseItem.course}
                             </td>
                             <td className="center">
                               <span className="student-status-badge present">
-                                {subject.present}
+                                {courseItem.present}
                               </span>
                             </td>
                             <td className="center">
                               <span className="student-status-badge late">
-                                {subject.late}
+                                {courseItem.late}
                               </span>
                             </td>
                             <td className="center">
                               <span className="student-status-badge absent">
-                                {subject.absent}
+                                {courseItem.absent}
                               </span>
                             </td>
                             <td className="center">
@@ -650,19 +650,19 @@ export default function Parent() {
                                 <div className="student-progress-bar">
                                   <div
                                     className={`student-progress-fill ${
-                                      subject.percentage >= 95
+                                      courseItem.percentage >= 95
                                         ? "good"
-                                        : subject.percentage >= 85
+                                        : courseItem.percentage >= 85
                                         ? "warning"
                                         : "danger"
                                     }`}
                                     style={{
-                                      width: `${subject.percentage}%`,
+                                      width: `${courseItem.percentage}%`,
                                     }}
                                   />
                                 </div>
                                 <span className="student-progress-text">
-                                  {subject.percentage}%
+                                  {courseItem.percentage}%
                                 </span>
                               </div>
                             </td>
@@ -681,11 +681,11 @@ export default function Parent() {
             label: "Notifications",
             Icon: BellIcon,
             panels: [
-                <div key="total-subjects" className="student-panel-card notifications">
+                <div key="total-courses" className="student-panel-card notifications">
                 <BookmarkIcon className="student-panel-icon" />
                 <div className="student-panel-content">
                     <div className="student-panel-label">Total Unread Notifications</div>
-                    <div className="student-panel-value">{totalSubjects}</div>
+                    <div className="student-panel-value">{totalCourses}</div>
                     <div className="student-panel-sub">From current semester</div>
                 </div>
                 </div>,
@@ -779,7 +779,7 @@ export default function Parent() {
                                 </div>
 
                                 <div className="notification-title-row">
-                                <span className="notification-title">{n.subject}</span>
+                                <span className="notification-title">{n.course}</span>
                                 <span className="notification-prof">{n.prof}</span>
                                 </div>
 
@@ -822,8 +822,8 @@ export default function Parent() {
                         {selectedNotification.type.toUpperCase()}
                     </h2>
 
-                    <div className="preview-subject">
-                        {selectedNotification.subject}
+                    <div className="preview-course">
+                        {selectedNotification.course}
                     </div>
 
                     <div className="preview-prof">

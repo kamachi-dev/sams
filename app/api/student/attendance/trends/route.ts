@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url)
         const view = searchParams.get('view') || 'weekly'
-        const subjectFilter = searchParams.get('subject') // optional subject/course filter
+        const courseFilter = searchParams.get('course') // optional course filter
 
         // Get student's ID from student_data table
         const studentResult = await db.query(
@@ -97,9 +97,9 @@ export async function GET(req: Request) {
                 `
                 const params: any[] = [user.id, dateStr]
 
-                if (subjectFilter && subjectFilter !== 'all') {
+                if (courseFilter && courseFilter !== 'all') {
                     query += ` AND r.course = $3`
-                    params.push(subjectFilter)
+                    params.push(courseFilter)
                 }
 
                 const result = await db.query(query, params)
@@ -173,9 +173,9 @@ export async function GET(req: Request) {
                 `
                 const params: any[] = [user.id, startStr, endStr]
 
-                if (subjectFilter && subjectFilter !== 'all') {
+                if (courseFilter && courseFilter !== 'all') {
                     query += ` AND r.course = $4`
-                    params.push(subjectFilter)
+                    params.push(courseFilter)
                 }
 
                 const result = await db.query(query, params)
@@ -235,9 +235,9 @@ export async function GET(req: Request) {
                 `
                 const params: any[] = [user.id, startStr, endStr]
 
-                if (subjectFilter && subjectFilter !== 'all') {
+                if (courseFilter && courseFilter !== 'all') {
                     query += ` AND r.course = $4`
-                    params.push(subjectFilter)
+                    params.push(courseFilter)
                 }
 
                 const result = await db.query(query, params)
@@ -320,9 +320,9 @@ export async function GET(req: Request) {
                 `
                 const params: any[] = [user.id, startStr, endStr]
 
-                if (subjectFilter && subjectFilter !== 'all') {
+                if (courseFilter && courseFilter !== 'all') {
                     query += ` AND r.course = $4`
-                    params.push(subjectFilter)
+                    params.push(courseFilter)
                 }
 
                 const result = await db.query(query, params)
