@@ -42,7 +42,11 @@ export async function POST(req: Request) {
 export async function GET() {
     try {
         const data = (await db.query(
-            `SELECT * FROM account WHERE role = 1`
+            `SELECT * FROM account WHERE role = 1
+              AND id IN (
+                SELECT DISTINCT teacher FROM course
+                WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1')
+              )`
         )).rows
         return NextResponse.json({ success: true, status: 200, data, error: null })
     } catch (error) {
