@@ -2060,9 +2060,9 @@ export default function Teacher() {
                     <div key="compare-courses" className="teacher-panel-card enroll">
                         <BarChartIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Courses Handled</div>
-                            <div className="teacher-panel-value">{courses.length}</div>
-                            <div className="teacher-panel-sub">Select a course to compare sections</div>
+                            <div className="teacher-panel-label">Courses Available for Comparison</div>
+                            <div className="teacher-panel-value">{courses.filter(c => (c.sectionCount || 0) > 1).length}</div>
+                            <div className="teacher-panel-sub">Courses with 2+ sections</div>
                         </div>
                     </div>,
                 ],
@@ -2080,7 +2080,7 @@ export default function Teacher() {
                                     <p className="overview-step-subtitle">Choose a course to compare attendance across its sections</p>
                                 </div>
                                 <div className="overview-cards-grid">
-                                    {[...courses].sort((a, b) => {
+                                    {[...courses].filter(c => (c.sectionCount || 0) > 1).sort((a, b) => {
                                         const aPin = a.id === pinnedCompareCourse ? -1 : 0;
                                         const bPin = b.id === pinnedCompareCourse ? -1 : 0;
                                         return aPin - bPin;
