@@ -9,6 +9,9 @@
     align-items: center;
     gap: 20px;
     border: none;
+    min-width: 0;          
+    width: 100%;           
+    box-sizing: border-box; 
 }
 
 .teacher-panel-card.attendance {
@@ -32,26 +35,31 @@
     width: 20%;
     height: 10%;
     opacity: 0.9;
+    flex-shrink: 0; 
 }
 
 .teacher-panel-content {
     flex: 1;
+    min-width: 0;
 }
 
 .teacher-panel-label {
     opacity: .9;
     font-weight: bold;
     font-size: 15px;
+    white-space: nowrap; 
 }
 
 .teacher-panel-value {
     font-size: 36px;
     font-weight: bold;
+    white-space: nowrap; 
 }
 
 .teacher-panel-sub {
     font-size: 12px;
     opacity: 0.8;
+    white-space: nowrap; 
 }
 
 /* Main Container */
@@ -59,8 +67,9 @@
     padding: 0px 10px 0px;
     width: 100%;
     max-width: 100%;
-    height: calc(100vh - 280px);
-    max-height: calc(100vh - 280px);
+
+    height: calc(100vh - 310px);
+    max-height: calc(100vh - 310px);
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -486,6 +495,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    overflow: hidden; 
 }
 
 .overview-step-header {
@@ -523,6 +533,7 @@
     align-items: center;
     gap: 10px;
     margin: 0;
+    padding-top: 4px; 
 }
 
 .overview-step-icon {
