@@ -2,7 +2,7 @@
 
 import SamsTemplate from "@/app/components/SamsTemplate";
 import Image from "next/image";
-import { Label, Separator, ToggleGroup, Dialog, Tabs } from "radix-ui";
+import { Label, Separator, ToggleGroup, Dialog, Tabs, Tooltip } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import './styles.css';
 import { PersonIcon, TrashIcon, CalendarIcon } from "@radix-ui/react-icons";
@@ -53,6 +53,16 @@ export default function Admin() {
     const [userToDeleteType, setUserToDeleteType] = useState<'student' | 'teacher' | null>(null);
     const [userDeleteConfirmText, setUserDeleteConfirmText] = useState<string>('');
     const [userSearch, setUserSearch] = useState<string>('');
+    const [revealedEmails, setRevealedEmails] = useState<Set<string>>(new Set());
+
+    function toggleEmailReveal(id: string) {
+        setRevealedEmails(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }
 
     // Courses management state
     const [courseName, setCourseName] = useState<string>('');
@@ -768,7 +778,24 @@ export default function Admin() {
                                                     )}
                                                     <div className="user-meta">
                                                         <div className="user-name">{s.username ?? s.email}</div>
-                                                        <div className="user-email">{s.email}</div>
+                                                        <Tooltip.Provider delayDuration={100}>
+                                                            <Tooltip.Root>
+                                                                <Tooltip.Trigger asChild>
+                                                                    <button
+                                                                        className="user-email user-email-masked"
+                                                                        onClick={() => toggleEmailReveal(s.id)}
+                                                                    >
+                                                                        {revealedEmails.has(s.id) ? s.email : '••••••••••••'}
+                                                                    </button>
+                                                                </Tooltip.Trigger>
+                                                                <Tooltip.Portal>
+                                                                    <Tooltip.Content className="tooltip-content" sideOffset={4}>
+                                                                        {revealedEmails.has(s.id) ? 'Click to hide email' : 'Click to reveal email'}
+                                                                        <Tooltip.Arrow className="tooltip-arrow" />
+                                                                    </Tooltip.Content>
+                                                                </Tooltip.Portal>
+                                                            </Tooltip.Root>
+                                                        </Tooltip.Provider>
                                                     </div>
                                                 </div>
                                                 <div className="user-actions">
@@ -818,7 +845,24 @@ export default function Admin() {
                                                     )}
                                                     <div className="user-meta">
                                                         <div className="user-name">{t.username ?? t.email}</div>
-                                                        <div className="user-email">{t.email}</div>
+                                                        <Tooltip.Provider delayDuration={100}>
+                                                            <Tooltip.Root>
+                                                                <Tooltip.Trigger asChild>
+                                                                    <button
+                                                                        className="user-email user-email-masked"
+                                                                        onClick={() => toggleEmailReveal(t.id)}
+                                                                    >
+                                                                        {revealedEmails.has(t.id) ? t.email : '••••••••••••'}
+                                                                    </button>
+                                                                </Tooltip.Trigger>
+                                                                <Tooltip.Portal>
+                                                                    <Tooltip.Content className="tooltip-content" sideOffset={4}>
+                                                                        {revealedEmails.has(t.id) ? 'Click to hide email' : 'Click to reveal email'}
+                                                                        <Tooltip.Arrow className="tooltip-arrow" />
+                                                                    </Tooltip.Content>
+                                                                </Tooltip.Portal>
+                                                            </Tooltip.Root>
+                                                        </Tooltip.Provider>
                                                     </div>
                                                 </div>
                                                 <button
