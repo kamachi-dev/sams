@@ -1062,24 +1062,19 @@
 }
 
 .low-attendance-table th:nth-child(1) { /* Student Name */
-    width: 18%;
-    min-width: 150px;
+    width: 30%;
+    min-width: 200px;
 }
 
-.low-attendance-table th:nth-child(2) { /* Email */
+.low-attendance-table th:nth-child(2) { /* Course */
     width: 22%;
-    min-width: 180px;
-}
-
-.low-attendance-table th:nth-child(3) { /* Course */
-    width: 20%;
     min-width: 150px;
 }
 
+.low-attendance-table th:nth-child(3),
 .low-attendance-table th:nth-child(4),
-.low-attendance-table th:nth-child(5),
-.low-attendance-table th:nth-child(6) { /* Present, Late, Absent */
-    width: 8%;
+.low-attendance-table th:nth-child(5) { /* Present, Absent, Attendance Rate */
+    width: 10%;
     min-width: 80px;
 }
 
@@ -1117,24 +1112,19 @@
 }
 
 .low-attendance-row td:nth-child(1) { /* Student Name */
-    width: 18%;
-    min-width: 150px;
+    width: 30%;
+    min-width: 200px;
 }
 
-.low-attendance-row td:nth-child(2) { /* Email */
+.low-attendance-row td:nth-child(2) { /* Course */
     width: 22%;
-    min-width: 180px;
-}
-
-.low-attendance-row td:nth-child(3) { /* Course */
-    width: 20%;
     min-width: 150px;
 }
 
+.low-attendance-row td:nth-child(3),
 .low-attendance-row td:nth-child(4),
-.low-attendance-row td:nth-child(5),
-.low-attendance-row td:nth-child(6) { /* Present, Late, Absent */
-    width: 8%;
+.low-attendance-row td:nth-child(5) { /* Present, Absent, Attendance Rate */
+    width: 10%;
     min-width: 80px;
 }
 
@@ -1728,4 +1718,38 @@
     font-weight: 700;
     color: #D84315;
     font-size: 11px;
+}
+
+/* Email Reveal Icon in Students at Risk Table */
+.student-name-email-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.email-reveal-icon {
+    width: 15px;
+    height: 15px;
+    color: #888;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.email-reveal-icon:hover {
+    color: #1DA1F2;
+    transform: scale(1.15);
+}
+
+.email-reveal-icon.active {
+    color: #1DA1F2;
+}
+
+.revealed-email {
+    font-size: 12px;
+    color: #1DA1F2;
+    font-weight: 500;
+    width: 100%;
+    padding-top: 2px;
 }

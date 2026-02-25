@@ -12,7 +12,8 @@ import {
     ExclamationTriangleIcon,
     BarChartIcon,
     ChevronLeftIcon,
-    ChevronRightIcon
+    ChevronRightIcon,
+    EnvelopeClosedIcon
 } from "@radix-ui/react-icons";
 import { 
     BarChart, 
@@ -418,6 +419,16 @@ export default function Teacher() {
     const [lowAttendanceStudents, setLowAttendanceStudents] = useState<LowAttendanceStudent[]>([]);
     const [isLoadingLowAttendance, setIsLoadingLowAttendance] = useState(false);
     const [lowAttendanceThreshold, setLowAttendanceThreshold] = useState(50);
+    const [revealedEmails, setRevealedEmails] = useState<Set<string>>(new Set());
+
+    const toggleEmailReveal = (studentKey: string) => {
+        setRevealedEmails(prev => {
+            const next = new Set(prev);
+            if (next.has(studentKey)) next.delete(studentKey);
+            else next.add(studentKey);
+            return next;
+        });
+    };
 
     // All at-risk students across all courses (for overview card + course/section annotations)
     const [allAtRiskStudents, setAllAtRiskStudents] = useState<LowAttendanceStudent[]>([]);
@@ -1987,7 +1998,6 @@ export default function Teacher() {
                                         <thead>
                                             <tr>
                                                 <th>Student Name</th>
-                                                <th>Email</th>
                                                 <th>Course</th>
                                                 <th className="center">Present</th>
                                                 <th className="center">Absent</th>
@@ -1997,13 +2007,13 @@ export default function Teacher() {
                                         <tbody>
                                             {isLoadingLowAttendance ? (
                                                 <tr>
-                                                    <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
+                                                    <td colSpan={5} style={{ textAlign: 'center', padding: '30px' }}>
                                                         Loading at-risk students...
                                                     </td>
                                                 </tr>
                                             ) : lowAttendanceStudents.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={6} style={{ textAlign: 'center', padding: '30px' }}>
+                                                    <td colSpan={5} style={{ textAlign: 'center', padding: '30px' }}>
                                                         <div className="no-low-attendance">
                                                             <span className="success-icon">✓</span>
                                                             <p>No students with attendance below {lowAttendanceThreshold}%</p>
@@ -2011,10 +2021,23 @@ export default function Teacher() {
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                lowAttendanceStudents.map((student) => (
-                                                    <tr key={`${student.id}-${student.courseId}`} className="low-attendance-row">
-                                                        <td className="student-name">{student.name}</td>
-                                                        <td className="student-email">{student.email}</td>
+                                                lowAttendanceStudents.map((student) => {
+                                                    const studentKey = `${student.id}-${student.courseId}`;
+                                                    const isEmailRevealed = revealedEmails.has(studentKey);
+                                                    return (
+                                                    <tr key={studentKey} className="low-attendance-row">
+                                                        <td className="student-name">
+                                                            <div className="student-name-email-wrapper">
+                                                                <span>{student.name}</span>
+                                                                <EnvelopeClosedIcon
+                                                                    className={`email-reveal-icon ${isEmailRevealed ? 'active' : ''}`}
+                                                                    onClick={() => toggleEmailReveal(studentKey)}
+                                                                />
+                                                                {isEmailRevealed && (
+                                                                    <span className="revealed-email">{student.email}</span>
+                                                                )}
+                                                            </div>
+                                                        </td>
                                                         <td className="course-name">{student.courseName}</td>
                                                         <td className="center present-cell">{student.presentCount}</td>
                                                         <td className="center absent-cell">{student.absentCount}</td>
@@ -2024,7 +2047,8 @@ export default function Teacher() {
                                                             </span>
                                                         </td>
                                                     </tr>
-                                                ))
+                                                    );
+                                                })
                                             )}
                                         </tbody>
                                     </table>
