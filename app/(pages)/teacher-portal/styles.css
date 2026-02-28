@@ -341,6 +341,25 @@
     transform: scale(1.02);
 }
 
+.teacher-export-format-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.teacher-export-format-btns .teacher-export-popover-confirm {
+    flex: 1;
+    font-size: 12px;
+    padding: 8px 6px;
+}
+
+.teacher-export-excel {
+    background: var(--present);
+}
+
+.teacher-export-pdf {
+    background: #DB4437;
+}
+
 .teacher-export-btn:hover:not(:disabled) {
     background: var(--present);
     transform: scale(1.02);

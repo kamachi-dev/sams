@@ -1,6 +1,9 @@
 "use client";
 
 import SamsTemplate from "@/app/components/SamsTemplate";
+import XLSX from 'xlsx-js-style';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   ThickArrowRightIcon,
   CalendarIcon,
@@ -63,6 +66,7 @@ export default function Student() {
 
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportPicker, setShowExportPicker] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "overview" | "analytics" | "courses"
   >("overview");
@@ -266,12 +270,437 @@ export default function Student() {
 
   const currentSemesterInfo = getCurrentSemester();
 
-  const handleExport = () => {
+  const handleExport = async (format: 'excel' | 'pdf' = 'excel') => {
     setIsExporting(true);
-    setTimeout(() => {
-      alert("Attendance report exported successfully!");
+    setShowExportPicker(false);
+    try {
+      // Gather data already in state
+      const name = studentData?.username || 'Student';
+      const grade = studentData?.grade_level || 'N/A';
+      const section = studentData?.section || 'N/A';
+      const { presentDays, lateDays, absentDays, totalDays, attendanceRate } = attendanceSummary;
+      const courses = courseAttendance;
+      const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      // Fetch detection records from API
+      let detectionRecords: { course: string; date: string; time: string; status: string; confidence: number | null }[] = [];
+      try {
+        const res = await fetch('/api/student/attendance/records');
+        const data = await res.json();
+        if (data.success) detectionRecords = data.data;
+      } catch { /* silently continue without detection data */ }
+
+      if (format === 'pdf') {
+        // ═══════════════════════════════════════════════════
+        // ── PDF Export ──
+        // ═══════════════════════════════════════════════════
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const mL = 14, mR = 14;
+        const contentW = pageW - mL - mR;
+        let curY = 10;
+
+        const navy: [number, number, number] = [31, 47, 87];
+        const green: [number, number, number] = [15, 157, 88];
+        const yellow: [number, number, number] = [244, 180, 0];
+        const red: [number, number, number] = [219, 68, 55];
+        const gray: [number, number, number] = [130, 130, 130];
+        const lightBg: [number, number, number] = [245, 247, 250];
+
+        // ── Header Bar ──
+        doc.setFillColor(...navy);
+        doc.rect(0, 0, pageW, 18, 'F');
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text('Student Attendance Report', pageW / 2, 11, { align: 'center' });
+        curY = 22;
+
+        // ── Green accent strip ──
+        doc.setFillColor(...green);
+        doc.rect(0, 18, pageW, 2.5, 'F');
+        curY = 24;
+
+        // ── Student Info Section ──
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...navy);
+        doc.text('Student Information', mL, curY);
+        curY += 2;
+        doc.setDrawColor(...green);
+        doc.setLineWidth(0.5);
+        doc.line(mL, curY, mL + 50, curY);
+        curY += 5;
+
+        const infoPairs = [
+          ['Student Name:', name],
+          ['Grade Level:', grade],
+          ['Section:', section],
+          ['Semester:', `${currentSemesterInfo.semester} (${currentSemesterInfo.range})`],
+          ['Date Generated:', dateStr],
+        ];
+        doc.setFontSize(9);
+        for (const [label, value] of infoPairs) {
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(80, 80, 80);
+          doc.text(label, mL, curY);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(50, 50, 50);
+          doc.text(value, mL + 38, curY);
+          curY += 5;
+        }
+        curY += 3;
+
+        // ── Attendance Summary Cards ──
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...navy);
+        doc.text('Attendance Summary', mL, curY);
+        curY += 2;
+        doc.setDrawColor(...green);
+        doc.line(mL, curY, mL + 50, curY);
+        curY += 4;
+
+        const cardW = (contentW - 12) / 4;
+        const cardH = 18;
+        const cards: { label: string; value: string; color: [number, number, number] }[] = [
+          { label: 'Present', value: String(presentDays), color: green },
+          { label: 'Late', value: String(lateDays), color: yellow },
+          { label: 'Absent', value: String(absentDays), color: red },
+          { label: 'Attendance Rate', value: `${attendanceRate}%`, color: navy },
+        ];
+        for (let i = 0; i < cards.length; i++) {
+          const x = mL + i * (cardW + 4);
+          doc.setFillColor(...lightBg);
+          doc.roundedRect(x, curY, cardW, cardH, 2, 2, 'F');
+          doc.setFillColor(...cards[i].color);
+          doc.rect(x, curY, 2, cardH, 'F');
+          doc.setFontSize(7.5);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 100, 100);
+          doc.text(cards[i].label, x + 5, curY + 6);
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...cards[i].color);
+          doc.text(cards[i].value, x + 5, curY + 14);
+        }
+        curY += cardH + 6;
+
+        // ── Total Days info strip ──
+        doc.setFillColor(235, 239, 244);
+        doc.roundedRect(mL, curY, contentW, 8, 1.5, 1.5, 'F');
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.text(`Total Recorded Days: ${totalDays}     |     Total Courses: ${courses.length}`, mL + 4, curY + 5.5);
+        curY += 13;
+
+        // ── Course Attendance Table ──
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...navy);
+        doc.text('Attendance by Course', mL, curY);
+        curY += 2;
+        doc.setDrawColor(...green);
+        doc.line(mL, curY, mL + 50, curY);
+        curY += 4;
+
+        const courseHead = [['Course', 'Present', 'Late', 'Absent', 'Total', 'Attendance Rate']];
+        const courseBody = courses.map(c => {
+          const total = c.present + c.late + c.absent;
+          return [
+            c.course,
+            { content: String(c.present), styles: { halign: 'center' as const, textColor: green, fontStyle: 'bold' as const } },
+            { content: String(c.late), styles: { halign: 'center' as const, textColor: yellow, fontStyle: 'bold' as const } },
+            { content: String(c.absent), styles: { halign: 'center' as const, textColor: red, fontStyle: 'bold' as const } },
+            { content: String(total), styles: { halign: 'center' as const } },
+            { content: `${c.percentage}%`, styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
+          ];
+        });
+
+        // Add totals row
+        const totalP = courses.reduce((s, c) => s + c.present, 0);
+        const totalL = courses.reduce((s, c) => s + c.late, 0);
+        const totalA = courses.reduce((s, c) => s + c.absent, 0);
+        const totalAll = totalP + totalL + totalA;
+        courseBody.push([
+          { content: 'TOTAL', styles: { fontStyle: 'bold' as const, fillColor: [235, 239, 244] as [number, number, number] } } as any,
+          { content: String(totalP), styles: { halign: 'center' as const, textColor: green, fontStyle: 'bold' as const, fillColor: [235, 239, 244] as [number, number, number] } },
+          { content: String(totalL), styles: { halign: 'center' as const, textColor: yellow, fontStyle: 'bold' as const, fillColor: [235, 239, 244] as [number, number, number] } },
+          { content: String(totalA), styles: { halign: 'center' as const, textColor: red, fontStyle: 'bold' as const, fillColor: [235, 239, 244] as [number, number, number] } },
+          { content: String(totalAll), styles: { halign: 'center' as const, fontStyle: 'bold' as const, fillColor: [235, 239, 244] as [number, number, number] } },
+          { content: `${attendanceRate}%`, styles: { halign: 'center' as const, fontStyle: 'bold' as const, fillColor: [235, 239, 244] as [number, number, number] } },
+        ]);
+
+        autoTable(doc, {
+          startY: curY,
+          head: courseHead,
+          body: courseBody as any,
+          theme: 'grid',
+          styles: { fontSize: 8.5, cellPadding: 2.5, lineColor: [200, 200, 200], lineWidth: 0.15 },
+          headStyles: { fillColor: navy, textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold', halign: 'center', cellPadding: 3 },
+          columnStyles: {
+            0: { cellWidth: contentW * 0.35 },
+            1: { cellWidth: contentW * 0.11, halign: 'center' },
+            2: { cellWidth: contentW * 0.11, halign: 'center' },
+            3: { cellWidth: contentW * 0.11, halign: 'center' },
+            4: { cellWidth: contentW * 0.12, halign: 'center' },
+            5: { cellWidth: contentW * 0.20, halign: 'center' },
+          },
+          alternateRowStyles: { fillColor: [248, 250, 253] },
+          margin: { left: mL, right: mR },
+          tableWidth: contentW,
+        });
+
+        // Get Y after the course table
+        curY = (doc as any).lastAutoTable.finalY + 8;
+
+        // ── Detection Log Table ──
+        if (detectionRecords.length > 0) {
+          // Check if we need a new page (if less than 40mm left for header + a few rows)
+          if (curY > pageH - 50) {
+            doc.addPage();
+            curY = 14;
+          }
+
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...navy);
+          doc.text('Detection Log', mL, curY);
+          curY += 2;
+          doc.setDrawColor(...green);
+          doc.setLineWidth(0.5);
+          doc.line(mL, curY, mL + 50, curY);
+          curY += 4;
+
+          const detHead = [['#', 'Course', 'Date', 'Time', 'Status', 'Confidence']];
+          const detBody = detectionRecords.map((rec, i) => {
+            const confStr = rec.confidence != null ? `${(rec.confidence * 100).toFixed(1)}%` : 'N/A';
+            const statusColor = rec.status === 'Present' ? green : rec.status === 'Late' ? yellow : red;
+            return [
+              { content: String(i + 1), styles: { halign: 'center' as const, textColor: gray } },
+              rec.course,
+              rec.date,
+              rec.time,
+              { content: rec.status, styles: { halign: 'center' as const, textColor: statusColor, fontStyle: 'bold' as const } },
+              { content: confStr, styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
+            ];
+          });
+
+          autoTable(doc, {
+            startY: curY,
+            head: detHead,
+            body: detBody as any,
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.15 },
+            headStyles: { fillColor: navy, textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold', halign: 'center', cellPadding: 2.5 },
+            columnStyles: {
+              0: { cellWidth: 10, halign: 'center' },
+              1: { cellWidth: contentW * 0.28 },
+              2: { cellWidth: contentW * 0.18 },
+              3: { cellWidth: contentW * 0.18 },
+              4: { cellWidth: contentW * 0.13, halign: 'center' },
+              5: { cellWidth: contentW * 0.13, halign: 'center' },
+            },
+            alternateRowStyles: { fillColor: [248, 250, 253] },
+            margin: { left: mL, right: mR },
+            tableWidth: contentW,
+          });
+        }
+
+        // ── Footer (on every page) ──
+        const totalPages = doc.getNumberOfPages();
+        for (let p = 1; p <= totalPages; p++) {
+          doc.setPage(p);
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(170, 170, 170);
+          doc.text(`Student Attendance Report — ${name} — Generated ${dateStr}`, mL, pageH - 6);
+          doc.text('Generated by SAMS (Student Attendance Management System)', pageW / 2, pageH - 6, { align: 'center' });
+          doc.text(`Page ${p} of ${totalPages}`, pageW - mR, pageH - 6, { align: 'right' });
+        }
+
+        const safeName = name.replace(/[^a-z0-9]/gi, '_');
+        doc.save(`Attendance_Report_${safeName}.pdf`);
+
+      } else {
+        // ═══════════════════════════════════════════════════
+        // ── Excel Export ──
+        // ═══════════════════════════════════════════════════
+        const wb = XLSX.utils.book_new();
+        const ws: XLSX.WorkSheet = {};
+        const merges: XLSX.Range[] = [];
+        let R = 0;
+
+        const setCell = (r: number, c: number, v: any, s?: any) => {
+          const addr = XLSX.utils.encode_cell({ r, c });
+          ws[addr] = { v, t: typeof v === 'number' ? 'n' : 's', s };
+        };
+
+        const border = {
+          top: { style: 'thin', color: { rgb: '000000' } },
+          bottom: { style: 'thin', color: { rgb: '000000' } },
+          left: { style: 'thin', color: { rgb: '000000' } },
+          right: { style: 'thin', color: { rgb: '000000' } },
+        };
+        const titleStyle = {
+          font: { bold: true, sz: 14, color: { rgb: '1F2F57' } },
+          alignment: { horizontal: 'center', vertical: 'center' },
+        };
+        const headerLabelStyle = { font: { bold: true, sz: 11, color: { rgb: '333333' } } };
+        const headerValueStyle = { font: { sz: 11, color: { rgb: '4F4F4F' } } };
+        const colHeaderStyle = {
+          font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '1F2F57' } },
+          alignment: { horizontal: 'center', vertical: 'center' },
+          border,
+        };
+        const cellCenter = {
+          alignment: { horizontal: 'center', vertical: 'center' },
+          border,
+        };
+        const greenBold = { font: { bold: true, sz: 10, color: { rgb: '0F9D58' } }, alignment: { horizontal: 'center', vertical: 'center' }, border };
+        const yellowBold = { font: { bold: true, sz: 10, color: { rgb: 'F4B400' } }, alignment: { horizontal: 'center', vertical: 'center' }, border };
+        const redBold = { font: { bold: true, sz: 10, color: { rgb: 'DB4437' } }, alignment: { horizontal: 'center', vertical: 'center' }, border };
+
+        const totalCols = 6; // Course, Present, Late, Absent, Total, %
+
+        // Title
+        setCell(R, 0, 'Student Attendance Report', titleStyle);
+        merges.push({ s: { r: R, c: 0 }, e: { r: R, c: totalCols - 1 } });
+        R += 2;
+
+        // Student info
+        setCell(R, 0, 'Student Name:', headerLabelStyle);
+        setCell(R, 1, name, headerValueStyle);
+        R++;
+        setCell(R, 0, 'Grade Level:', headerLabelStyle);
+        setCell(R, 1, grade, headerValueStyle);
+        R++;
+        setCell(R, 0, 'Section:', headerLabelStyle);
+        setCell(R, 1, section, headerValueStyle);
+        R++;
+        setCell(R, 0, 'Semester:', headerLabelStyle);
+        setCell(R, 1, `${currentSemesterInfo.semester} (${currentSemesterInfo.range})`, headerValueStyle);
+        R++;
+        setCell(R, 0, 'Date Generated:', headerLabelStyle);
+        setCell(R, 1, dateStr, headerValueStyle);
+        R += 2;
+
+        // Summary row
+        const summaryBg = { fill: { fgColor: { rgb: 'F5F7FA' } }, border };
+        setCell(R, 0, 'Present', { ...colHeaderStyle, fill: { fgColor: { rgb: '0F9D58' } } });
+        setCell(R, 1, 'Late', { ...colHeaderStyle, fill: { fgColor: { rgb: 'F4B400' } } });
+        setCell(R, 2, 'Absent', { ...colHeaderStyle, fill: { fgColor: { rgb: 'DB4437' } } });
+        setCell(R, 3, 'Total Days', colHeaderStyle);
+        setCell(R, 4, 'Attendance Rate', colHeaderStyle);
+        setCell(R, 5, '', colHeaderStyle);
+        R++;
+        setCell(R, 0, presentDays, { ...greenBold, fill: { fgColor: { rgb: 'E8F5E9' } } });
+        setCell(R, 1, lateDays, { ...yellowBold, fill: { fgColor: { rgb: 'FFF8E1' } } });
+        setCell(R, 2, absentDays, { ...redBold, fill: { fgColor: { rgb: 'FFEBEE' } } });
+        setCell(R, 3, totalDays, { ...cellCenter, font: { bold: true, sz: 11, color: { rgb: '1F2F57' } } });
+        setCell(R, 4, `${attendanceRate}%`, { ...cellCenter, font: { bold: true, sz: 11, color: { rgb: '1F2F57' } } });
+        setCell(R, 5, '', cellCenter);
+        R += 2;
+
+        // Course table header
+        const courseHeaderRow = R;
+        const courseHeaders = ['Course', 'Present', 'Late', 'Absent', 'Total', 'Attendance Rate'];
+        courseHeaders.forEach((h, i) => setCell(R, i, h, colHeaderStyle));
+        R++;
+
+        // Course data rows
+        courses.forEach((c, i) => {
+          const total = c.present + c.late + c.absent;
+          const rowBg = i % 2 === 0 ? 'FFFFFF' : 'F8FAFB';
+          const rowStyle = { ...cellCenter, fill: { fgColor: { rgb: rowBg } }, font: { sz: 10, color: { rgb: '333333' } } };
+          setCell(R, 0, c.course, { ...rowStyle, alignment: { horizontal: 'left', vertical: 'center' }, border });
+          setCell(R, 1, c.present, { ...greenBold, fill: { fgColor: { rgb: rowBg } } });
+          setCell(R, 2, c.late, { ...yellowBold, fill: { fgColor: { rgb: rowBg } } });
+          setCell(R, 3, c.absent, { ...redBold, fill: { fgColor: { rgb: rowBg } } });
+          setCell(R, 4, total, { ...cellCenter, fill: { fgColor: { rgb: rowBg } } });
+          setCell(R, 5, `${c.percentage}%`, { ...cellCenter, fill: { fgColor: { rgb: rowBg } }, font: { bold: true, sz: 10, color: { rgb: '1F2F57' } } });
+          R++;
+        });
+
+        // Total row
+        const totalP = courses.reduce((s, c) => s + c.present, 0);
+        const totalL = courses.reduce((s, c) => s + c.late, 0);
+        const totalA = courses.reduce((s, c) => s + c.absent, 0);
+        const totalAll = totalP + totalL + totalA;
+        const totBg = { fill: { fgColor: { rgb: 'EBEEF4' } }, border };
+        setCell(R, 0, 'TOTAL', { ...totBg, font: { bold: true, sz: 10, color: { rgb: '1F2F57' } }, alignment: { horizontal: 'left', vertical: 'center' } });
+        setCell(R, 1, totalP, { ...totBg, font: { bold: true, sz: 10, color: { rgb: '0F9D58' } }, alignment: { horizontal: 'center', vertical: 'center' } });
+        setCell(R, 2, totalL, { ...totBg, font: { bold: true, sz: 10, color: { rgb: 'F4B400' } }, alignment: { horizontal: 'center', vertical: 'center' } });
+        setCell(R, 3, totalA, { ...totBg, font: { bold: true, sz: 10, color: { rgb: 'DB4437' } }, alignment: { horizontal: 'center', vertical: 'center' } });
+        setCell(R, 4, totalAll, { ...totBg, font: { bold: true, sz: 10, color: { rgb: '1F2F57' } }, alignment: { horizontal: 'center', vertical: 'center' } });
+        setCell(R, 5, `${attendanceRate}%`, { ...totBg, font: { bold: true, sz: 10, color: { rgb: '1F2F57' } }, alignment: { horizontal: 'center', vertical: 'center' } });
+        R += 2;
+
+        // ── Detection Log Section ──
+        if (detectionRecords.length > 0) {
+          const detTitleRow = R;
+          setCell(R, 0, 'Detection Log', { font: { bold: true, sz: 13, color: { rgb: '1F2F57' } }, alignment: { horizontal: 'center', vertical: 'center' } });
+          merges.push({ s: { r: R, c: 0 }, e: { r: R, c: totalCols - 1 } });
+          R += 2;
+
+          // Detection headers
+          const detHeaders = ['#', 'Course', 'Date', 'Time', 'Status', 'Confidence'];
+          detHeaders.forEach((h, i) => setCell(R, i, h, colHeaderStyle));
+          R++;
+
+          // Detection data rows
+          detectionRecords.forEach((rec, i) => {
+            const rowBg = i % 2 === 0 ? 'FFFFFF' : 'F8FAFB';
+            const rowFill = { fill: { fgColor: { rgb: rowBg } }, border };
+            setCell(R, 0, i + 1, { ...cellCenter, fill: { fgColor: { rgb: rowBg } }, font: { sz: 10, color: { rgb: '828282' } } });
+            setCell(R, 1, rec.course, { ...rowFill, font: { sz: 10, color: { rgb: '333333' } }, alignment: { horizontal: 'left', vertical: 'center' } });
+            setCell(R, 2, rec.date, { ...cellCenter, fill: { fgColor: { rgb: rowBg } } });
+            setCell(R, 3, rec.time, { ...cellCenter, fill: { fgColor: { rgb: rowBg } } });
+
+            const statusStyle = rec.status === 'Present'
+              ? { ...greenBold, fill: { fgColor: { rgb: rowBg } } }
+              : rec.status === 'Late'
+              ? { ...yellowBold, fill: { fgColor: { rgb: rowBg } } }
+              : { ...redBold, fill: { fgColor: { rgb: rowBg } } };
+            setCell(R, 4, rec.status, statusStyle);
+
+            const confStr = rec.confidence != null ? `${(rec.confidence * 100).toFixed(1)}%` : 'N/A';
+            setCell(R, 5, confStr, { ...cellCenter, fill: { fgColor: { rgb: rowBg } }, font: { bold: true, sz: 10, color: { rgb: '1F2F57' } } });
+            R++;
+          });
+          R++;
+        }
+
+        // Generated note
+        setCell(R, 0, `Generated by SAMS (Student Attendance Management System) — ${dateStr}`, { font: { sz: 9, italic: true, color: { rgb: '999999' } } });
+        R++;
+
+        // Sheet config
+        ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: R, c: totalCols - 1 } });
+        ws['!merges'] = merges;
+        ws['!cols'] = [
+          { wch: 38 }, // Course
+          { wch: 12 }, // Present
+          { wch: 10 }, // Late
+          { wch: 10 }, // Absent
+          { wch: 10 }, // Total
+          { wch: 18 }, // Attendance Rate
+        ];
+        ws['!rows'] = [{ hpx: 30 }]; // Title row height
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Attendance Report');
+        const safeName = name.replace(/[^a-z0-9]/gi, '_');
+        XLSX.writeFile(wb, `Attendance_Report_${safeName}.xlsx`);
+      }
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Failed to export attendance report. Please try again.');
+    } finally {
       setIsExporting(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -448,14 +877,38 @@ export default function Student() {
                       </select>
                     </div>
 
-                    <button
-                      onClick={handleExport}
-                      disabled={isExporting}
-                      className="teacher-export-btn"
-                    >
-                      <DownloadIcon />
-                      {isExporting ? "Exporting..." : ""}
-                    </button>
+                    <div className="teacher-export-wrapper">
+                      <button
+                        onClick={() => setShowExportPicker(!showExportPicker)}
+                        disabled={isExporting}
+                        className="teacher-export-btn"
+                        title="Download Attendance Report"
+                      >
+                        <DownloadIcon />
+                        {isExporting ? "Exporting..." : "Export"}
+                      </button>
+
+                      {showExportPicker && (
+                        <div className="teacher-export-popover">
+                          <p className="teacher-export-popover-title">Export Attendance Report</p>
+                          <label className="teacher-export-popover-label">Select Format</label>
+                          <div className="teacher-export-format-btns">
+                            <button
+                              onClick={() => handleExport('excel')}
+                              className="teacher-export-popover-confirm teacher-export-excel"
+                            >
+                              <DownloadIcon /> Excel (.xlsx)
+                            </button>
+                            <button
+                              onClick={() => handleExport('pdf')}
+                              className="teacher-export-popover-confirm teacher-export-pdf"
+                            >
+                              <DownloadIcon /> PDF (.pdf)
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="teacher-chart-container">
