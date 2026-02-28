@@ -127,19 +127,21 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
 }
 
 // Query helper: Get present, late, and explicit absent counts in a date range
-// Deduplicates by taking the first record per student per day (earliest detection)
+// Deduplicates by taking the BEST attendance record per student per day
+// Priority: present(1) > late(2) > absent(0)
 // Absent is only counted from EXPLICIT records (attendance=0) — not inferred
 async function getAttendanceCounts(userId: string, courseFilter: string | null, sectionFilter: string | null, startStr: string, endStr: string): Promise<{ present: number; late: number; absent: number }> {
     let query: string
     let params: any[]
 
-    // Use a subquery with DISTINCT ON to get only the first record per student per day
+    // Use a subquery with DISTINCT ON to get the BEST record per student per day
+    // CASE maps: present(1)→1, late(2)→2, absent(0)→3, so MIN via ORDER BY picks best
     // Then count those deduplicated records
     if (courseFilter && sectionFilter) {
         query = `SELECT 
-                    COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late,
-                    COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as absent
+                    COUNT(CASE WHEN best_records.attendance = 1 THEN 1 END) as present,
+                    COUNT(CASE WHEN best_records.attendance = 2 THEN 1 END) as late,
+                    COUNT(CASE WHEN best_records.attendance = 0 THEN 1 END) as absent
                  FROM (
                     SELECT DISTINCT ON (r.student, DATE(r.time))
                         r.attendance
@@ -153,14 +155,14 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                       AND DATE(r.time) >= $4
                       AND DATE(r.time) <= $5
                       AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-                    ORDER BY r.student, DATE(r.time), r.time ASC
-                 ) AS first_records`
+                    ORDER BY r.student, DATE(r.time), CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC, r.time ASC
+                 ) AS best_records`
         params = [userId, courseFilter, sectionFilter, startStr, endStr]
     } else if (courseFilter) {
         query = `SELECT 
-                    COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late,
-                    COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as absent
+                    COUNT(CASE WHEN best_records.attendance = 1 THEN 1 END) as present,
+                    COUNT(CASE WHEN best_records.attendance = 2 THEN 1 END) as late,
+                    COUNT(CASE WHEN best_records.attendance = 0 THEN 1 END) as absent
                  FROM (
                     SELECT DISTINCT ON (r.student, DATE(r.time))
                         r.attendance
@@ -172,14 +174,14 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                       AND DATE(r.time) >= $3
                       AND DATE(r.time) <= $4
                       AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-                    ORDER BY r.student, DATE(r.time), r.time ASC
-                 ) AS first_records`
+                    ORDER BY r.student, DATE(r.time), CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC, r.time ASC
+                 ) AS best_records`
         params = [userId, courseFilter, startStr, endStr]
     } else {
         query = `SELECT 
-                    COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late,
-                    COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as absent
+                    COUNT(CASE WHEN best_records.attendance = 1 THEN 1 END) as present,
+                    COUNT(CASE WHEN best_records.attendance = 2 THEN 1 END) as late,
+                    COUNT(CASE WHEN best_records.attendance = 0 THEN 1 END) as absent
                  FROM (
                     SELECT DISTINCT ON (r.student, DATE(r.time))
                         r.attendance
@@ -190,8 +192,8 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                       AND DATE(r.time) >= $2
                       AND DATE(r.time) <= $3
                       AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-                    ORDER BY r.student, DATE(r.time), r.time ASC
-                 ) AS first_records`
+                    ORDER BY r.student, DATE(r.time), CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC, r.time ASC
+                 ) AS best_records`
         params = [userId, startStr, endStr]
     }
 

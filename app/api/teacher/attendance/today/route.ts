@@ -75,11 +75,16 @@ export async function GET(req: Request) {
             ),
             student_best_attendance AS (
                 -- For each student, get their BEST attendance for THIS SPECIFIC COURSE today
-                -- Use MIN since present(1) < late(2), so MIN gives best status
-                -- Only consider students who actually have records (no COALESCE - NULL means no record)
+                -- Priority: present(1) > late(2) > absent(0)
+                -- Map to priority values so MIN picks the best: present=1, late=2, absent=3
+                -- Then map back to original values
                 SELECT 
                     sc.student,
-                    MIN(r.attendance) as best_attendance
+                    CASE MIN(CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 END)
+                        WHEN 1 THEN 1
+                        WHEN 2 THEN 2
+                        WHEN 3 THEN 0
+                    END as best_attendance
                 FROM student_courses sc
                 INNER JOIN record r ON r.student = sc.student 
                     AND r.time IS NOT NULL
@@ -107,10 +112,16 @@ export async function GET(req: Request) {
             ),
             student_best_attendance AS (
                 -- For each student, get their BEST attendance across all courses today
-                -- Only consider students who actually have records (INNER JOIN, no COALESCE)
+                -- Priority: present(1) > late(2) > absent(0)
+                -- Map to priority values so MIN picks the best: present=1, late=2, absent=3
+                -- Then map back to original values
                 SELECT 
                     sc.student,
-                    MIN(r.attendance) as best_attendance
+                    CASE MIN(CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 END)
+                        WHEN 1 THEN 1
+                        WHEN 2 THEN 2
+                        WHEN 3 THEN 0
+                    END as best_attendance
                 FROM student_courses sc
                 INNER JOIN record r ON r.student = sc.student 
                     AND r.time IS NOT NULL

@@ -68,16 +68,17 @@
     width: 100%;
     max-width: 100%;
 
-    height: calc(100vh - 310px);
-    max-height: calc(100vh - 310px);
+    height: calc(100vh - 280px);
+    max-height: calc(100vh - 280px);
     box-sizing: border-box;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Split Layout */
 .teacher-split-layout {
     display: grid;
-    grid-template-columns: 50% 50%;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
     height: 100%;
     max-height: 100%;
@@ -102,7 +103,7 @@
 /* Right Column */
 .teacher-right-column {
     background: var(--background1);
-    padding: 8px;
+    padding: 12px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);

@@ -788,10 +788,18 @@ export default function Teacher() {
         fetchSections();
     }, [selectedOverviewCourse]);
 
-    // When a section is selected, update the data fetchers
+    // Sync selectedChartCourse and selectedCourse based on overview navigation
     useEffect(() => {
-        if (overviewStep === 'stats' && selectedOverviewCourse && selectedSection) {
-            // Set the course for the records table and charts
+        if (overviewStep === 'courses') {
+            // Back to courses view → reset to show overall data
+            setSelectedChartCourse("all");
+            setSelectedCourse("");
+        } else if (overviewStep === 'sections' && selectedOverviewCourse) {
+            // Selected a course, viewing sections → show course-level data
+            setSelectedChartCourse(selectedOverviewCourse.id);
+            setSelectedCourse(selectedOverviewCourse.id);
+        } else if (overviewStep === 'stats' && selectedOverviewCourse && selectedSection) {
+            // Selected a section → show section-level data
             setSelectedCourse(selectedOverviewCourse.id);
             setSelectedChartCourse(selectedOverviewCourse.id);
         }
@@ -1222,7 +1230,7 @@ export default function Teacher() {
                     <div key="total-courses" className="teacher-panel-card enroll">
                         <BookmarkIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Number of Courses Handled</div>
+                            <div className="teacher-panel-label">Number of Courses Handled</div>
                             <div className="teacher-panel-value">{courses.length}</div>
                             <div className="teacher-panel-sub">Active this semester</div>
                         </div>
@@ -1242,7 +1250,7 @@ export default function Teacher() {
                     <div key="section-count" className="teacher-panel-card present">
                         <PersonIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Number of Sections Handled</div>
+                            <div className="teacher-panel-label">Number of Sections Handled</div>
                             <div className="teacher-panel-value">
                                 {totalSections}
                             </div>

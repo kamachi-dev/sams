@@ -38,9 +38,10 @@ export async function GET(req: Request) {
         console.log('Date:', date, 'StartDate:', startDate, 'EndDate:', endDate)
         console.log('Course:', courseFilter, 'UserId:', user.id)
 
-        // Get ALL students enrolled in the specified course, with their FIRST attendance record only (earliest detection)
+        // Get ALL students enrolled in the specified course, with their BEST attendance record
         // Note: attendance column is smallint (1=present, 2=late, 0/NULL=absent)
-        // Using DISTINCT ON to get only one record per student (the earliest detection)
+        // Priority: present(1) > late(2) > absent(0) > no record(NULL)
+        // Using DISTINCT ON with CASE ordering to pick best attendance first, then earliest time
         const query = useDateRange
             ? `SELECT DISTINCT ON (a.id)
                 a.id,
@@ -64,6 +65,7 @@ export async function GET(req: Request) {
             ${sectionFilter ? 'AND sd.section = $5' : ''}
             ORDER BY 
                 a.id,
+                CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC,
                 r.created_at ASC NULLS LAST`
             : `SELECT DISTINCT ON (a.id)
                 a.id,
@@ -86,6 +88,7 @@ export async function GET(req: Request) {
             ${sectionFilter ? 'AND sd.section = $4' : ''}
             ORDER BY 
                 a.id,
+                CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC,
                 r.created_at ASC NULLS LAST`
 
         const params = useDateRange
