@@ -188,6 +188,42 @@ export async function GET(req: Request) {
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December']
 
+        // Get best attendance record per student per day (deduplicated) for Detection Log
+        const detectionLogResult = await db.query(`
+            SELECT * FROM (
+                SELECT DISTINCT ON (r.student, DATE(r.time))
+                    r.student,
+                    a.username as student_name,
+                    r.time,
+                    r.attendance,
+                    r.confidence
+                FROM record r
+                INNER JOIN account a ON r.student = a.id
+                WHERE r.course = $1
+                  AND r.time IS NOT NULL
+                  AND DATE(r.time) >= $2
+                  AND DATE(r.time) <= $3
+                  AND r.student = ANY($4::text[])
+                ORDER BY r.student, DATE(r.time),
+                    CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC
+            ) sub
+            ORDER BY sub.time ASC, sub.student_name ASC
+        `, [courseId, startDate, endDate, students.map(s => s.id)])
+
+        const detectionLog = detectionLogResult.rows.map(row => {
+            let status = 'Absent'
+            if (row.attendance === 1) status = 'Present'
+            else if (row.attendance === 2) status = 'Late'
+
+            return {
+                studentName: row.student_name,
+                date: row.time ? new Date(row.time).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-',
+                time: row.time ? new Date(row.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }) : '-',
+                status,
+                confidence: row.confidence != null ? row.confidence : null
+            }
+        })
+
         return NextResponse.json({
             success: true,
             data: {
@@ -200,7 +236,8 @@ export async function GET(req: Request) {
                 totalEnrolled: students.length,
                 schoolDays,
                 totalSchoolDays: schoolDays.length,
-                students: studentData
+                students: studentData,
+                detectionLog
             }
         })
     } catch (error) {
