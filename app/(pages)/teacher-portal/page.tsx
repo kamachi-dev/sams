@@ -1,7 +1,7 @@
 "use client";
 
 import SamsTemplate from "@/app/components/SamsTemplate";
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import { 
     MagnifyingGlassIcon, 
     PersonIcon, 
@@ -35,7 +35,7 @@ import {
     PolarAngleAxis,
     PolarRadiusAxis
 } from "recharts";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import './styles.css';
 import '../student-portal/styles.css';
 import { attendanceAppeals } from "../teacher-portal/constants";
@@ -311,6 +311,26 @@ export default function Teacher() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isExporting, setIsExporting] = useState(false);
     const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("daily");
+
+    // SF2 export month picker — popover state
+    const [showExportPicker, setShowExportPicker] = useState(false);
+    const [exportMonth, setExportMonth] = useState(() => {
+        const now = new Date();
+        const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    });
+    const exportPickerRef = useRef<HTMLDivElement>(null);
+
+    // Close export picker when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (exportPickerRef.current && !exportPickerRef.current.contains(e.target as Node)) {
+                setShowExportPicker(false);
+            }
+        };
+        if (showExportPicker) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showExportPicker]);
     const [totalStudents, setTotalStudents] = useState<number>(0);
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
 
@@ -873,294 +893,596 @@ export default function Teacher() {
         fetchSectionComparison();
     }, [compareStep, compareCourse]);
 
-    const handleExport = async () => {
+    const handleExport = async (monthOverride?: string) => {
+        // SF2 Export — School Form 2: Daily Attendance Report of Learners
+        if (!selectedOverviewCourse || !selectedSection) {
+            alert('Please select a course and section first to export the SF2 attendance report.');
+            return;
+        }
+
+        setShowExportPicker(false);
         setIsExporting(true);
-        
+
         try {
-            let data: any[] = [];
-            let fileName = '';
-            
-            const courseLabel = selectedChartCourse === 'all' 
-                ? 'All Courses' 
-                : courses.find(c => c.id === selectedChartCourse)?.name || 'Selected Course';
-            
-            const sanitizedCourseLabel = courseLabel.replace(/[^a-z0-9]/gi, '_');
-            const dateStr = new Date().toISOString().split('T')[0];
-            
-            // Create workbook
-            const wb = XLSX.utils.book_new();
-            
-            // Helper function to fetch records for a date range
-            const fetchRecordsForDateRange = async (startDate: Date, endDate: Date) => {
-                const allRecords: any[] = [];
-                
-                if (selectedChartCourse === 'all') {
-                    for (const course of courses) {
-                        const response = await fetch(`/api/teacher/attendance/records?course=${course.id}&startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`);
-                        const result = await response.json();
-                        if (result.success) {
-                            allRecords.push(...result.data);
-                        }
-                    }
-                } else {
-                    const response = await fetch(`/api/teacher/attendance/records?course=${selectedChartCourse}&startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`);
-                    const result = await response.json();
-                    if (result.success) {
-                        allRecords.push(...result.data);
-                    }
-                }
-                
-                return allRecords;
-            };
-            
-            // Helper function to create status sheets
-            const createStatusSheets = (records: any[], includeWeekInfo = false) => {
-                const presentStudents = records.filter(r => r.status === 'present');
-                const lateStudents = records.filter(r => r.status === 'late');
-                const absentStudents = records.filter(r => r.status === 'absent');
-                
-                if (presentStudents.length > 0) {
-                    const presentData = presentStudents.map(s => {
-                        const data: any = {
-                            'Student Name': s.name,
-                            'Email': s.email
-                        };
-                        if (selectedChartCourse === 'all') data['Course'] = s.course;
-                        if (includeWeekInfo) data['Week/Period'] = s.weekInfo;
-                        data['Date'] = s.date || new Date(s.time).toLocaleDateString();
-                        data['Time'] = s.time;
-                        data['Confidence'] = s.confidence;
-                        return data;
-                    });
-                    const presentWs = XLSX.utils.json_to_sheet(presentData);
-                    XLSX.utils.book_append_sheet(wb, presentWs, 'Present Students');
-                }
-                
-                if (lateStudents.length > 0) {
-                    const lateData = lateStudents.map(s => {
-                        const data: any = {
-                            'Student Name': s.name,
-                            'Email': s.email
-                        };
-                        if (selectedChartCourse === 'all') data['Course'] = s.course;
-                        if (includeWeekInfo) data['Week/Period'] = s.weekInfo;
-                        data['Date'] = s.date || new Date(s.time).toLocaleDateString();
-                        data['Time'] = s.time;
-                        data['Confidence'] = s.confidence;
-                        return data;
-                    });
-                    const lateWs = XLSX.utils.json_to_sheet(lateData);
-                    XLSX.utils.book_append_sheet(wb, lateWs, 'Late Students');
-                }
-                
-                if (absentStudents.length > 0) {
-                    const absentData = absentStudents.map(s => {
-                        const data: any = {
-                            'Student Name': s.name,
-                            'Email': s.email
-                        };
-                        if (selectedChartCourse === 'all') data['Course'] = s.course;
-                        if (includeWeekInfo) data['Week/Period'] = s.weekInfo;
-                        data['Date'] = s.date || new Date(s.time).toLocaleDateString();
-                        data['Time'] = s.time;
-                        data['Confidence'] = s.confidence;
-                        return data;
-                    });
-                    const absentWs = XLSX.utils.json_to_sheet(absentData);
-                    XLSX.utils.book_append_sheet(wb, absentWs, 'Absent Students');
-                }
-            };
-            
-            if (selectedView === 'daily') {
-                // Export daily attendance data with detailed student list
-                fileName = `Daily_Attendance_${sanitizedCourseLabel}_${dateStr}.xlsx`;
-                
-                // Summary data
-                const summaryData = [
-                    { Status: 'Present', Count: todayAttendance.present },
-                    { Status: 'Late', Count: todayAttendance.late },
-                    { Status: 'Absent', Count: todayAttendance.absent },
-                    { Status: 'Total', Count: todayAttendance.total },
-                    { Status: 'Attendance Rate', Count: `${todayAttendance.attendanceRate}%` }
-                ];
-                const summaryWs = XLSX.utils.json_to_sheet(summaryData);
-                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-                
-                // Fetch detailed student records
-                try {
-                    if (selectedChartCourse === 'all') {
-                        const allRecords: any[] = [];
-                        for (const course of courses) {
-                            const response = await fetch(`/api/teacher/attendance/records?course=${course.id}`);
-                            const result = await response.json();
-                            if (result.success) {
-                                allRecords.push(...result.data);
-                            }
-                        }
-                        createStatusSheets(allRecords);
-                    } else {
-                        const response = await fetch(`/api/teacher/attendance/records?course=${selectedChartCourse}`);
-                        const result = await response.json();
-                        if (result.success) {
-                            createStatusSheets(result.data);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching detailed records:', error);
-                }
-                
-            } else if (selectedView === 'weekly') {
-                // Export weekly attendance data with detailed student records
-                fileName = `Weekly_Attendance_${sanitizedCourseLabel}_${dateStr}.xlsx`;
-                
-                // Summary data
-                data = weeklyTrendData.map(week => ({
-                    Week: week.week,
-                    'Date Range': week.dateRange,
-                    Present: week.present,
-                    Late: week.late,
-                    Absent: week.absent,
-                    Total: week.present + week.late + week.absent
-                }));
-                const summaryWs = XLSX.utils.json_to_sheet(data);
-                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-                
-                // Fetch detailed records for all weeks
-                try {
-                    // We'll need to query the records API with date filters
-                    // For now, we'll fetch all records from the current month
-                    const now = new Date();
-                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-                    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                    
-                    const records = await fetchRecordsForDateRange(startOfMonth, endOfMonth);
-                    
-                    // Add week info to each record based on weeklyTrendData
-                    const enrichedRecords = records.map((record: any) => {
-                        // Parse the time to determine which week it belongs to
-                        const recordDate = new Date(record.time);
-                        const matchingWeek = weeklyTrendData.find(week => {
-                            const [startStr, endStr] = week.dateRange.split(' - ');
-                            return true; // Simplified - would need proper date parsing
-                        });
-                        
-                        return {
-                            ...record,
-                            weekInfo: 'Current Month'
-                        };
-                    });
-                    
-                    createStatusSheets(enrichedRecords, true);
-                } catch (error) {
-                    console.error('Error fetching weekly detailed records:', error);
-                }
-                
-            } else if (selectedView === 'monthly') {
-                // Export monthly attendance data with detailed student records
-                fileName = `Monthly_Attendance_${sanitizedCourseLabel}_${dateStr}.xlsx`;
-                
-                // Summary data
-                data = monthlyTrendData.map(month => ({
-                    Month: month.fullMonth,
-                    Present: month.present,
-                    Late: month.late,
-                    Absent: month.absent,
-                    Total: month.total,
-                    'Attendance Rate': `${month.attendanceRate}%`
-                }));
-                const summaryWs = XLSX.utils.json_to_sheet(data);
-                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-                
-                // Fetch detailed records for last 6 months
-                try {
-                    const now = new Date();
-                    const startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-                    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                    
-                    const records = await fetchRecordsForDateRange(startDate, endDate);
-                    
-                    // Add month info to each record
-                    const enrichedRecords = records.map((record: any) => {
-                        const recordDate = new Date(record.time);
-                        const monthName = recordDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                        return {
-                            ...record,
-                            weekInfo: monthName
-                        };
-                    });
-                    
-                    createStatusSheets(enrichedRecords, true);
-                } catch (error) {
-                    console.error('Error fetching monthly detailed records:', error);
-                }
-                
-            } else if (selectedView === 'quarterly') {
-                // Export quarterly attendance data with detailed student records
-                fileName = `Quarterly_Attendance_${sanitizedCourseLabel}_${dateStr}.xlsx`;
-                
-                // Summary data
-                data = quarterlyTrendData.map(quarter => {
-                    const semester = (quarter.name === 'Q1' || quarter.name === 'Q2') ? '1st Semester' : '2nd Semester';
-                    return {
-                        Quarter: quarter.label,
-                        Semester: semester,
-                        'Date Range': quarter.dateRange,
-                        Present: quarter.present,
-                        Late: quarter.late,
-                        Absent: quarter.absent,
-                        Total: quarter.present + quarter.late + quarter.absent
-                    };
-                });
-                const summaryWs = XLSX.utils.json_to_sheet(data);
-                XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-                
-                // Fetch detailed records for the entire semester
-                try {
-                    const startDate = new Date(2025, 7, 1); // Aug 1, 2025
-                    const endDate = new Date(2026, 0, 31); // Jan 31, 2026
-                    
-                    const records = await fetchRecordsForDateRange(startDate, endDate);
-                    
-                    // Add quarter info to each record
-                    const enrichedRecords = records.map((record: any) => {
-                        const recordDate = new Date(record.time);
-                        let quarterInfo = 'Unknown';
-                        
-                        for (const quarter of quarterlyTrendData) {
-                            const [startStr, endStr] = quarter.dateRange.split(' - ');
-                            quarterInfo = quarter.label;
-                            break; // Simplified
-                        }
-                        
-                        return {
-                            ...record,
-                            weekInfo: quarterInfo
-                        };
-                    });
-                    
-                    createStatusSheets(enrichedRecords, true);
-                } catch (error) {
-                    console.error('Error fetching quarterly detailed records:', error);
-                }
+            const picked = monthOverride || exportMonth;
+            const [yearStr, monthStr] = picked.split('-');
+            const selectedExportMonth = parseInt(monthStr);
+            const selectedExportYear = parseInt(yearStr);
+
+            const response = await fetch(
+                `/api/teacher/attendance/sf2?course=${selectedOverviewCourse.id}&section=${selectedSection}&month=${selectedExportMonth}&year=${selectedExportYear}`
+            );
+            const result = await response.json();
+
+            if (!result.success) {
+                alert(result.error || 'Failed to fetch SF2 data.');
+                return;
             }
-            
-            // Add metadata sheet
-            const metadata = [
-                { Field: 'Export Date', Value: new Date().toLocaleString() },
-                { Field: 'View Type', Value: selectedView.charAt(0).toUpperCase() + selectedView.slice(1) },
-                { Field: 'Course Filter', Value: courseLabel },
-                { Field: 'Academic Year', Value: '2025-2026' },
-                { Field: 'Semester', Value: '2nd Semester' }
+
+            const sf2 = result.data;
+            const schoolDays: number[] = sf2.schoolDays;
+            const students = sf2.students;
+            const totalCols = 2 + schoolDays.length + 5; // No. + Name + days + 5 summary cols (P, L, A, ND, %)
+
+            // ── Style definitions ──
+            const border = {
+                top: { style: 'thin', color: { rgb: '000000' } },
+                bottom: { style: 'thin', color: { rgb: '000000' } },
+                left: { style: 'thin', color: { rgb: '000000' } },
+                right: { style: 'thin', color: { rgb: '000000' } },
+            };
+            const titleStyle = {
+                font: { bold: true, sz: 14, color: { rgb: '1F2F57' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+            };
+            const headerLabelStyle = {
+                font: { bold: true, sz: 11, color: { rgb: '333333' } },
+            };
+            const headerValueStyle = {
+                font: { sz: 11, color: { rgb: '4F4F4F' } },
+            };
+            const colHeaderStyle = {
+                font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
+                fill: { fgColor: { rgb: '1F2F57' } },
+                alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+                border,
+            };
+            const dayOfWeekStyle = {
+                font: { sz: 9, color: { rgb: '666666' } },
+                fill: { fgColor: { rgb: 'E8ECF0' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const numCellStyle = {
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const nameCellStyle = {
+                font: { sz: 10 },
+                alignment: { vertical: 'center' },
+                border,
+            };
+            const presentCellStyle = {
+                font: { sz: 10, color: { rgb: '0F9D58' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const lateCellStyle = {
+                font: { sz: 10, bold: true, color: { rgb: 'F4B400' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const absentCellStyle = {
+                font: { sz: 10, color: { rgb: 'DB4437' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const emptyCellStyle = {
+                fill: { fgColor: { rgb: 'F8F8F8' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const noDetectionCellStyle = {
+                font: { sz: 10, color: { rgb: '999999' } },
+                fill: { fgColor: { rgb: 'F0F0F0' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const summaryHeaderStyle = {
+                font: { bold: true, sz: 10, color: { rgb: '1F2F57' } },
+                fill: { fgColor: { rgb: 'F0F4F8' } },
+                alignment: { vertical: 'center' },
+                border,
+            };
+            const summaryValueStyle = {
+                font: { bold: true, sz: 10 },
+                fill: { fgColor: { rgb: 'F0F4F8' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const totalPresentValStyle = {
+                font: { bold: true, sz: 10, color: { rgb: '0F9D58' } },
+                fill: { fgColor: { rgb: 'E8F5E9' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const totalLateValStyle = {
+                font: { bold: true, sz: 10, color: { rgb: 'F4B400' } },
+                fill: { fgColor: { rgb: 'FFF8E1' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const totalAbsentValStyle = {
+                font: { bold: true, sz: 10, color: { rgb: 'DB4437' } },
+                fill: { fgColor: { rgb: 'FFEBEE' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const pctStyle = {
+                font: { bold: true, sz: 10, color: { rgb: '1F2F57' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+            const footerLabelStyle = {
+                font: { bold: true, sz: 10, color: { rgb: '333333' } },
+            };
+            const footerValueStyle = {
+                font: { sz: 10, color: { rgb: '4F4F4F' } },
+            };
+
+            // ── Build worksheet cell-by-cell ──
+            const ws: XLSX.WorkSheet = {};
+            let R = 0; // current row (0-indexed)
+
+            // Helper to set a cell
+            const setCell = (r: number, c: number, value: any, style?: any) => {
+                const cellRef = XLSX.utils.encode_cell({ r, c });
+                const cell: any = { v: value, t: typeof value === 'number' ? 'n' : 's' };
+                if (style) cell.s = style;
+                ws[cellRef] = cell;
+            };
+
+            // Cell merge tracking — built incrementally, assigned at end
+            const merges: XLSX.Range[] = [];
+            const shortMergeSpan = Math.min(6, totalCols - 2);
+            const wideMergeSpan = totalCols - 2;
+
+            // Helper to set a cell spanning multiple columns (fills merged area for borders)
+            const setCellSpan = (r: number, c: number, span: number, value: any, style?: any) => {
+                setCell(r, c, value, style);
+                for (let i = 1; i < span; i++) setCell(r, c + i, '', style);
+                if (span > 1) merges.push({ s: { r, c }, e: { r, c: c + span - 1 } });
+            };
+
+            // Row 0: Title (merged across all columns)
+            setCellSpan(R, 0, totalCols, 'School Form 2 (SF2) Daily Attendance Report of Learners', titleStyle);
+            R++;
+
+            // Row 1: Blank
+            R++;
+
+            // Row 2: School + Report month
+            setCell(R, 0, 'School:', headerLabelStyle);
+            setCell(R, 1, 'Malayan Colleges Laguna', headerValueStyle);
+            setCell(R, Math.max(4, Math.floor(totalCols * 0.6)), 'Report for the Month of:', headerLabelStyle);
+            setCell(R, Math.max(4, Math.floor(totalCols * 0.6)) + 1, `${sf2.month} ${sf2.year}`, headerValueStyle);
+            R++;
+
+            // Row 3: Course
+            setCell(R, 0, 'Course:', headerLabelStyle);
+            setCell(R, 1, sf2.courseName, headerValueStyle);
+            R++;
+
+            // Row 4: Section
+            setCell(R, 0, 'Grade & Section:', headerLabelStyle);
+            setCell(R, 1, `Section ${sf2.section}`, headerValueStyle);
+            R++;
+
+            // Row 5: Teacher
+            setCell(R, 0, 'Teacher:', headerLabelStyle);
+            setCell(R, 1, sf2.teacherName, headerValueStyle);
+            R++;
+
+            // Row 6: Blank
+            R++;
+
+            // ── Table Header Row (Row 7) ──
+            const headerRowIdx = R;
+            setCell(R, 0, 'No.', colHeaderStyle);
+            setCell(R, 1, "LEARNER'S NAME", colHeaderStyle);
+            for (let d = 0; d < schoolDays.length; d++) {
+                setCell(R, 2 + d, schoolDays[d], colHeaderStyle);
+            }
+            const tpCol = 2 + schoolDays.length;
+            setCell(R, tpCol, 'Total Present', colHeaderStyle);
+            setCell(R, tpCol + 1, 'Total Late', colHeaderStyle);
+            setCell(R, tpCol + 2, 'Total Absent', colHeaderStyle);
+            setCell(R, tpCol + 3, 'No Detection', colHeaderStyle);
+            setCell(R, tpCol + 4, '% Attendance', colHeaderStyle);
+            R++;
+
+            // ── Day-of-week sub-header (Row 8) ──
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            setCell(R, 0, '', dayOfWeekStyle);
+            setCell(R, 1, '', dayOfWeekStyle);
+            for (let d = 0; d < schoolDays.length; d++) {
+                const date = new Date(sf2.year, sf2.monthNum - 1, schoolDays[d]);
+                setCell(R, 2 + d, dayNames[date.getDay()], dayOfWeekStyle);
+            }
+            setCell(R, tpCol, '', dayOfWeekStyle);
+            setCell(R, tpCol + 1, '', dayOfWeekStyle);
+            setCell(R, tpCol + 2, '', dayOfWeekStyle);
+            setCell(R, tpCol + 3, '', dayOfWeekStyle);
+            setCell(R, tpCol + 4, '', dayOfWeekStyle);
+            R++;
+
+            // ── Student data rows ──
+            const dataStartRow = R;
+            for (let i = 0; i < students.length; i++) {
+                const student = students[i];
+                const isEven = i % 2 === 0;
+                const rowBg = isEven ? 'FFFFFF' : 'F8FAFB';
+
+                const numStyle = { ...numCellStyle, fill: { fgColor: { rgb: rowBg } }, font: { sz: 10, color: { rgb: '828282' } } };
+                const nameStyle = { ...nameCellStyle, fill: { fgColor: { rgb: rowBg } } };
+
+                setCell(R, 0, i + 1, numStyle);
+                setCell(R, 1, student.name, nameStyle);
+
+                for (let d = 0; d < schoolDays.length; d++) {
+                    const status = student.dailyStatus[String(schoolDays[d])];
+                    if (status === 'P') {
+                        setCell(R, 2 + d, '✓', { ...presentCellStyle, fill: { fgColor: { rgb: rowBg } } });
+                    } else if (status === 'L') {
+                        setCell(R, 2 + d, 'L', { ...lateCellStyle, fill: { fgColor: { rgb: rowBg } } });
+                    } else if (status === 'A') {
+                        setCell(R, 2 + d, '✗', { ...absentCellStyle, fill: { fgColor: { rgb: rowBg } } });
+                    } else if (status === 'ND') {
+                        setCell(R, 2 + d, '—', { ...noDetectionCellStyle, fill: { fgColor: { rgb: isEven ? 'F0F0F0' : 'E8E8E8' } } });
+                    } else {
+                        setCell(R, 2 + d, '', { ...emptyCellStyle, fill: { fgColor: { rgb: rowBg } } });
+                    }
+                }
+
+                const totalRecorded = student.actualRecords ?? (student.totalPresent + student.totalLate + student.totalAbsent);
+                const attendancePct = totalRecorded > 0
+                    ? ((student.totalPresent / totalRecorded) * 100).toFixed(1) + '%'
+                    : 'N/A';
+                const studentND = student.totalNoDetection ?? 0;
+
+                setCell(R, tpCol, student.totalPresent, { ...totalPresentValStyle, fill: { fgColor: { rgb: rowBg } } });
+                setCell(R, tpCol + 1, student.totalLate, { ...totalLateValStyle, fill: { fgColor: { rgb: rowBg } } });
+                setCell(R, tpCol + 2, student.totalAbsent, { ...totalAbsentValStyle, fill: { fgColor: { rgb: rowBg } } });
+                setCell(R, tpCol + 3, studentND, { font: { sz: 10, color: { rgb: '999999' } }, fill: { fgColor: { rgb: rowBg } }, alignment: { horizontal: 'center', vertical: 'center' }, border });
+                setCell(R, tpCol + 4, attendancePct, { ...pctStyle, fill: { fgColor: { rgb: rowBg } } });
+                R++;
+            }
+
+            // ── Blank separator row ──
+            R++;
+
+            // ── Summary rows ──
+            let grandPresent = 0, grandLate = 0, grandAbsent = 0, grandND = 0;
+            const dailyP: number[] = [], dailyL: number[] = [], dailyA: number[] = [], dailyND: number[] = [];
+
+            for (const day of schoolDays) {
+                let dayP = 0, dayL = 0, dayA = 0, dayND = 0;
+                for (const student of students) {
+                    const status = student.dailyStatus[String(day)];
+                    if (status === 'P') dayP++;
+                    else if (status === 'L') dayL++;
+                    else if (status === 'A') dayA++;
+                    else if (status === 'ND') dayND++;
+                }
+                dailyP.push(dayP);
+                dailyL.push(dayL);
+                dailyA.push(dayA);
+                dailyND.push(dayND);
+                grandPresent += dayP;
+                grandLate += dayL;
+                grandAbsent += dayA;
+                grandND += dayND;
+            }
+
+            // Total Present row
+            setCell(R, 0, '', summaryHeaderStyle);
+            setCell(R, 1, 'Total Present', summaryHeaderStyle);
+            for (let d = 0; d < schoolDays.length; d++) {
+                setCell(R, 2 + d, dailyP[d], { ...summaryValueStyle, font: { bold: true, sz: 10, color: { rgb: '0F9D58' } } });
+            }
+            setCell(R, tpCol, grandPresent, { ...totalPresentValStyle, font: { bold: true, sz: 11, color: { rgb: '0F9D58' } } });
+            setCell(R, tpCol + 1, '', summaryValueStyle);
+            setCell(R, tpCol + 2, '', summaryValueStyle);
+            setCell(R, tpCol + 3, '', summaryValueStyle);
+            setCell(R, tpCol + 4, '', summaryValueStyle);
+            R++;
+
+            // Total Late row
+            setCell(R, 0, '', summaryHeaderStyle);
+            setCell(R, 1, 'Total Late', summaryHeaderStyle);
+            for (let d = 0; d < schoolDays.length; d++) {
+                setCell(R, 2 + d, dailyL[d], { ...summaryValueStyle, font: { bold: true, sz: 10, color: { rgb: 'F4B400' } } });
+            }
+            setCell(R, tpCol, '', summaryValueStyle);
+            setCell(R, tpCol + 1, grandLate, { ...totalLateValStyle, font: { bold: true, sz: 11, color: { rgb: 'F4B400' } } });
+            setCell(R, tpCol + 2, '', summaryValueStyle);
+            setCell(R, tpCol + 3, '', summaryValueStyle);
+            setCell(R, tpCol + 4, '', summaryValueStyle);
+            R++;
+
+            // Total Absent row
+            setCell(R, 0, '', summaryHeaderStyle);
+            setCell(R, 1, 'Total Absent', summaryHeaderStyle);
+            for (let d = 0; d < schoolDays.length; d++) {
+                setCell(R, 2 + d, dailyA[d], { ...summaryValueStyle, font: { bold: true, sz: 10, color: { rgb: 'DB4437' } } });
+            }
+            setCell(R, tpCol, '', summaryValueStyle);
+            setCell(R, tpCol + 1, '', summaryValueStyle);
+            setCell(R, tpCol + 2, grandAbsent, { ...totalAbsentValStyle, font: { bold: true, sz: 11, color: { rgb: 'DB4437' } } });
+            setCell(R, tpCol + 3, '', summaryValueStyle);
+            setCell(R, tpCol + 4, '', summaryValueStyle);
+            R++;
+
+            // Total No Detection row
+            setCell(R, 0, '', summaryHeaderStyle);
+            setCell(R, 1, 'No Detection', { ...summaryHeaderStyle, font: { bold: true, sz: 10, color: { rgb: '999999' } } });
+            for (let d = 0; d < schoolDays.length; d++) {
+                setCell(R, 2 + d, dailyND[d], { ...summaryValueStyle, font: { bold: true, sz: 10, color: { rgb: '999999' } } });
+            }
+            setCell(R, tpCol, '', summaryValueStyle);
+            setCell(R, tpCol + 1, '', summaryValueStyle);
+            setCell(R, tpCol + 2, '', summaryValueStyle);
+            setCell(R, tpCol + 3, grandND, { font: { bold: true, sz: 11, color: { rgb: '999999' } }, fill: { fgColor: { rgb: 'F0F0F0' } }, alignment: { horizontal: 'center', vertical: 'center' }, border });
+            setCell(R, tpCol + 4, '', summaryValueStyle);
+            R++;
+
+            // ── Blank ──
+            R++;
+
+            // ── Enrollment summary ──
+            setCell(R, 1, 'Total Enrolled:', footerLabelStyle);
+            setCell(R, 2, sf2.totalEnrolled, footerValueStyle);
+            R++;
+            setCell(R, 1, 'Total School Days this Month:', footerLabelStyle);
+            setCell(R, 2, sf2.totalSchoolDays, footerValueStyle);
+            R++;
+
+            // ── Blank ──
+            R++;
+
+            // ── Legend ──
+            setCell(R, 0, 'Legend:  ✓ = Present    L = Late    ✗ = Absent    — = No Detection', { font: { sz: 10, italic: true, color: { rgb: '666666' } } });
+            R += 2;
+
+            // ════════════════════════════════════════════════════
+            // ── SAMS Analytics — Additional Insights ──
+            // ════════════════════════════════════════════════════
+            const sectionTitleStyle = {
+                font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } },
+                fill: { fgColor: { rgb: '2E7D32' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+            };
+            const sectionSubtitleStyle = {
+                font: { bold: true, italic: true, sz: 10, color: { rgb: '555555' } },
+            };
+            const analyticLabelStyle = {
+                font: { bold: true, sz: 10, color: { rgb: '333333' } },
+                border,
+            };
+            const analyticValueStyle = {
+                font: { sz: 10, color: { rgb: '4F4F4F' } },
+                border,
+                alignment: { horizontal: 'left' } as any,
+            };
+            const analyticHighlightStyle = {
+                font: { bold: true, sz: 11, color: { rgb: '1F2F57' } },
+                border,
+                alignment: { horizontal: 'center' } as any,
+            };
+            const detectionTableHeaderStyle = {
+                font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
+                fill: { fgColor: { rgb: '2E7D32' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border,
+            };
+
+            // Section title row
+            setCell(R, 0, 'SAMS Analytics — Additional Insights (Not part of standard SF2)', sectionTitleStyle);
+            const analyticsStartRow = R;
+            R++;
+            setCell(R, 0, 'These metrics are generated automatically by the Student Attendance Management System (SAMS).', sectionSubtitleStyle);
+            R += 2;
+
+            // ── 1. Overall Attendance Rate Breakdown ──
+            // Use ACTUAL records only (matching the website calculation).
+            // This excludes "assumed absences" where no database record exists.
+            let actualGrandPresent = 0, actualGrandLate = 0, actualGrandAbsent = 0, actualGrandRecords = 0;
+            for (const student of students) {
+                actualGrandPresent += student.totalPresent;
+                actualGrandLate += student.totalLate;
+                actualGrandAbsent += student.totalAbsent ?? 0;
+                actualGrandRecords += student.actualRecords ?? (student.totalPresent + student.totalLate + (student.totalAbsent ?? 0));
+            }
+            const overallRate = actualGrandRecords > 0
+                ? ((actualGrandPresent / actualGrandRecords) * 100).toFixed(2)
+                : '0.00';
+
+            setCell(R, 0, '1.', { font: { bold: true, sz: 11, color: { rgb: '2E7D32' } } });
+            setCell(R, 1, 'Overall Attendance Rate Calculation', { font: { bold: true, sz: 11, color: { rgb: '2E7D32' } } });
+            R += 1;
+
+            setCell(R, 1, 'Formula:', analyticLabelStyle);
+            setCellSpan(R, 2, wideMergeSpan, 'Attendance Rate = (Total Present ÷ Total Actual Records) × 100', analyticValueStyle);
+            R++;
+            setCell(R, 1, 'Total Present:', analyticLabelStyle);
+            setCellSpan(R, 2, shortMergeSpan, actualGrandPresent, { ...analyticValueStyle, font: { bold: true, sz: 10, color: { rgb: '0F9D58' } } });
+            R++;
+            setCell(R, 1, 'Total Late:', analyticLabelStyle);
+            setCellSpan(R, 2, shortMergeSpan, actualGrandLate, { ...analyticValueStyle, font: { bold: true, sz: 10, color: { rgb: 'F4B400' } } });
+            R++;
+            setCell(R, 1, 'Total Absent (actual records):', analyticLabelStyle);
+            setCellSpan(R, 2, shortMergeSpan, actualGrandAbsent, { ...analyticValueStyle, font: { bold: true, sz: 10, color: { rgb: 'DB4437' } } });
+            R++;
+            setCell(R, 1, 'Total Actual Records (P + L + A):', analyticLabelStyle);
+            setCellSpan(R, 2, shortMergeSpan, actualGrandRecords, analyticHighlightStyle);
+            R++;
+            setCell(R, 1, 'Calculation:', analyticLabelStyle);
+            setCellSpan(R, 2, wideMergeSpan, `(${actualGrandPresent} ÷ ${actualGrandRecords}) × 100 = ${overallRate}%`, analyticValueStyle);
+            R++;
+            setCell(R, 1, 'Overall Attendance Rate:', { ...analyticLabelStyle, font: { bold: true, sz: 12, color: { rgb: '1F2F57' } } });
+            setCellSpan(R, 2, shortMergeSpan, `${overallRate}%`, {
+                font: { bold: true, sz: 14, color: { rgb: parseFloat(overallRate) >= 80 ? '0F9D58' : parseFloat(overallRate) >= 50 ? 'F4B400' : 'DB4437' } },
+                border,
+                alignment: { horizontal: 'center' },
+            });
+            R++;
+
+            // Note
+            setCell(R, 1, 'Note:', { font: { bold: true, italic: true, sz: 9, color: { rgb: '888888' } } });
+            setCellSpan(R, 2, wideMergeSpan, 'Only actual database records are counted. Days with no detection (—) are not counted toward this rate.', { font: { italic: true, sz: 9, color: { rgb: '888888' } } });
+            R += 2;
+
+            // ── 2. Face Detection Confidence Summary ──
+            setCell(R, 0, '2.', { font: { bold: true, sz: 11, color: { rgb: '2E7D32' } } });
+            setCell(R, 1, 'Face Detection Confidence Summary', { font: { bold: true, sz: 11, color: { rgb: '2E7D32' } } });
+            R += 1;
+
+            setCell(R, 1, 'This section shows the average confidence of the facial recognition detections for each', sectionSubtitleStyle);
+            R++;
+            setCell(R, 1, 'student where they were marked Present or Late via the SAMS camera module.', sectionSubtitleStyle);
+            R += 1;
+
+            // Detection table header — uses col 0 for No., col 1 (32ch) for Name, merged pairs for data
+            setCell(R, 0, 'No.', detectionTableHeaderStyle);
+            setCell(R, 1, 'Student Name', detectionTableHeaderStyle);
+            setCellSpan(R, 2, 2, 'Detections', detectionTableHeaderStyle);
+            setCellSpan(R, 4, 2, 'Avg. Confidence', detectionTableHeaderStyle);
+            setCellSpan(R, 6, 2, 'Rating', detectionTableHeaderStyle);
+            R++;
+
+            // Per-student detection rows
+            let allConfidences: number[] = [];
+            let totalDetections = 0;
+            for (let i = 0; i < students.length; i++) {
+                const student = students[i];
+                const isEven = i % 2 === 0;
+                const rowBg = isEven ? 'FFFFFF' : 'F8FAFB';
+                const detections = student.totalDetections || 0;
+                const avgConf = student.avgConfidence;
+                const avgPct = avgConf != null ? (avgConf * 100).toFixed(1) + '%' : 'N/A';
+                let rating = 'No Data';
+                if (avgConf != null) {
+                    if (avgConf >= 0.90) rating = 'Excellent';
+                    else if (avgConf >= 0.75) rating = 'Good';
+                    else if (avgConf >= 0.50) rating = 'Fair';
+                    else rating = 'Low';
+                }
+
+                const ratingColor = rating === 'Excellent' ? '0F9D58' : rating === 'Good' ? '4285F4' : rating === 'Fair' ? 'F4B400' : rating === 'Low' ? 'DB4437' : '999999';
+
+                setCell(R, 0, i + 1, { ...numCellStyle, fill: { fgColor: { rgb: rowBg } }, font: { sz: 10, color: { rgb: '828282' } } });
+                setCell(R, 1, student.name, { ...nameCellStyle, fill: { fgColor: { rgb: rowBg } } });
+                setCellSpan(R, 2, 2, detections, { alignment: { horizontal: 'center' }, border, fill: { fgColor: { rgb: rowBg } }, font: { sz: 10 } });
+                setCellSpan(R, 4, 2, avgPct, { alignment: { horizontal: 'center' }, border, fill: { fgColor: { rgb: rowBg } }, font: { bold: true, sz: 10 } });
+                setCellSpan(R, 6, 2, rating, { alignment: { horizontal: 'center' }, border, fill: { fgColor: { rgb: rowBg } }, font: { bold: true, sz: 10, color: { rgb: ratingColor } } });
+                R++;
+
+                if (avgConf != null) allConfidences.push(avgConf);
+                totalDetections += detections;
+            }
+
+            // Detection summary
+            R++;
+            const overallAvgConf = allConfidences.length > 0
+                ? (allConfidences.reduce((a, b) => a + b, 0) / allConfidences.length * 100).toFixed(1)
+                : 'N/A';
+
+            setCell(R, 1, 'Total Face Detections:', analyticLabelStyle);
+            setCellSpan(R, 2, shortMergeSpan, totalDetections, analyticHighlightStyle);
+            R++;
+            setCell(R, 1, 'Overall Avg. Detection Confidence:', analyticLabelStyle);
+            setCellSpan(R, 2, shortMergeSpan, overallAvgConf !== 'N/A' ? `${overallAvgConf}%` : 'N/A', {
+                font: { bold: true, sz: 12, color: { rgb: overallAvgConf !== 'N/A' && parseFloat(overallAvgConf) >= 75 ? '0F9D58' : 'F4B400' } },
+                border,
+                alignment: { horizontal: 'center' },
+            });
+            R++;
+            setCell(R, 1, 'Students with Detections:', analyticLabelStyle);
+            setCellSpan(R, 2, shortMergeSpan, `${allConfidences.length} out of ${students.length}`, analyticHighlightStyle);
+            R++;
+
+            // Rating scale explanation
+            R++;
+            setCell(R, 1, 'Detection Confidence Rating Scale:', { font: { bold: true, sz: 10, color: { rgb: '333333' } } });
+            R++;
+            setCell(R, 1, '≥ 90%  =  Excellent', { font: { sz: 9, color: { rgb: '0F9D58' } } });
+            setCell(R, 3, '≥ 75%  =  Good', { font: { sz: 9, color: { rgb: '4285F4' } } });
+            R++;
+            setCell(R, 1, '≥ 50%  =  Fair', { font: { sz: 9, color: { rgb: 'F4B400' } } });
+            setCell(R, 3, '< 50%  =  Low', { font: { sz: 9, color: { rgb: 'DB4437' } } });
+            R += 2;
+
+            setCell(R, 0, 'This report was generated by SAMS (Student Attendance Monitoring System).', { font: { italic: true, sz: 9, color: { rgb: 'AAAAAA' } } });
+            R += 2;
+
+            // ── Signature lines ──
+            setCell(R, 1, 'Prepared by:', footerLabelStyle);
+            setCell(R, 4, 'Noted by:', footerLabelStyle);
+            R += 2;
+            setCell(R, 1, sf2.teacherName, { font: { bold: true, sz: 11, color: { rgb: '1F2F57' } }, alignment: { horizontal: 'center' } });
+            setCell(R, 4, '________________________________', { alignment: { horizontal: 'center' } });
+            R++;
+            setCell(R, 1, 'Class Adviser / Subject Teacher', { font: { sz: 9, color: { rgb: '828282' } }, alignment: { horizontal: 'center' } });
+            setCell(R, 4, 'School Principal', { font: { sz: 9, color: { rgb: '828282' } }, alignment: { horizontal: 'center' } });
+            R++;
+
+            // ── Set worksheet range ──
+            ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: R, c: totalCols - 1 } });
+
+            // ── Merge cells ──
+            // SAMS Analytics section title merge
+            merges.push({ s: { r: analyticsStartRow, c: 0 }, e: { r: analyticsStartRow, c: totalCols - 1 } });
+            ws['!merges'] = merges;
+
+            // ── Column widths ──
+            const colWidths: XLSX.ColInfo[] = [
+                { wch: 5 },  // No.
+                { wch: 32 }, // Student Name (wider to fit full names)
             ];
-            const metaWs = XLSX.utils.json_to_sheet(metadata);
-            XLSX.utils.book_append_sheet(wb, metaWs, 'Info');
-            
-            // Export file
+            for (let i = 0; i < schoolDays.length; i++) {
+                colWidths.push({ wch: 5 }); // Day columns
+            }
+            colWidths.push({ wch: 14 }); // Total Present
+            colWidths.push({ wch: 12 }); // Total Late
+            colWidths.push({ wch: 13 }); // Total Absent
+            colWidths.push({ wch: 15 }); // No Detection
+            colWidths.push({ wch: 14 }); // % Attendance
+            ws['!cols'] = colWidths;
+
+            // ── Row heights ──
+            const rowHeights: XLSX.RowInfo[] = [];
+            rowHeights[0] = { hpx: 30 }; // Title
+            rowHeights[headerRowIdx] = { hpx: 32 }; // Column headers (taller for wrapped text)
+            rowHeights[headerRowIdx + 1] = { hpx: 20 }; // Day-of-week
+            // Set student data rows to consistent height
+            for (let i = 0; i < students.length; i++) {
+                rowHeights[dataStartRow + i] = { hpx: 22 };
+            }
+            ws['!rows'] = rowHeights;
+
+            // ── Create workbook and export ──
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, `SF2 - ${sf2.month} ${sf2.year}`);
+
+            const sanitizedCourse = sf2.courseName.replace(/[^a-z0-9]/gi, '_');
+            const sanitizedSection = sf2.section.replace(/[^a-z0-9]/gi, '_');
+            const fileName = `SF2_${sanitizedCourse}_Sec${sanitizedSection}_${sf2.month}_${sf2.year}.xlsx`;
+
             XLSX.writeFile(wb, fileName);
-            
+
         } catch (error) {
-            console.error('Error exporting attendance data:', error);
-            alert('Failed to export attendance report. Please try again.');
+            console.error('Error exporting SF2:', error);
+            alert('Failed to export SF2 report. Please try again.');
         } finally {
             setIsExporting(false);
         }
@@ -1524,14 +1846,58 @@ export default function Teacher() {
                                                 </select>
                                             </div>
 
-                                            <button
-                                                onClick={handleExport}
-                                                disabled={isExporting}
-                                                className="teacher-export-btn"
-                                            >
-                                                <DownloadIcon />
-                                                {isExporting ? "Exporting..." : ""}
-                                            </button>
+                                            <div className="teacher-export-wrapper" ref={exportPickerRef}>
+                                                <button
+                                                    onClick={() => {
+                                                        if (!selectedOverviewCourse || !selectedSection) {
+                                                            alert('Please select a course and section first to export the SF2 attendance report.');
+                                                            return;
+                                                        }
+                                                        setShowExportPicker(!showExportPicker);
+                                                    }}
+                                                    disabled={isExporting}
+                                                    className="teacher-export-btn"
+                                                    title="Download SF2 (School Form 2) Daily Attendance Report"
+                                                >
+                                                    <DownloadIcon />
+                                                    {isExporting ? "Exporting SF2..." : "Export SF2"}
+                                                </button>
+
+                                                {showExportPicker && (
+                                                    <div className="teacher-export-popover">
+                                                        <p className="teacher-export-popover-title">Export SF2 Report</p>
+                                                        <label className="teacher-export-popover-label">Select Month</label>
+                                                        <select
+                                                            value={exportMonth}
+                                                            onChange={(e) => setExportMonth(e.target.value)}
+                                                            className="teacher-select teacher-month-select"
+                                                        >
+                                                            {(() => {
+                                                                const options = [];
+                                                                const now = new Date();
+                                                                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                                                    'July', 'August', 'September', 'October', 'November', 'December'];
+                                                                for (let i = 0; i < 12; i++) {
+                                                                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                                                                    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                                                                    options.push(
+                                                                        <option key={val} value={val}>
+                                                                            {monthNames[d.getMonth()]} {d.getFullYear()}
+                                                                        </option>
+                                                                    );
+                                                                }
+                                                                return options;
+                                                            })()}
+                                                        </select>
+                                                        <button
+                                                            onClick={() => handleExport(exportMonth)}
+                                                            className="teacher-export-popover-confirm"
+                                                        >
+                                                            <DownloadIcon /> Download
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div className="teacher-chart-container">

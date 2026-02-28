@@ -14,8 +14,6 @@ import {
 } from "@radix-ui/react-icons";
 import { useState, useEffect } from "react";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   PieChart,
@@ -241,6 +239,32 @@ export default function Student() {
     };
     const overallStatus = getAttendanceStatus(Number(attendanceRate));
 
+  // Helper function to get current semester info (matches teacher portal)
+  const getCurrentSemester = () => {
+    const now = new Date();
+    const month = now.getMonth();
+    const day = now.getDate();
+    
+    if ((month === 6 && day >= 7) || month === 7 || month === 8) {
+      return { semester: '1st Semester', quarter: 'Q1', range: 'July 7 - September 30' };
+    }
+    if (month === 9 || month === 10) {
+      return { semester: '1st Semester', quarter: 'Q2', range: 'October 1 - November 30' };
+    }
+    if (month === 11 || month === 0 || month === 1) {
+      return { semester: '2nd Semester', quarter: 'Q3', range: 'December 1 - February 28' };
+    }
+    if (month === 2 || (month === 3 && day <= 14)) {
+      return { semester: '2nd Semester', quarter: 'Q4', range: 'March 1 - April 14' };
+    }
+    if ((month === 3 && day > 14) || month === 4 || month === 5 || (month === 6 && day < 7)) {
+      return { semester: 'Summer Break', quarter: '', range: 'April 15 - July 6' };
+    }
+    return { semester: '2nd Semester', quarter: 'Q3', range: 'December 1 - February 28' };
+  };
+
+  const currentSemesterInfo = getCurrentSemester();
+
   const handleExport = () => {
     setIsExporting(true);
     setTimeout(() => {
@@ -322,10 +346,6 @@ export default function Student() {
                         </div>
                       </div>
                       <div>
-                        <div className="student-info-field-label">Student ID</div>
-                        <div className="student-info-field-value">{studentInfo.studentId}</div>
-                      </div>
-                      <div>
                         <div className="student-info-field-label">Grade Level</div>
                         <div className="student-info-field-value">
                           {isLoading ? "Loading..." : (studentData?.grade_level || studentInfo.grade)}
@@ -341,7 +361,12 @@ export default function Student() {
                   </div>
 
                   <div className="student-summary-card">
-                    <h3 className="student-summary-title">Current Semester Summary</h3>
+                    <h3 className="student-summary-title">
+                      Current Semester Summary
+                      <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666', marginLeft: '10px' }}>
+                        ({currentSemesterInfo.semester} - {currentSemesterInfo.range})
+                      </span>
+                    </h3>
 
                     <div className="student-summary-row">
                         {/* LEFT: CHART */}
@@ -439,7 +464,7 @@ export default function Student() {
                           <p>Loading chart data...</p>
                         </div>
                       ) : (
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="80%">
                         {selectedView === "daily" && (
                           <BarChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -510,7 +535,7 @@ export default function Student() {
                         )}
 
                         {selectedView === "monthly" && (
-                          <LineChart data={trendsData}>
+                          <BarChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="month" />
                             <YAxis />
@@ -526,10 +551,12 @@ export default function Student() {
                                       borderRadius: '4px'
                                     }}>
                                       <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data?.fullMonth}</p>
-                                      <p style={{ color: 'var(--present)' }}>Attendance Rate: {data?.attendanceRate}%</p>
-                                      <p style={{ color: '#666', fontSize: '12px', marginTop: '8px' }}>Present: {data?.present}</p>
-                                      <p style={{ color: '#666', fontSize: '12px' }}>Late: {data?.late}</p>
-                                      <p style={{ color: '#666', fontSize: '12px' }}>Absent: {data?.absent}</p>
+                                      <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>
+                                        Attendance Rate: {data?.attendanceRate}%
+                                      </p>
+                                      <p style={{ color: 'var(--present)' }}>Present: {payload[0]?.value}</p>
+                                      <p style={{ color: 'var(--late)' }}>Late: {payload[1]?.value}</p>
+                                      <p style={{ color: 'var(--absent)' }}>Absent: {payload[2]?.value}</p>
                                     </div>
                                   );
                                 }
@@ -537,14 +564,10 @@ export default function Student() {
                               }}
                             />
                             <Legend />
-                            <Line
-                              type="monotone"
-                              dataKey="attendanceRate"
-                              stroke="var(--present)"
-                              strokeWidth={3}
-                              name="Attendance Rate (%)"
-                            />
-                          </LineChart>
+                            <Bar dataKey="present" fill="var(--present)" name="Present" />
+                            <Bar dataKey="late" fill="var(--late)" name="Late" />
+                            <Bar dataKey="absent" fill="var(--absent)" name="Absent" />
+                          </BarChart>
                         )}
 
                         {selectedView === "quarterly" && (
@@ -553,9 +576,12 @@ export default function Student() {
                             <XAxis dataKey="name" />
                             <YAxis />
                             <Tooltip 
-                              content={({ active, payload }) => {
+                              content={({ active, payload, label }) => {
                                 if (active && payload && payload.length) {
-                                  const data = payload[0]?.payload;
+                                  const data = trendsData.find(d => d.name === label);
+                                  const semester = (label === 'Q1' || label === 'Q2') 
+                                    ? '1st Semester' 
+                                    : '2nd Semester';
                                   return (
                                     <div style={{ 
                                       backgroundColor: 'white', 
@@ -563,13 +589,16 @@ export default function Student() {
                                       border: '1px solid #ccc',
                                       borderRadius: '4px'
                                     }}>
-                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data.label}</p>
-                                      <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>
-                                        {data.dateRange}
+                                      <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{data?.label}</p>
+                                      <p style={{ color: '#1F2F57', fontSize: '13px', fontWeight: '500', marginBottom: '5px' }}>
+                                        {semester}
                                       </p>
-                                      <p style={{ color: 'var(--present)' }}>Present: {data.present}</p>
-                                      <p style={{ color: 'var(--late)' }}>Late: {data.late}</p>
-                                      <p style={{ color: 'var(--absent)' }}>Absent: {data.absent}</p>
+                                      <p style={{ color: '#666', fontSize: '12px', marginBottom: '8px' }}>
+                                        {data?.dateRange}
+                                      </p>
+                                      <p style={{ color: 'var(--present)' }}>Present: {payload[0]?.value}</p>
+                                      <p style={{ color: 'var(--late)' }}>Late: {payload[1]?.value}</p>
+                                      <p style={{ color: 'var(--absent)' }}>Absent: {payload[2]?.value}</p>
                                     </div>
                                   );
                                 }
