@@ -59,7 +59,7 @@ function getLateReason(record: any) {
 export default function Student() {
   const [selectedView, setSelectedView] = useState<
     "daily" | "weekly" | "monthly" | "quarterly"
-  >("weekly");
+  >("daily");
 
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
@@ -90,6 +90,7 @@ export default function Student() {
   });
 
   const [courseAttendance, setCourseAttendance] = useState<Array<{
+    courseId: string;
     course: string;
     present: number;
     late: number;
@@ -442,7 +443,7 @@ export default function Student() {
                       >
                         <option value="all">All Courses</option>
                         {courseAttendance.map((courseItem, index) => (
-                          <option key={index} value={courseItem.course}>{courseItem.course}</option>
+                          <option key={index} value={courseItem.courseId}>{courseItem.course}</option>
                         ))}
                       </select>
                     </div>

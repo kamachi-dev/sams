@@ -18,6 +18,7 @@ export async function GET() {
         // attendance: 1=present, 2=late, 0=absent
         const result = await db.query(`
             SELECT 
+                c.id as course_id,
                 c.name as course_name,
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late,
@@ -38,13 +39,13 @@ export async function GET() {
             const absent = parseInt(row.absent || '0')
             const total = parseInt(row.total_records || '0')
 
-            // New attendance rate calculation:
-            // Present = 1 (100%), Late = 0.5 (50%), Absent = 0 (0%)
+            // Attendance rate = present out of all actual records (matches teacher portal)
             const percentage = total > 0
-                ? (((present * 1) + (late * 0.5) + (absent * 0)) / total * 100).toFixed(1)
+                ? ((present / total) * 100).toFixed(1)
                 : '0.0'
 
             return {
+                courseId: row.course_id,
                 course: row.course_name,
                 present,
                 late,

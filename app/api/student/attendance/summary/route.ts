@@ -33,11 +33,9 @@ export async function GET() {
         const absentDays = parseInt(data.absent_days || '0')
         const totalDays = parseInt(data.total_days || '0')
 
-        // New attendance rate calculation:
-        // Present = 1 (100%), Late = 0.5 (50%), Absent = 0 (0%)
-        // Example: 1 present + 1 late = (1 + 0.5) / 2 = 75%
+        // Attendance rate = present out of all actual records (matches teacher portal)
         const attendanceRate = totalDays > 0
-            ? (((presentDays * 1) + (lateDays * 0.5) + (absentDays * 0)) / totalDays * 100).toFixed(1)
+            ? ((presentDays / totalDays) * 100).toFixed(1)
             : '0.0'
 
         // Get total courses enrolled
