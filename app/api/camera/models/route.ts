@@ -25,23 +25,27 @@ export async function GET() {
             SELECT 
                 c.id as course_id,
                 c.name as course_name,
-                c.model_pickle,
+                cm.id as model_id,
+                cm.section,
+                cm.model_pickle,
                 t.name as teacher_name,
                 COUNT(DISTINCT ed.student) as enrolled_count
-            FROM course c
+            FROM course_models cm
+            INNER JOIN course c ON cm.course_id = c.id
             LEFT JOIN enrollment_data ed ON c.id = ed.course
             LEFT JOIN teacher_data t ON c.teacher = t.account_id
-            WHERE c.model_pickle IS NOT NULL
-            GROUP BY c.id, c.name, c.model_pickle, t.name
-            ORDER BY c.name
+            GROUP BY cm.id, c.id, c.name, cm.model_pickle, cm.section, t.name
+            ORDER BY c.name, cm.section
         `);
 
         const data = result.rows.map(row => ({
+            model_id: row.model_id,
             course_id: row.course_id,
             course_name: row.course_name,
+            section: row.section,
             teacher_name: row.teacher_name,
             enrolled_count: row.enrolled_count,
-            model_base64: bufferToBase64(row.model_pickle)  // ✅ Now handles both Buffer and string
+            model_base64: bufferToBase64(row.model_pickle)
         }));
 
         return NextResponse.json({ success: true, data });
