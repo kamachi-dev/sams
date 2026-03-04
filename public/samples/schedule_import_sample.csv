@@ -1,0 +1,10 @@
+course_name,Math 101
+teacher_id,teacher-123
+schedule,"{""monday"":{""start"":""9:00"",""end"":""10:15""},""wednesday"":{""start"":""9:00"",""end"":""10:15""}}"
+section,A
+,,
+,student_id,username,email
+,stu-001,Jane Doe,jane@example.com
+,stu-002,John Smith,john@example.com
+,stu-003,Alice Wong,alice@example.com
+,stu-004,Bob Lee,bob@example.com

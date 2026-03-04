@@ -45,6 +45,7 @@ export default function Admin() {
 
     const studentFileRef = useRef<HTMLInputElement | null>(null);
     const teacherFileRef = useRef<HTMLInputElement | null>(null);
+    const scheduleFileRef = useRef<HTMLInputElement | null>(null);
     const [students, setStudents] = useState<{ id: string; username?: string; email?: string; pfp?: string }[]>([]);
     const [teachers, setTeachers] = useState<{ id: string; username?: string; email?: string; pfp?: string }[]>([]);
     const [usersLoading, setUsersLoading] = useState<boolean>(false);
@@ -709,7 +710,7 @@ export default function Admin() {
                                 <button className="import-button" onClick={() => teacherFileRef.current?.click()}>
                                     <Label.Root>Teachers</Label.Root>
                                 </button>
-                                <button className="import-button">
+                                <button className="import-button" onClick={() => scheduleFileRef.current?.click()}>
                                     <Label.Root>Schedule</Label.Root>
                                 </button>
                             </div>
@@ -732,6 +733,57 @@ export default function Admin() {
                                 onChange={(e) => {
                                     const f = e.target.files?.[0];
                                     if (f) handleCsvUpload(f, '/api/teachers');
+                                    e.currentTarget.value = '';
+                                }}
+                            />
+                            <input
+                                ref={scheduleFileRef}
+                                type="file"
+                                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                className="hidden"
+                                onChange={async (e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) {
+                                        try {
+                                            setImportStatus('Uploading schedule...');
+                                            const form = new FormData();
+                                            form.append('file', f);
+                                            const res = await fetch('/api/schedule/import', { method: 'POST', body: form });
+                                            const json = await res.json();
+                                            if (!res.ok || json?.success === false) {
+                                                setImportStatus(`Schedule import error: ${json?.error ?? 'Unknown error'}`);
+                                            } else {
+                                                const d = json.data;
+                                                setImportStatus(
+                                                    `Schedule imported: ${d.coursesCreated} courses, ${d.studentsCreated} new students, ${d.studentsExisting} existing, ${d.studentDataCreated} student records, ${d.enrollments} enrollments, ${d.teachersLinked} teachers linked` +
+                                                    (d.errors?.length ? ` (${d.errors.length} errors)` : '')
+                                                );
+                                                // Refresh counts and lists
+                                                try {
+                                                    const [sc, tc, cc] = await Promise.all([
+                                                        fetch('/api/students/count').then(r => r.json()),
+                                                        fetch('/api/teachers/count').then(r => r.json()),
+                                                        fetch('/api/classes/count').then(r => r.json()),
+                                                    ]);
+                                                    if (sc?.success) setStudentCount(Number(sc.data.count));
+                                                    if (tc?.success) setTeacherCount(Number(tc.data.count));
+                                                    if (cc?.success) setClassCount(Number(cc.data.count));
+                                                } catch { /* ignore refresh errors */ }
+                                                try {
+                                                    const studentsRes = await fetch('/api/students').then(r => r.json());
+                                                    if (studentsRes?.success) setStudents(studentsRes.data ?? []);
+                                                    const coursesRes = await fetch('/api/courses').then(r => r.json());
+                                                    if (coursesRes?.success) setCoursesList(coursesRes.data ?? []);
+                                                } catch { /* ignore */ }
+                                            }
+                                        } catch (err: unknown) {
+                                            let message = 'Unknown error';
+                                            if (err instanceof Error) message = err.message;
+                                            setImportStatus(`Schedule import error: ${message}`);
+                                        } finally {
+                                            setTimeout(() => setImportStatus(null), 7000);
+                                        }
+                                    }
                                     e.currentTarget.value = '';
                                 }}
                             />
