@@ -43,7 +43,6 @@ export default function Admin() {
     const [activateConfirmText, setActivateConfirmText] = useState<string>('');
     const [activeSchoolYearId, setActiveSchoolYearId] = useState<string | null>(null);
 
-    const studentFileRef = useRef<HTMLInputElement | null>(null);
     const teacherFileRef = useRef<HTMLInputElement | null>(null);
     const scheduleFileRef = useRef<HTMLInputElement | null>(null);
     const [students, setStudents] = useState<{ id: string; username?: string; email?: string; pfp?: string }[]>([]);
@@ -704,9 +703,6 @@ export default function Admin() {
                         <div className="import-header">
                             <Label.Root className="import-section-title">Import</Label.Root>
                             <div className="import-actions">
-                                <button className="import-button" onClick={() => studentFileRef.current?.click()}>
-                                    <Label.Root>Students</Label.Root>
-                                </button>
                                 <button className="import-button" onClick={() => teacherFileRef.current?.click()}>
                                     <Label.Root>Teachers</Label.Root>
                                 </button>
@@ -714,17 +710,6 @@ export default function Admin() {
                                     <Label.Root>Schedule</Label.Root>
                                 </button>
                             </div>
-                            <input
-                                ref={studentFileRef}
-                                type="file"
-                                accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                className="hidden"
-                                onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) handleCsvUpload(f, '/api/students');
-                                    e.currentTarget.value = '';
-                                }}
-                            />
                             <input
                                 ref={teacherFileRef}
                                 type="file"
