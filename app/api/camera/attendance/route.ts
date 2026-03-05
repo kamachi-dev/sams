@@ -24,7 +24,11 @@ export async function POST(req: Request) {
 
         // Validate all records
         for (const rec of records) {
-            if (!rec.student || !rec.course || !rec.attendance || !rec.confidence || !rec.timestamp) {
+            if (rec.student === undefined || rec.student === null || 
+                rec.course === undefined || rec.course === null || 
+                rec.attendance === undefined || rec.attendance === null || 
+                rec.confidence === undefined || rec.confidence === null || 
+                rec.timestamp === undefined || rec.timestamp === null) {
                 return NextResponse.json(
                     {
                         success: false,
