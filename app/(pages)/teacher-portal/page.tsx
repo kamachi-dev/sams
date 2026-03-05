@@ -925,9 +925,11 @@ export default function Teacher() {
             const schoolDays: number[] = sf2.schoolDays;
             const students = sf2.students;
 
-            // All days of the month (1..28/29/30/31) for fixed column layout
+            // All days of the month (1..28/29/30/31) excluding Sundays for fixed column layout
             const daysInMonth = new Date(sf2.year, sf2.monthNum, 0).getDate();
-            const allDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+            const allDays = Array.from({ length: daysInMonth }, (_, i) => i + 1).filter(
+              day => new Date(sf2.year, sf2.monthNum - 1, day).getDay() !== 0
+            );
 
             if (format === 'pdf') {
                 // ═══════════════════════════════════════════════════
