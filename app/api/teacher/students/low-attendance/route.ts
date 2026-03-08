@@ -20,12 +20,12 @@ export async function GET(req: Request) {
         const threshold = parseFloat(searchParams.get('threshold') || '50')
 
         // Build dynamic WHERE clauses based on filters
-        const conditions: string[] = ['c.teacher = $1', `c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`]
+        const conditions: string[] = ['s.teacher = $1', `c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`]
         const params: any[] = [user.id]
         let paramIdx = 2
 
         if (courseFilter) {
-            conditions.push(`c.id = $${paramIdx++}`)
+            conditions.push(`s.id = $${paramIdx++}`)
             params.push(courseFilter)
         }
         if (sectionFilter) {
@@ -55,11 +55,12 @@ export async function GET(req: Request) {
                     COUNT(CASE WHEN r.attendance = 2 THEN 1 END) AS late_count,
                     COUNT(CASE WHEN r.attendance = 0 THEN 1 END) AS absent_count
                 FROM enrollment_data e
-                INNER JOIN course c ON e.course = c.id
+                INNER JOIN section s ON e.section = s.id
+                INNER JOIN course c ON s.course = c.id
                 INNER JOIN account a ON e.student = a.id
                 INNER JOIN student_data sd ON sd.student = a.id
                 LEFT JOIN record r ON r.student = a.id
-                    AND r.course = c.id
+                    AND r.course = s.id
                     AND r.time IS NOT NULL
                 WHERE ${whereClause}
                 GROUP BY a.id, a.username, a.email, c.id, c.name, sd.section

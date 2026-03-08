@@ -18,19 +18,21 @@ export async function GET() {
         // attendance: 1=present, 2=late, 0=absent
         const result = await db.query(`
             SELECT 
-                c.id as course_id,
+                s.id as course_id,
                 c.name as course_name,
+                s.name as section_name,
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late,
                 COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent,
                 COUNT(*) as total_records
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
-            LEFT JOIN record r ON r.course = c.id AND r.student = e.student
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
+            LEFT JOIN record r ON r.course = s.id AND r.student = e.student
             WHERE e.student = $1
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-            GROUP BY c.id, c.name
-            ORDER BY c.name
+            GROUP BY s.id, c.name, s.name
+            ORDER BY c.name, s.name
         `, [user.id])
 
         const courses = result.rows.map(row => {

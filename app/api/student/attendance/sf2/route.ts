@@ -57,14 +57,15 @@ export async function GET(req: Request) {
 
         const studentInfo = studentInfoResult.rows[0]
 
-        // Get enrolled courses for the active school year
+        // Get enrolled sections for the active school year
         const coursesResult = await db.query(`
-            SELECT c.id, c.name
+            SELECT s.id, c.name, s.name as section_name
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
             WHERE e.student = $1
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-            ORDER BY c.name ASC
+            ORDER BY c.name ASC, s.name ASC
         `, [user.id])
 
         const enrolledCourses = coursesResult.rows
@@ -177,17 +178,19 @@ export async function GET(req: Request) {
             }
         })
 
-        // Detection Log (best record per course per day, chronological)
+        // Detection Log (best record per section per day, chronological)
         const detectionLogResult = await db.query(`
             SELECT * FROM (
                 SELECT DISTINCT ON (r.course, DATE(r.time))
                     r.course,
                     c.name as course_name,
+                    s.name as section_name,
                     r.time,
                     r.attendance,
                     r.confidence
                 FROM record r
-                INNER JOIN course c ON r.course = c.id
+                INNER JOIN section s ON r.course = s.id
+                INNER JOIN course c ON s.course = c.id
                 WHERE r.student = $1
                   AND r.course = ANY($2::uuid[])
                   AND r.time IS NOT NULL

@@ -36,10 +36,11 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
             INNER JOIN account a ON e.student = a.id
-            LEFT JOIN record r ON r.student = a.id AND r.course = c.id
-            WHERE c.teacher = $1 AND a.id = $2 AND c.id = $3
+            LEFT JOIN record r ON r.student = a.id AND r.course = s.id
+            WHERE s.teacher = $1 AND a.id = $2 AND s.id = $3
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             GROUP BY a.id, a.username, c.name
         `, [user.id, studentId, courseId])
@@ -53,9 +54,10 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count,
                 COUNT(DISTINCT e.student) as total_students
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
-            LEFT JOIN record r ON r.student = e.student AND r.course = c.id
-            WHERE c.teacher = $1 AND c.id = $2
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
+            LEFT JOIN record r ON r.student = e.student AND r.course = s.id
+            WHERE s.teacher = $1 AND s.id = $2
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user.id, courseId])
 
@@ -69,8 +71,9 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late,
                 COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent
             FROM record r
-            INNER JOIN course c ON r.course = c.id
-            WHERE c.teacher = $1 AND r.student = $2 AND c.id = $3
+            INNER JOIN section s ON r.course = s.id
+            INNER JOIN course c ON s.course = c.id
+            WHERE s.teacher = $1 AND r.student = $2 AND s.id = $3
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             GROUP BY TO_CHAR(r.time, 'Mon'), EXTRACT(MONTH FROM r.time)
             ORDER BY month_num
@@ -85,8 +88,9 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late,
                 COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent
             FROM record r
-            INNER JOIN course c ON r.course = c.id
-            WHERE c.teacher = $1 AND c.id = $2
+            INNER JOIN section s ON r.course = s.id
+            INNER JOIN course c ON s.course = c.id
+            WHERE s.teacher = $1 AND s.id = $2
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             GROUP BY TO_CHAR(r.time, 'Mon'), EXTRACT(MONTH FROM r.time)
             ORDER BY month_num

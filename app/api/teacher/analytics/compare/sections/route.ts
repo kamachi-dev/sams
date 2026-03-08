@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
         // Verify teacher owns this course
         const courseCheck = await db.query(
-            `SELECT id, name FROM course WHERE id = $1 AND teacher = $2 AND school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
+            `SELECT s.id, c.name FROM section s INNER JOIN course c ON s.course = c.id WHERE s.id = $1 AND s.teacher = $2 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
             [courseId, user.id]
         )
 
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
             FROM enrollment_data e
             INNER JOIN account a ON e.student = a.id
             LEFT JOIN student_data sd ON sd.student = a.id
-            WHERE e.course = $1
+            WHERE e.section = $1
             ORDER BY section
         `, [courseId])
 
@@ -57,7 +57,7 @@ export async function GET(req: Request) {
                 FROM enrollment_data e
                 INNER JOIN account a ON e.student = a.id
                 LEFT JOIN student_data sd ON sd.student = a.id
-                WHERE e.course = $1 AND COALESCE(sd.section, 'Unassigned') = $2
+                WHERE e.section = $1 AND COALESCE(sd.section, 'Unassigned') = $2
             `, [courseId, section])
             const enrolledCount = parseInt(enrolledResult.rows[0]?.enrolled_count || '0')
 
@@ -69,9 +69,8 @@ export async function GET(req: Request) {
                     COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
                     COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
                 FROM record r
-                INNER JOIN course c ON r.course = c.id
                 INNER JOIN student_data sd ON r.student = sd.student
-                WHERE c.id = $1
+                WHERE r.course = $1
                   AND COALESCE(sd.section, 'Unassigned') = $2
                   AND r.time IS NOT NULL
             `, [courseId, section])
@@ -111,9 +110,8 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
             FROM record r
-            INNER JOIN course c ON r.course = c.id
             INNER JOIN student_data sd ON r.student = sd.student
-            WHERE c.id = $1
+            WHERE r.course = $1
               AND r.time IS NOT NULL
             GROUP BY sd.section, TO_CHAR(r.time, 'Mon'), EXTRACT(MONTH FROM r.time)
             ORDER BY month_num

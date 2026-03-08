@@ -9,18 +9,20 @@ export async function GET() {
 
         // Get all courses for this teacher
         const coursesResult = await db.query(`
-            SELECT id, name, teacher, school_year 
-            FROM course 
-            WHERE teacher = $1
-              AND school_year = (SELECT active_school_year FROM meta WHERE id='1')
+            SELECT s.id, c.name, s.teacher, c.school_year 
+            FROM section s
+            INNER JOIN course c ON s.course = c.id
+            WHERE s.teacher = $1
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user?.id])
 
         // Get all enrollments for these courses
         const enrollmentsResult = await db.query(`
             SELECT e.*, c.name as course_name
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
-            WHERE c.teacher = $1
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
+            WHERE s.teacher = $1
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user?.id])
 
@@ -36,8 +38,9 @@ export async function GET() {
         const countResult = await db.query(`
             SELECT COUNT(DISTINCT e.student) as count
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
-            WHERE c.teacher = $1 
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
+            WHERE s.teacher = $1 
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user?.id])
 

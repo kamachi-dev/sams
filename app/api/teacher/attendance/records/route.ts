@@ -52,15 +52,16 @@ export async function GET(req: Request) {
                 r.created_at,
                 r.confidence
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
             INNER JOIN account a ON e.student = a.id
             ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = a.id' : ''}
             LEFT JOIN record r ON r.student = a.id 
                 AND r.time IS NOT NULL
                 AND DATE(r.time) >= $1
                 AND DATE(r.time) <= $2
-                AND r.course = c.id
-            WHERE c.teacher = $3 AND c.id = $4
+                AND r.course = s.id
+            WHERE s.teacher = $3 AND s.id = $4
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ${sectionFilter ? 'AND sd.section = $5' : ''}
             ORDER BY 
@@ -76,14 +77,15 @@ export async function GET(req: Request) {
                 r.created_at,
                 r.confidence
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
             INNER JOIN account a ON e.student = a.id
             ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = a.id' : ''}
             LEFT JOIN record r ON r.student = a.id 
                 AND r.time IS NOT NULL
                 AND DATE(r.time) = $1
-                AND r.course = c.id
-            WHERE c.teacher = $2 AND c.id = $3
+                AND r.course = s.id
+            WHERE s.teacher = $2 AND s.id = $3
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ${sectionFilter ? 'AND sd.section = $4' : ''}
             ORDER BY 

@@ -233,21 +233,28 @@ export async function POST(req: Request) {
                 scheduleObj[slot.day] = { start: slot.start, end: slot.end }
             }
 
-            /* ── 4. Create course ── */
+            /* ── 4. Create course and section ── */
             try {
                 const courseResult = await db.query(
-                    `INSERT INTO course (name, schedule, teacher, school_year) VALUES ($1, $2, $3, $4) RETURNING id`,
-                    [course.name, JSON.stringify(scheduleObj), teacherId, activeSchoolYear],
+                    `INSERT INTO course (name, school_year) VALUES ($1, $2) RETURNING id`,
+                    [course.name, activeSchoolYear],
                 )
                 const courseId = courseResult.rows[0].id
                 results.coursesCreated++
+
+                // Create a section for this course with schedule and teacher
+                const sectionResult = await db.query(
+                    `INSERT INTO section (name, schedule, teacher, course) VALUES ($1, $2, $3, $4) RETURNING id`,
+                    ['Default', JSON.stringify(scheduleObj), teacherId, courseId],
+                )
+                const sectionId = sectionResult.rows[0].id
 
                 /* ── 5. Enroll students using their account IDs ── */
                 if (studentIds.length) {
                     const placeholders = studentIds.map((_, i) => `($1, $${i + 2})`).join(', ')
                     await db.query(
-                        `INSERT INTO enrollment_data (course, student) VALUES ${placeholders} ON CONFLICT DO NOTHING`,
-                        [courseId, ...studentIds],
+                        `INSERT INTO enrollment_data (section, student) VALUES ${placeholders} ON CONFLICT DO NOTHING`,
+                        [sectionId, ...studentIds],
                     )
                     results.enrollments += studentIds.length
                 }

@@ -24,12 +24,14 @@ export async function GET() {
                 SELECT DISTINCT ON (r.course, DATE(r.time))
                     r.course,
                     c.name as course_name,
+                    s.name as section_name,
                     r.time,
                     r.attendance,
                     r.confidence
                 FROM record r
-                INNER JOIN course c ON r.course = c.id
-                INNER JOIN enrollment_data e ON e.course = c.id AND e.student = r.student
+                INNER JOIN section s ON r.course = s.id
+                INNER JOIN course c ON s.course = c.id
+                INNER JOIN enrollment_data e ON e.section = s.id AND e.student = r.student
                 WHERE r.student = $1
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                   AND r.time IS NOT NULL

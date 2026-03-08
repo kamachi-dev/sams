@@ -14,49 +14,35 @@ export async function GET() {
             }, { status: 401 })
         }
 
-        // Get all courses for this teacher with section and student counts
+        // Get all sections for this teacher with course info and student counts
         const result = await db.query(`
             SELECT 
-                c.id, 
+                s.id, 
                 c.name, 
-                c.schedule,
-                COUNT(DISTINCT e.student) as student_count,
-                COUNT(DISTINCT COALESCE(sd.section, 'Unassigned')) as section_count,
-                ARRAY_AGG(DISTINCT COALESCE(sd.section, 'Unassigned') ORDER BY COALESCE(sd.section, 'Unassigned')) as section_names
-            FROM course c
-            LEFT JOIN enrollment_data e ON e.course = c.id
-            LEFT JOIN student_data sd ON sd.student = e.student
-            WHERE c.teacher = $1
+                s.schedule,
+                s.name as section_name,
+                COUNT(DISTINCT e.student) as student_count
+            FROM section s
+            INNER JOIN course c ON s.course = c.id
+            LEFT JOIN enrollment_data e ON e.section = s.id
+            WHERE s.teacher = $1
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-            GROUP BY c.id, c.name, c.schedule
-            ORDER BY c.name
+            GROUP BY s.id, c.name, s.schedule, s.name
+            ORDER BY c.name, s.name
         `, [user.id])
 
-        // For each course, get the student count per section
-        const coursesWithSections = await Promise.all(result.rows.map(async (row) => {
-            const sectionDetails = await db.query(`
-                SELECT 
-                    COALESCE(sd.section, 'Unassigned') as section,
-                    COUNT(DISTINCT e.student) as student_count
-                FROM enrollment_data e
-                LEFT JOIN student_data sd ON sd.student = e.student
-                WHERE e.course = $1
-                GROUP BY COALESCE(sd.section, 'Unassigned')
-                ORDER BY COALESCE(sd.section, 'Unassigned')
-            `, [row.id])
-
-            return {
-                id: row.id,
-                name: row.name,
-                schedule: row.schedule || '',
-                studentCount: parseInt(row.student_count || '0'),
-                sectionCount: parseInt(row.section_count || '0'),
-                sectionNames: row.section_names || [],
-                sections: sectionDetails.rows.map((s: any) => ({
-                    name: s.section,
-                    studentCount: parseInt(s.student_count || '0')
-                }))
-            }
+        const coursesWithSections = result.rows.map(row => ({
+            id: row.id,
+            name: row.name,
+            schedule: row.schedule || '',
+            sectionName: row.section_name || '',
+            studentCount: parseInt(row.student_count || '0'),
+            sectionCount: 1,
+            sectionNames: [row.section_name || ''],
+            sections: [{
+                name: row.section_name || '',
+                studentCount: parseInt(row.student_count || '0')
+            }]
         }))
 
         return NextResponse.json({

@@ -45,9 +45,9 @@ export async function GET(req: Request) {
             return NextResponse.json({ success: false, error: 'Invalid month or year' }, { status: 400 })
         }
 
-        // Verify teacher owns this course
+        // Verify teacher owns this section
         const courseCheck = await db.query(
-            `SELECT id, name FROM course WHERE id = $1 AND teacher = $2 AND school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
+            `SELECT s.id, c.name FROM section s INNER JOIN course c ON s.course = c.id WHERE s.id = $1 AND s.teacher = $2 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
             [courseId, user.id]
         )
 
@@ -77,7 +77,7 @@ export async function GET(req: Request) {
             FROM enrollment_data e
             INNER JOIN account a ON e.student = a.id
             LEFT JOIN student_data sd ON sd.student = a.id
-            WHERE e.course = $1
+            WHERE e.section = $1
               AND COALESCE(sd.section, 'Unassigned') = $2
             ORDER BY a.username ASC
         `, [courseId, section])
@@ -109,11 +109,11 @@ export async function GET(req: Request) {
         for (const row of recordsResult.rows) {
             const studentId = row.student
             const day = new Date(row.record_date).getDate()
-            
+
             if (!attendanceMap[studentId]) {
                 attendanceMap[studentId] = {}
             }
-            
+
             // Only keep the first (best) record per student per day due to ORDER BY
             if (attendanceMap[studentId][day] === undefined) {
                 attendanceMap[studentId][day] = row.attendance

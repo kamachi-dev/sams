@@ -45,7 +45,8 @@ export async function GET() {
             `SELECT * FROM account WHERE role = 3
               AND id IN (
                 SELECT DISTINCT e.student FROM enrollment_data e
-                INNER JOIN course c ON e.course = c.id
+                INNER JOIN section s ON e.section = s.id
+                INNER JOIN course c ON s.course = c.id
                 WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
               )`
         )).rows

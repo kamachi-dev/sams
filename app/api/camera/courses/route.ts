@@ -2,42 +2,38 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import db from '@/app/services/database'
 
-// GET /api/camera/courses - List all courses
-// GET /api/camera/courses?courseId=...&section=... - List students in a course and section
+// GET /api/camera/courses - List all sections (classes)
+// GET /api/camera/courses?courseId=... - List students in a section
 
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url)
         const courseId = searchParams.get('courseId')
-        const section = searchParams.get('section')
 
         if (courseId) {
-            // Get course info
+            // courseId is now a section id
             const courseResult = await db.query(
-                `SELECT id, name, schedule, teacher FROM course WHERE id = $1`,
+                `SELECT s.id, c.name, s.name as section_name, s.schedule, s.teacher FROM section s INNER JOIN course c ON s.course = c.id WHERE s.id = $1`,
                 [courseId]
             )
             if (courseResult.rows.length === 0) {
-                return NextResponse.json({ success: false, status: 404, data: null, error: 'Course not found' }, { status: 404 })
+                return NextResponse.json({ success: false, status: 404, data: null, error: 'Section not found' }, { status: 404 })
             }
             const course = courseResult.rows[0]
 
-            // Get enrolled students filtered by section
+            // Get enrolled students for this section
             const studentsQuery = `
-                SELECT a.id, a.username as name, a.email, sd.section
+                SELECT a.id, a.username as name, a.email
                 FROM enrollment_data e
                 INNER JOIN account a ON e.student = a.id
-                LEFT JOIN student_data sd ON sd.student = a.id
-                WHERE e.course = $1
-                ${section ? 'AND sd.section = $2' : ''}
+                WHERE e.section = $1
                 ORDER BY a.username ASC
             `
-            const studentsResult = await db.query(studentsQuery, section ? [courseId, section] : [courseId])
+            const studentsResult = await db.query(studentsQuery, [courseId])
             course.enrolled_students = studentsResult.rows.map(row => ({
                 id: row.id,
                 name: row.name,
-                email: row.email,
-                section: row.section
+                email: row.email
             }))
 
             return NextResponse.json({
@@ -45,11 +41,12 @@ export async function GET(req: Request) {
                 data: course
             })
         } else {
-            // Get all courses
+            // Get all sections with parent course info
             const result = await db.query(`
-                SELECT id, name, schedule, teacher
-                FROM course
-                ORDER BY name
+                SELECT s.id, c.name, s.name as section_name, s.schedule, s.teacher
+                FROM section s
+                INNER JOIN course c ON s.course = c.id
+                ORDER BY c.name, s.name
             `)
             return NextResponse.json({
                 success: true,

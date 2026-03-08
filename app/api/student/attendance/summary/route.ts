@@ -24,7 +24,7 @@ export async function GET() {
                 COUNT(*) as total_days
             FROM record r
             WHERE r.student = $1
-              AND r.course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
+              AND r.course IN (SELECT s.id FROM section s INNER JOIN course c ON s.course = c.id WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1'))
         `, [user.id])
 
         const data = result.rows[0]
@@ -40,10 +40,10 @@ export async function GET() {
 
         // Get total courses enrolled
         const enrollmentResult = await db.query(`
-            SELECT COUNT(DISTINCT course) as total_courses
+            SELECT COUNT(DISTINCT section) as total_courses
             FROM enrollment_data
             WHERE student = $1
-              AND course IN (SELECT id FROM course WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1'))
+              AND section IN (SELECT s.id FROM section s INNER JOIN course c ON s.course = c.id WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1'))
         `, [user.id])
 
         const totalCourses = parseInt(enrollmentResult.rows[0]?.total_courses || '0')

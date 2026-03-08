@@ -14,12 +14,13 @@ export async function GET(req: Request) {
 
         // Get all courses the student is enrolled in with their schedules
         const result = await db.query(`
-            SELECT c.id, c.name, c.schedule
+            SELECT s.id, c.name, s.name as section_name, s.schedule
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
             WHERE e.student = $1
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-            ORDER BY c.name
+            ORDER BY c.name, s.name
         `, [studentId])
 
         return NextResponse.json({

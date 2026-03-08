@@ -36,10 +36,11 @@ export async function GET(req: Request) {
                 SELECT DISTINCT ON (r.student, DATE(r.time))
                     r.attendance
                 FROM record r
-                INNER JOIN course c ON r.course = c.id
-                INNER JOIN enrollment_data e ON e.student = r.student AND e.course = c.id
+                INNER JOIN section s ON r.course = s.id
+                INNER JOIN course c ON s.course = c.id
+                INNER JOIN enrollment_data e ON e.student = r.student AND e.section = s.id
                 LEFT JOIN student_data sd ON sd.student = r.student
-                WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3
+                WHERE s.teacher = $1 AND s.id = $2 AND sd.section = $3
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY r.student, DATE(r.time), r.time ASC
             ) AS first_records`
@@ -54,8 +55,9 @@ export async function GET(req: Request) {
                 SELECT DISTINCT ON (r.student, DATE(r.time))
                     r.attendance
                 FROM record r
-                INNER JOIN course c ON r.course = c.id
-                WHERE c.teacher = $1 AND c.id = $2
+                INNER JOIN section s ON r.course = s.id
+                INNER JOIN course c ON s.course = c.id
+                WHERE s.teacher = $1 AND s.id = $2
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY r.student, DATE(r.time), r.time ASC
             ) AS first_records`
@@ -70,8 +72,9 @@ export async function GET(req: Request) {
                 SELECT DISTINCT ON (r.student, DATE(r.time))
                     r.attendance
                 FROM record r
-                INNER JOIN course c ON r.course = c.id
-                WHERE c.teacher = $1
+                INNER JOIN section s ON r.course = s.id
+                INNER JOIN course c ON s.course = c.id
+                WHERE s.teacher = $1
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY r.student, DATE(r.time), r.time ASC
             ) AS first_records`

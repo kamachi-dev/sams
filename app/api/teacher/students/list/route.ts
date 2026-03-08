@@ -31,9 +31,10 @@ export async function GET(req: Request) {
                 a.username as name,
                 a.email
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
             INNER JOIN account a ON e.student = a.id
-            WHERE c.teacher = $1 AND c.id = $2
+            WHERE s.teacher = $1 AND s.id = $2
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ORDER BY a.username ASC
         `, [user.id, courseId])

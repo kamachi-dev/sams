@@ -11,7 +11,7 @@ export async function POST(request: Request) {
         const section = typeof sectionRaw === 'string' && sectionRaw.trim().length > 0
             ? sectionRaw.trim()
             : null;
-        
+
         // Validate inputs
         if (!courseId || !file || typeof file === 'string') {
             return NextResponse.json(
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
-        
+
         // Validate file type
         if (!file.name.endsWith('.joblib')) {
             return NextResponse.json(
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
-        
+
         // Validate file size (50MB limit)
         const maxSize = 50 * 1024 * 1024; // 50 MB
         if (file.size > maxSize) {
@@ -36,20 +36,20 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
-        
-        // Verify course exists
+
+        // Verify section exists (course_id in course_models now references section.id)
         const courseCheck = await db.query(
-            `SELECT id FROM course WHERE id = $1`,
+            `SELECT id FROM section WHERE id = $1`,
             [courseId]
         );
-        
+
         if (courseCheck.rows.length === 0) {
             return NextResponse.json(
-                { success: false, error: 'Course not found' },
+                { success: false, error: 'Section not found' },
                 { status: 404 }
             );
         }
-        
+
         // Read file as buffer
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
@@ -77,9 +77,9 @@ export async function POST(request: Request) {
             );
             modelId = insertResult.rows[0].id;
         }
-        
-        return NextResponse.json({ 
-            success: true, 
+
+        return NextResponse.json({
+            success: true,
             message: 'Model stored successfully',
             model_id: modelId,
             course_id: courseId,
@@ -89,9 +89,9 @@ export async function POST(request: Request) {
         });
     } catch (error) {
         console.error('Model upload error:', error);
-        return NextResponse.json({ 
-            success: false, 
-            error: error instanceof Error ? error.message : 'Failed to store model' 
+        return NextResponse.json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to store model'
         }, { status: 500 });
     }
 }

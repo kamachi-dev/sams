@@ -56,23 +56,26 @@ async function getEnrolledCount(userId: string, courseFilter: string | null, sec
     if (courseFilter && sectionFilter) {
         query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
                  FROM enrollment_data e
-                 INNER JOIN course c ON e.course = c.id
+                 INNER JOIN section s ON e.section = s.id
+                 INNER JOIN course c ON s.course = c.id
                  INNER JOIN student_data sd ON e.student = sd.student
-                 WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3
+                 WHERE s.teacher = $1 AND s.id = $2 AND sd.section = $3
                    AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
         params = [userId, courseFilter, sectionFilter]
     } else if (courseFilter) {
         query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
                  FROM enrollment_data e
-                 INNER JOIN course c ON e.course = c.id
-                 WHERE c.teacher = $1 AND c.id = $2
+                 INNER JOIN section s ON e.section = s.id
+                 INNER JOIN course c ON s.course = c.id
+                 WHERE s.teacher = $1 AND s.id = $2
                    AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
         params = [userId, courseFilter]
     } else {
         query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
                  FROM enrollment_data e
-                 INNER JOIN course c ON e.course = c.id
-                 WHERE c.teacher = $1
+                 INNER JOIN section s ON e.section = s.id
+                 INNER JOIN course c ON s.course = c.id
+                 WHERE s.teacher = $1
                    AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
         params = [userId]
     }
@@ -89,10 +92,11 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
     if (courseFilter && sectionFilter) {
         query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
                  FROM record r
-                 INNER JOIN course c ON r.course = c.id
+                 INNER JOIN section s ON r.course = s.id
+                 INNER JOIN course c ON s.course = c.id
                  INNER JOIN student_data sd ON r.student = sd.student
-                 WHERE c.teacher = $1
-                   AND c.id = $2
+                 WHERE s.teacher = $1
+                   AND s.id = $2
                    AND sd.section = $3
                    AND r.time IS NOT NULL
                    AND DATE(r.time) >= $4
@@ -102,9 +106,10 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
     } else if (courseFilter) {
         query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
                  FROM record r
-                 INNER JOIN course c ON r.course = c.id
-                 WHERE c.teacher = $1
-                   AND c.id = $2
+                 INNER JOIN section s ON r.course = s.id
+                 INNER JOIN course c ON s.course = c.id
+                 WHERE s.teacher = $1
+                   AND s.id = $2
                    AND r.time IS NOT NULL
                    AND DATE(r.time) >= $3
                    AND DATE(r.time) <= $4
@@ -113,8 +118,9 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
     } else {
         query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
                  FROM record r
-                 INNER JOIN course c ON r.course = c.id
-                 WHERE c.teacher = $1
+                 INNER JOIN section s ON r.course = s.id
+                 INNER JOIN course c ON s.course = c.id
+                 WHERE s.teacher = $1
                    AND r.time IS NOT NULL
                    AND DATE(r.time) >= $2
                    AND DATE(r.time) <= $3
@@ -146,10 +152,11 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                     SELECT DISTINCT ON (r.student, DATE(r.time))
                         r.attendance
                     FROM record r
-                    INNER JOIN course c ON r.course = c.id
+                    INNER JOIN section s ON r.course = s.id
+                    INNER JOIN course c ON s.course = c.id
                     INNER JOIN student_data sd ON r.student = sd.student
-                    WHERE c.teacher = $1
-                      AND c.id = $2
+                    WHERE s.teacher = $1
+                      AND s.id = $2
                       AND sd.section = $3
                       AND r.time IS NOT NULL
                       AND DATE(r.time) >= $4
@@ -167,9 +174,10 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                     SELECT DISTINCT ON (r.student, DATE(r.time))
                         r.attendance
                     FROM record r
-                    INNER JOIN course c ON r.course = c.id
-                    WHERE c.teacher = $1
-                      AND c.id = $2
+                    INNER JOIN section s ON r.course = s.id
+                    INNER JOIN course c ON s.course = c.id
+                    WHERE s.teacher = $1
+                      AND s.id = $2
                       AND r.time IS NOT NULL
                       AND DATE(r.time) >= $3
                       AND DATE(r.time) <= $4
@@ -186,8 +194,9 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
                     SELECT DISTINCT ON (r.student, DATE(r.time))
                         r.attendance
                     FROM record r
-                    INNER JOIN course c ON r.course = c.id
-                    WHERE c.teacher = $1
+                    INNER JOIN section s ON r.course = s.id
+                    INNER JOIN course c ON s.course = c.id
+                    WHERE s.teacher = $1
                       AND r.time IS NOT NULL
                       AND DATE(r.time) >= $2
                       AND DATE(r.time) <= $3

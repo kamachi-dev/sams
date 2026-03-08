@@ -35,23 +35,26 @@ export async function GET(req: Request) {
         if (courseFilter && sectionFilter) {
             totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
                FROM enrollment_data e
-               INNER JOIN course c ON e.course = c.id
+               INNER JOIN section s ON e.section = s.id
+               INNER JOIN course c ON s.course = c.id
                LEFT JOIN student_data sd ON sd.student = e.student
-               WHERE c.teacher = $1 AND c.id = $2 AND sd.section = $3
+               WHERE s.teacher = $1 AND s.id = $2 AND sd.section = $3
                  AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
             totalParams = [user.id, courseFilter, sectionFilter]
         } else if (courseFilter) {
             totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
                FROM enrollment_data e
-               INNER JOIN course c ON e.course = c.id
-               WHERE c.teacher = $1 AND c.id = $2
+               INNER JOIN section s ON e.section = s.id
+               INNER JOIN course c ON s.course = c.id
+               WHERE s.teacher = $1 AND s.id = $2
                  AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
             totalParams = [user.id, courseFilter]
         } else {
             totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
                FROM enrollment_data e
-               INNER JOIN course c ON e.course = c.id
-               WHERE c.teacher = $1
+               INNER JOIN section s ON e.section = s.id
+               INNER JOIN course c ON s.course = c.id
+               WHERE s.teacher = $1
                  AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
             totalParams = [user.id]
         }
@@ -64,12 +67,13 @@ export async function GET(req: Request) {
         // Note: attendance column is smallint (1=present, 2=late, 0/NULL=absent)
         const attendanceQuery = courseFilter
             ? `WITH student_courses AS (
-                -- Get all distinct students enrolled in the filtered course
+                -- Get all distinct students enrolled in the filtered section
                 SELECT DISTINCT e.student
                 FROM enrollment_data e
-                INNER JOIN course c ON e.course = c.id
+                INNER JOIN section s ON e.section = s.id
+                INNER JOIN course c ON s.course = c.id
                 ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = e.student' : ''}
-                WHERE c.teacher = $2 AND c.id = $3
+                WHERE s.teacher = $2 AND s.id = $3
                 ${sectionFilter ? 'AND sd.section = $4' : ''}
                 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ),
@@ -98,17 +102,18 @@ export async function GET(req: Request) {
                 COUNT(CASE WHEN best_attendance = 0 THEN 1 END) as absent_count
             FROM student_best_attendance`
             : `WITH student_courses AS (
-                -- Get all distinct students enrolled in any of this teacher's courses
+                -- Get all distinct students enrolled in any of this teacher's sections
                 SELECT DISTINCT e.student
                 FROM enrollment_data e
-                INNER JOIN course c ON e.course = c.id
-                WHERE c.teacher = $2
+                INNER JOIN section s ON e.section = s.id
+                INNER JOIN course c ON s.course = c.id
+                WHERE s.teacher = $2
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ),
-            teacher_courses AS (
-                -- Get all course IDs taught by this teacher
-                SELECT id FROM course WHERE teacher = $2
-                  AND school_year = (SELECT active_school_year FROM meta WHERE id='1')
+            teacher_sections AS (
+                -- Get all section IDs taught by this teacher
+                SELECT s.id FROM section s INNER JOIN course c ON s.course = c.id WHERE s.teacher = $2
+                  AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ),
             student_best_attendance AS (
                 -- For each student, get their BEST attendance across all courses today
@@ -126,7 +131,7 @@ export async function GET(req: Request) {
                 INNER JOIN record r ON r.student = sc.student 
                     AND r.time IS NOT NULL
                     AND DATE(r.time) = $1
-                    AND r.course IN (SELECT id FROM teacher_courses)
+                    AND r.course IN (SELECT id FROM teacher_sections)
                 GROUP BY sc.student
             )
             SELECT 

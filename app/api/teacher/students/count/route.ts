@@ -26,8 +26,9 @@ export async function GET(req: Request) {
         const result = await db.query(`
             SELECT COUNT(DISTINCT e.student) as count
             FROM enrollment_data e
-            INNER JOIN course c ON e.course = c.id
-            WHERE c.teacher = $1
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
+            WHERE s.teacher = $1
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [user.id])
 

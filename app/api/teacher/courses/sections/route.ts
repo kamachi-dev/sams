@@ -24,9 +24,9 @@ export async function GET(req: Request) {
             }, { status: 400 })
         }
 
-        // Verify teacher owns this course
+        // Verify teacher owns this section
         const courseCheck = await db.query(
-            `SELECT id, name FROM course WHERE id = $1 AND teacher = $2 AND school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
+            `SELECT s.id, c.name FROM section s INNER JOIN course c ON s.course = c.id WHERE s.id = $1 AND s.teacher = $2 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
             [courseId, user.id]
         )
 
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
             FROM enrollment_data e
             INNER JOIN account a ON e.student = a.id
             LEFT JOIN student_data sd ON sd.student = a.id
-            WHERE e.course = $1
+            WHERE e.section = $1
             GROUP BY sd.section
             ORDER BY sd.section
         `, [courseId])
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
             FROM enrollment_data e
             INNER JOIN account a ON e.student = a.id
             LEFT JOIN student_data sd ON sd.student = a.id
-            WHERE e.course = $1
+            WHERE e.section = $1
             ORDER BY sd.section, a.username
         `, [courseId])
 

@@ -6,8 +6,9 @@ export async function GET() {
         const data = (await db.query(
             `SELECT COUNT(*) FROM account WHERE role = 1
               AND id IN (
-                SELECT DISTINCT teacher FROM course
-                WHERE school_year = (SELECT active_school_year FROM meta WHERE id='1')
+                SELECT DISTINCT s.teacher FROM section s
+                INNER JOIN course c ON s.course = c.id
+                WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
               )`
         )).rows[0];
 

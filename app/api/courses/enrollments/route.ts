@@ -22,10 +22,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, status: 400, data: null, error: 'No valid student ids' }, { status: 400 })
         }
 
-        // Insert enrollments, ignoring duplicates
+        // Insert enrollments, ignoring duplicates (courseId is now a section id)
         const values = ids.map((id, i) => `($1, $${i + 2})`).join(', ')
         await db.query(
-            `INSERT INTO enrollment_data (course, student) VALUES ${values} ON CONFLICT DO NOTHING`,
+            `INSERT INTO enrollment_data (section, student) VALUES ${values} ON CONFLICT DO NOTHING`,
             [courseId, ...ids]
         )
 
@@ -52,7 +52,7 @@ export async function DELETE(req: Request) {
         }
 
         await db.query(
-            `DELETE FROM enrollment_data WHERE course = $1 AND student = $2`,
+            `DELETE FROM enrollment_data WHERE section = $1 AND student = $2`,
             [courseId, studentId]
         )
 
