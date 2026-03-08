@@ -33,7 +33,8 @@ export async function GET(req: Request) {
             course.enrolled_students = studentsResult.rows.map(row => ({
                 id: row.id,
                 name: row.name,
-                email: row.email
+                email: row.email,
+                section: course.section_name
             }))
 
             return NextResponse.json({
