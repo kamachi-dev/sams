@@ -2,7 +2,7 @@
 
 import SamsTemplate from "@/app/components/SamsTemplate";
 import Image from "next/image";
-import { Label, Separator, ToggleGroup, Dialog, Tabs, Tooltip } from "radix-ui";
+import { Label, Separator, ToggleGroup, Dialog, Tabs, Tooltip, Select } from "radix-ui";
 import { useEffect, useRef, useState } from "react";
 import './styles.css';
 import { PersonIcon, TrashIcon, CalendarIcon } from "@radix-ui/react-icons";
@@ -31,6 +31,7 @@ export default function Admin() {
     const [studentCount, setStudentCount] = useState<number | null>(null);
     const [teacherCount, setTeacherCount] = useState<number | null>(null);
     const [classCount, setClassCount] = useState<number | null>(null);
+    const [sectionCount, setSectionCount] = useState<number | null>(null);
 
     const [schoolYear, setSchoolYear] = useState<string>('');
     const [schoolYearNotes, setSchoolYearNotes] = useState<string>('');
@@ -81,6 +82,7 @@ export default function Admin() {
     const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([]);
     const [enrolledLoading, setEnrolledLoading] = useState<boolean>(false);
     const [enrolledSearch, setEnrolledSearch] = useState<string>('');
+    const [selectedSection, setSelectedSection] = useState<string>('all');
 
     // Course deletion state
     const [courseDeleteDialogOpen, setCourseDeleteDialogOpen] = useState<boolean>(false);
@@ -251,6 +253,7 @@ export default function Admin() {
         setSelectedViewCourse(course);
         setEnrolledStudents([]);
         setEnrolledSearch('');
+        setSelectedSection('all');
         try {
             setEnrolledLoading(true);
             const res = await fetch(`/api/camera/courses?courseId=${encodeURIComponent(course.id)}`).then(r => r.json()).catch(() => null);
@@ -640,6 +643,8 @@ export default function Admin() {
             if (teacherCountRes?.success) setTeacherCount(Number(teacherCountRes.data.count));
             const classCountRes = await fetch('/api/classes/count').then(res => res.json());
             if (classCountRes?.success) setClassCount(Number(classCountRes.data.count));
+            const sectionCountRes = await fetch('/api/classes/sections').then(res => res.json());
+            if (sectionCountRes?.success) setSectionCount(Number(sectionCountRes.data.count));
             try {
                 const activeRes = await fetch('/api/school_year/active').then(res => res.json());
                 if (activeRes?.success && Array.isArray(activeRes.data) && activeRes.data[0]) {
@@ -680,21 +685,21 @@ export default function Admin() {
                         <div key={1} className="stats-card">
                             <Image src="/icons/people.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Students</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Students</Label.Root>
                                 <span>{studentCount ?? 'Loading...'}</span>
                             </div>
                         </div>,
                         <div key={2} className="stats-card">
                             <Image src="/icons/people.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Teachers</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Teachers</Label.Root>
                                 <span>{teacherCount ?? 'Loading...'}</span>
                             </div>
                         </div>,
                         <div key={3} className="stats-card">
                             <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Classes</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Classes</Label.Root>
                                 <span>{classCount ?? 'Loading...'}</span>
                             </div>
                         </div>
@@ -1085,6 +1090,13 @@ export default function Admin() {
                                 <Label.Root className="font-bold">Total Num of Classes</Label.Root>
                                 <span>{classCount ?? 'Loading...'}</span>
                             </div>
+                        </div>,
+                        <div key={3} className="stats-card">
+                            <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
+                            <div className="stats-icon-group">
+                                <Label.Root className="font-bold">Total Num of Sections</Label.Root>
+                                <span>{sectionCount ?? 'Loading...'}</span>
+                            </div>
                         </div>
                     ],
                     content: <section className="import-section">
@@ -1139,7 +1151,33 @@ export default function Admin() {
                                                 </div>
                                                 {selectedViewCourse.schedule && <div className="course-schedule-info">{typeof selectedViewCourse.schedule === 'string' ? selectedViewCourse.schedule : Object.keys(selectedViewCourse.schedule).join(', ')}</div>}
                                                 <Separator.Root orientation="horizontal" className="sams-separator" style={{ margin: '0.75rem 0' }} />
-                                                <Label.Root className="form-field-label">Enrolled Students</Label.Root>
+                                                <div className="section-filter-row">
+                                                    <Label.Root className="form-field-label">Enrolled Students</Label.Root>
+                                                    {enrolledStudents.length > 0 && (
+                                                        <Select.Root value={selectedSection} onValueChange={setSelectedSection}>
+                                                            <Select.Trigger className="section-select-trigger">
+                                                                <Select.Value placeholder="All Sections" />
+                                                                <Select.Icon className="section-select-icon">
+                                                                    <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 5l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                                </Select.Icon>
+                                                            </Select.Trigger>
+                                                            <Select.Portal>
+                                                                <Select.Content className="section-select-content" position="popper" sideOffset={4}>
+                                                                    <Select.Viewport>
+                                                                        <Select.Item value="all" className="section-select-item">
+                                                                            <Select.ItemText>All Sections</Select.ItemText>
+                                                                        </Select.Item>
+                                                                        {Array.from(new Set(enrolledStudents.map(s => s.section ?? 'Unassigned'))).sort().map(sec => (
+                                                                            <Select.Item key={sec} value={sec} className="section-select-item">
+                                                                                <Select.ItemText>{sec}</Select.ItemText>
+                                                                            </Select.Item>
+                                                                        ))}
+                                                                    </Select.Viewport>
+                                                                </Select.Content>
+                                                            </Select.Portal>
+                                                        </Select.Root>
+                                                    )}
+                                                </div>
                                                 <input
                                                     type="text"
                                                     value={enrolledSearch}
@@ -1152,7 +1190,9 @@ export default function Admin() {
                                                     {enrolledLoading ? <div>Loading students...</div> : (
                                                         (() => {
                                                             const q = enrolledSearch.toLowerCase();
-                                                            const filtered = enrolledStudents.filter(s => (s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q)));
+                                                            const filtered = enrolledStudents
+                                                                .filter(s => selectedSection === 'all' || (s.section ?? 'Unassigned') === selectedSection)
+                                                                .filter(s => (s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q)));
                                                             return filtered.length ? (
                                                                 filtered.map(s => (
                                                                     <div key={s.id} className="enrolled-student-item">

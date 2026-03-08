@@ -27,7 +27,7 @@ export async function GET(req: Request) {
                 SELECT a.id, a.username as name, a.email, sd.section
                 FROM enrollment_data e
                 INNER JOIN account a ON e.student = a.id
-                INNER JOIN student_data sd ON sd.student = a.id
+                LEFT JOIN student_data sd ON sd.student = a.id
                 WHERE e.course = $1
                 ${section ? 'AND sd.section = $2' : ''}
                 ORDER BY a.username ASC
