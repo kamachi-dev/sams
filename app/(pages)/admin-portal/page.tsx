@@ -699,7 +699,7 @@ export default function Admin() {
                         <div key={3} className="stats-card">
                             <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Number of Classes</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Courses</Label.Root>
                                 <span>{classCount ?? 'Loading...'}</span>
                             </div>
                         </div>
@@ -935,21 +935,21 @@ export default function Admin() {
                         <div key={1} className="stats-card">
                             <Image src="/icons/people.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Students</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Students</Label.Root>
                                 <span>{studentCount ?? 'Loading...'}</span>
                             </div>
                         </div>,
                         <div key={2} className="stats-card">
                             <Image src="/icons/people.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Teachers</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Teachers</Label.Root>
                                 <span>{teacherCount ?? 'Loading...'}</span>
                             </div>
                         </div>,
                         <div key={3} className="stats-card">
                             <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Classes</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Courses</Label.Root>
                                 <span>{classCount ?? 'Loading...'}</span>
                             </div>
                         </div>
@@ -1080,21 +1080,21 @@ export default function Admin() {
                         <div key={1} className="stats-card">
                             <Image src="/icons/people.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Students</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Students</Label.Root>
                                 <span>{studentCount ?? 'Loading...'}</span>
                             </div>
                         </div>,
                         <div key={2} className="stats-card">
                             <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Classes</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Courses</Label.Root>
                                 <span>{classCount ?? 'Loading...'}</span>
                             </div>
                         </div>,
                         <div key={3} className="stats-card">
                             <Image src="/icons/notebook.svg" alt="" width={40} height={40} />
                             <div className="stats-icon-group">
-                                <Label.Root className="font-bold">Total Num of Sections</Label.Root>
+                                <Label.Root className="font-bold">Total Number of Sections</Label.Root>
                                 <span>{sectionCount ?? 'Loading...'}</span>
                             </div>
                         </div>
