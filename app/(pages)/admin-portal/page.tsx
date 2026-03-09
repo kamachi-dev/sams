@@ -44,7 +44,6 @@ export default function Admin() {
     const [activateConfirmText, setActivateConfirmText] = useState<string>('');
     const [activeSchoolYearId, setActiveSchoolYearId] = useState<string | null>(null);
 
-    const teacherFileRef = useRef<HTMLInputElement | null>(null);
     const scheduleFileRef = useRef<HTMLInputElement | null>(null);
     const [students, setStudents] = useState<{ id: string; username?: string; email?: string; pfp?: string }[]>([]);
     const [teachers, setTeachers] = useState<{ id: string; username?: string; email?: string; pfp?: string }[]>([]);
@@ -64,13 +63,6 @@ export default function Admin() {
             return next;
         });
     }
-
-    // Courses management state
-    const [courseName, setCourseName] = useState<string>('');
-    const [courseSchedule, setCourseSchedule] = useState<string>('');
-    const [selectedCourseStudents, setSelectedCourseStudents] = useState<string[]>([]);
-    const [creatingCourse, setCreatingCourse] = useState<boolean>(false);
-    const [courseStudentSearch, setCourseStudentSearch] = useState<string>('');
 
     // Course viewer state
     type Course = { id: string; course_id?: string; name: string; section_name?: string; schedule?: string; teacher?: string };
@@ -103,37 +95,6 @@ export default function Admin() {
     const [scheduleStudent, setScheduleStudent] = useState<{ id: string; username?: string; email?: string } | null>(null);
     const [studentSchedule, setStudentSchedule] = useState<ScheduleCourse[]>([]);
     const [scheduleLoading, setScheduleLoading] = useState<boolean>(false);
-
-    async function handleCsvUpload(file: File, endpoint: string) {
-        try {
-            setImportStatus("Uploading...");
-            const form = new FormData();
-            form.append('file', file);
-            const res = await fetch(endpoint, { method: 'POST', body: form });
-            const json = await res.json();
-            if (!res.ok || json?.success === false) {
-                setImportStatus(`Import failed: ${json?.error ?? res.statusText}`);
-                return;
-            }
-            const imported = Array.isArray(json?.data)
-                ? json.data.length
-                : (json?.data?.imported ?? 0);
-            const invalid = Array.isArray(json?.data?.invalid)
-                ? json.data.invalid.length
-                : (json?.data?.invalid?.length ?? 0);
-            setImportStatus(`Import complete: ${imported} rows, ${invalid} invalid`);
-        } catch (err: unknown) {
-            let message = 'Unknown error';
-            if (err instanceof Error) {
-                const error = err as Error;
-                message = error.message
-            };
-            Error(message);
-            setImportStatus(`Import error: ${message}`);
-        } finally {
-            setTimeout(() => setImportStatus(null), 5000);
-        }
-    }
 
     async function handleCreateSchoolYear() {
         if (!schoolYear.trim() || !schoolYearNotes.trim()) {
@@ -245,10 +206,6 @@ export default function Admin() {
             setTimeout(() => setImportStatus(null), 4000);
             closeUserDeleteDialog();
         }
-    }
-
-    function toggleCourseStudent(id: string) {
-        setSelectedCourseStudents(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
     }
 
     async function handleSelectCourse(courseId: string) {
@@ -516,51 +473,6 @@ export default function Admin() {
         };
     }
 
-    async function handleCreateCourse() {
-        if (!courseName.trim()) {
-            setImportStatus('Course name is required');
-            setTimeout(() => setImportStatus(null), 4000);
-            return;
-        }
-
-        try {
-            setCreatingCourse(true);
-            const form = new FormData();
-            form.append('name', courseName.trim());
-            form.append('schedule', courseSchedule.trim());
-            if (selectedCourseStudents.length) form.append('students', selectedCourseStudents.join(','));
-
-            const res = await fetch('/api/courses', { method: 'POST', body: form });
-            const json = await res.json();
-            if (!res.ok || json?.success === false) {
-                setImportStatus(`Create course failed: ${json?.error ?? res.statusText}`);
-                setTimeout(() => setImportStatus(null), 4000);
-                return;
-            }
-
-            setImportStatus('Course created');
-            setCourseName('');
-            setCourseSchedule('');
-            setSelectedCourseStudents([]);
-            setTimeout(() => setImportStatus(null), 4000);
-
-            // refresh class count
-            try {
-                const classCountRes = await fetch('/api/classes/count').then(r => r.json()).catch(() => null);
-                if (classCountRes?.success) setClassCount(Number(classCountRes.data.count));
-            } catch {
-                // ignore
-            }
-        } catch (err: unknown) {
-            let message = 'Unknown error';
-            if (err instanceof Error) message = err.message;
-            setImportStatus(`Create course error: ${message}`);
-            setTimeout(() => setImportStatus(null), 4000);
-        } finally {
-            setCreatingCourse(false);
-        }
-    }
-
     async function handleDeleteSchoolYear() {
         if (!schoolYearToDelete || deleteConfirmText !== 'delete') {
             return;
@@ -727,24 +639,10 @@ export default function Admin() {
                         <div className="import-header">
                             <Label.Root className="import-section-title">Import</Label.Root>
                             <div className="import-actions">
-                                <button className="import-button" onClick={() => teacherFileRef.current?.click()}>
-                                    <Label.Root>Teachers</Label.Root>
-                                </button>
                                 <button className="import-button" onClick={() => scheduleFileRef.current?.click()}>
                                     <Label.Root>Schedule</Label.Root>
                                 </button>
                             </div>
-                            <input
-                                ref={teacherFileRef}
-                                type="file"
-                                accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                className="hidden"
-                                onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) handleCsvUpload(f, '/api/teachers');
-                                    e.currentTarget.value = '';
-                                }}
-                            />
                             <input
                                 ref={scheduleFileRef}
                                 type="file"
@@ -1124,7 +1022,6 @@ export default function Admin() {
                         <Tabs.Root defaultValue="view" className="user-tabs" style={{ width: '100%' }}>
                             <Tabs.List className="tab-list" aria-label="Course tabs">
                                 <Tabs.Trigger value="view" className="tab-trigger">View Courses</Tabs.Trigger>
-                                <Tabs.Trigger value="create" className="tab-trigger">Create Course</Tabs.Trigger>
                             </Tabs.List>
 
                             <Tabs.Content value="view" className="tab-content">
@@ -1251,63 +1148,6 @@ export default function Admin() {
                                                 </>
                                             );
                                         })()}
-                                    </div>
-                                </div>
-                            </Tabs.Content>
-
-                            <Tabs.Content value="create" className="tab-content">
-                                <div className="school-year-form full-form">
-                                    <Label.Root className="school-year-form-title">Create Course</Label.Root>
-                                    <div className="school-year-form-container w-full">
-                                        <div className="form-field-group">
-                                            <Label.Root className="form-field-label">Course Name</Label.Root>
-                                            <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} className="school-year-input" placeholder="e.g., Algebra 1" />
-                                        </div>
-                                        <div className="form-field-group">
-                                            <Label.Root className="form-field-label">Schedule (optional)</Label.Root>
-                                            <input type="text" value={courseSchedule} onChange={(e) => setCourseSchedule(e.target.value)} className="school-year-input" placeholder="e.g., Mon/Wed/Fri 9:00-10:00" />
-                                        </div>
-
-                                        <div className="form-field-group">
-                                            <Label.Root className="form-field-label">Assign Students</Label.Root>
-                                            <input
-                                                type="text"
-                                                value={courseStudentSearch}
-                                                onChange={(e) => setCourseStudentSearch(e.target.value)}
-                                                className="school-year-input"
-                                                placeholder="Search students..."
-                                                style={{ marginBottom: '0.5rem' }}
-                                            />
-                                            <div className="student-checkbox-list">
-                                                {usersLoading ? <div>Loading students...</div> : (
-                                                    (() => {
-                                                        const filtered = students
-                                                            .filter(s => {
-                                                                const q = courseStudentSearch.toLowerCase();
-                                                                return (s.username?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q));
-                                                            })
-                                                            .sort((a, b) => (a.username ?? a.email ?? '').localeCompare(b.username ?? b.email ?? ''));
-                                                        return filtered.length ? (
-                                                            filtered.map(s => (
-                                                                <label key={s.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                                                    <input type="checkbox" checked={selectedCourseStudents.includes(s.id)} onChange={() => toggleCourseStudent(s.id)} />
-                                                                    <span style={{ fontSize: 14 }}>{s.username ?? s.email}</span>
-                                                                </label>
-                                                            ))
-                                                        ) : <div className="user-empty">No students found</div>;
-                                                    })()
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                                            <button className="import-button" onClick={() => { setCourseName(''); setCourseSchedule(''); setSelectedCourseStudents([]); }} style={{ backgroundColor: '#6b7280' }}>
-                                                <Label.Root>Clear</Label.Root>
-                                            </button>
-                                            <button className="import-button" onClick={async () => { await handleCreateCourse(); const cRes = await fetch('/api/courses').then(r => r.json()).catch(() => null); if (cRes?.success && Array.isArray(cRes.data)) setCoursesList(cRes.data); }} disabled={creatingCourse}>
-                                                <Label.Root>{creatingCourse ? 'Creating...' : 'Create Course'}</Label.Root>
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
                             </Tabs.Content>
