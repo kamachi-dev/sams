@@ -1039,7 +1039,10 @@ export default function Admin() {
                                         <div className="course-select-list">
                                             {coursesLoading ? <div>Loading courses...</div> : (
                                                 (() => {
-                                                    const filtered = coursesList.filter(c => c.name.toLowerCase().includes(courseViewerSearch.toLowerCase()));
+                                                    const filtered = coursesList.filter(c =>
+                                                        c.name.toLowerCase().includes(courseViewerSearch.toLowerCase()) ||
+                                                        (c.teacher && c.teacher.toLowerCase().includes(courseViewerSearch.toLowerCase()))
+                                                    );
                                                     // Group sections by course_id
                                                     const groups = new Map<string, Course[]>();
                                                     for (const c of filtered) {
@@ -1048,16 +1051,26 @@ export default function Admin() {
                                                         groups.get(key)!.push(c);
                                                     }
                                                     return groups.size ? (
-                                                        Array.from(groups.entries()).map(([courseId, sections]) => (
-                                                            <button
-                                                                key={courseId}
-                                                                className={`course-select-item ${selectedCourseId === courseId ? 'selected' : ''}`}
-                                                                onClick={() => handleSelectCourse(courseId)}
-                                                            >
-                                                                <span className="course-select-name">{sections[0].name}</span>
-                                                                <span className="course-select-schedule">{sections.length} section{sections.length > 1 ? 's' : ''}</span>
-                                                            </button>
-                                                        ))
+                                                        Array.from(groups.entries()).map(([courseId, sections]) => {
+                                                            // If teacher is an ID, try to find the teacher's name from teachers list
+                                                            let teacherName = 'N/A';
+                                                            const teacherId = sections[0].teacher;
+                                                            if (teacherId) {
+                                                                const teacherObj = teachers.find(t => t.id === teacherId);
+                                                                teacherName = teacherObj?.username || teacherObj?.email || teacherId;
+                                                            }
+                                                            return (
+                                                                <button
+                                                                    key={courseId}
+                                                                    className={`course-select-item ${selectedCourseId === courseId ? 'selected' : ''}`}
+                                                                    onClick={() => handleSelectCourse(courseId)}
+                                                                >
+                                                                    <span className="course-select-name">{sections[0].name}</span>
+                                                                    <span className="course-select-schedule">{sections.length} section{sections.length > 1 ? 's' : ''}</span>
+                                                                    <span className="course-select-teacher">Teacher: {teacherName}</span>
+                                                                </button>
+                                                            );
+                                                        })
                                                     ) : <div className="user-empty">No courses found</div>;
                                                 })()
                                             )}
