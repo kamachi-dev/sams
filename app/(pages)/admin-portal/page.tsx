@@ -1052,12 +1052,14 @@ export default function Admin() {
                                                     }
                                                     return groups.size ? (
                                                         Array.from(groups.entries()).map(([courseId, sections]) => {
-                                                            // If teacher is an ID, try to find the teacher's name from teachers list
+                                                            // If teacher is an ID, try to find the teacher's info from teachers list
                                                             let teacherName = 'N/A';
+                                                            let teacherPfp = '/icons/placeholder-pfp.png';
                                                             const teacherId = sections[0].teacher;
                                                             if (teacherId) {
                                                                 const teacherObj = teachers.find(t => t.id === teacherId);
                                                                 teacherName = teacherObj?.username || teacherObj?.email || teacherId;
+                                                                teacherPfp = teacherObj?.pfp || teacherPfp;
                                                             }
                                                             return (
                                                                 <button
@@ -1067,7 +1069,9 @@ export default function Admin() {
                                                                 >
                                                                     <span className="course-select-name">{sections[0].name}</span>
                                                                     <span className="course-select-schedule">{sections.length} section{sections.length > 1 ? 's' : ''}</span>
-                                                                    <span className="course-select-teacher">Teacher: {teacherName}</span>
+                                                                    <span className="course-select-teacher">
+                                                                        Teacher: {teacherName}
+                                                                    </span>
                                                                 </button>
                                                             );
                                                         })
@@ -1083,10 +1087,16 @@ export default function Admin() {
                                             if (!selectedCourseId || !courseName) {
                                                 return <div className="user-empty" style={{ textAlign: 'center', padding: '2rem' }}>Select a course to view enrolled students</div>;
                                             }
+                                            // Teacher info
+                                            let teacherId = selectedSections[0]?.teacher;
+                                            let teacherObj = teacherId ? teachers.find(t => t.id === teacherId) : null;
+                                            let teacherName = teacherObj?.username || teacherObj?.email || teacherId || 'N/A';
+                                            let teacherPfp = teacherObj?.pfp || '/icons/placeholder-pfp.png';
                                             return (
                                                 <>
                                                     <div className="course-header-row">
                                                         <Label.Root className="school-year-form-title">{courseName}</Label.Root>
+                                                        <div style={{ flex: 1 }} />
                                                         <button className="school-year-delete-button" onClick={() => openCourseDeleteDialog(selectedCourseId, courseName)} title="Delete course">
                                                             <TrashIcon />
                                                         </button>
@@ -1096,6 +1106,17 @@ export default function Admin() {
                                                             {selectedSections.map(s => s.section_name ?? s.name).join(', ')}
                                                         </div>
                                                     )}
+                                                    <div className="course-teacher-info">
+                                                        {teacherPfp.startsWith('http') ? (
+                                                            <img src={teacherPfp} alt="Teacher profile" width={48} height={48} className="teacher-avatar" />
+                                                        ) : (
+                                                            <Image src={teacherPfp} alt="Teacher profile" width={48} height={48} className="teacher-avatar" />
+                                                        )}
+                                                        <div className="teacher-meta">
+                                                            <div className="teacher-name">{teacherName}</div>
+                                                            {teacherObj?.email && <div className="teacher-email">{teacherObj.email}</div>}
+                                                        </div>
+                                                    </div>
                                                     <Separator.Root orientation="horizontal" className="sams-separator" style={{ margin: '0.75rem 0' }} />
                                                     <div className="section-filter-row">
                                                         <Label.Root className="form-field-label">Enrolled Students</Label.Root>
@@ -1140,17 +1161,30 @@ export default function Admin() {
                                                                     .filter(s => selectedSection === 'all' || (s.section ?? 'Unassigned') === selectedSection)
                                                                     .filter(s => (s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q)));
                                                                 return filtered.length ? (
-                                                                    filtered.map(s => (
-                                                                        <div key={`${s.sectionId}-${s.id}`} className="enrolled-student-item">
-                                                                            <div className="enrolled-student-info">
-                                                                                <div className="enrolled-student-name">{s.name ?? s.email}</div>
-                                                                                {s.section && <div className="enrolled-student-section">{s.section}</div>}
+                                                                    filtered.map(s => {
+                                                                        // Find student object for pfp
+                                                                        const studentObj = students.find(st => st.id === s.id);
+                                                                        const studentPfp = studentObj?.pfp || '/icons/placeholder-pfp.png';
+                                                                        return (
+                                                                            <div key={`${s.sectionId}-${s.id}`} className="enrolled-student-item">
+                                                                                <div className="enrolled-student-avatar">
+                                                                                    {studentPfp.startsWith('http') ? (
+                                                                                        <img src={studentPfp} alt="Student profile" width={40} height={40} className="student-avatar" />
+                                                                                    ) : (
+                                                                                        <Image src={studentPfp} alt="Student profile" width={40} height={40} className="student-avatar" />
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="enrolled-student-info">
+                                                                                    <div className="enrolled-student-name">{s.name ?? s.email}</div>
+                                                                                    {s.section && <div className="enrolled-student-section">{s.section}</div>}
+                                                                                </div>
+                                                                                <div style={{ flex: 1 }} />
+                                                                                <button className="student-remove-button" onClick={() => handleRemoveStudentFromCourse(s.id, s.sectionId ?? '')} title="Remove from course">
+                                                                                    <TrashIcon />
+                                                                                </button>
                                                                             </div>
-                                                                            <button className="student-remove-button" onClick={() => handleRemoveStudentFromCourse(s.id, s.sectionId ?? '')} title="Remove from course">
-                                                                                <TrashIcon />
-                                                                            </button>
-                                                                        </div>
-                                                                    ))
+                                                                        );
+                                                                    })
                                                                 ) : <div className="user-empty">No enrolled students{enrolledStudents.length ? ' matching search' : ''}</div>;
                                                             })()
                                                         )}
