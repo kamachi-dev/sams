@@ -32,16 +32,7 @@ export async function GET(req: Request) {
         let totalQuery: string
         let totalParams: string[]
 
-        if (courseFilter && sectionFilter) {
-            totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
-               FROM enrollment_data e
-               INNER JOIN section s ON e.section = s.id
-               INNER JOIN course c ON s.course = c.id
-               LEFT JOIN student_data sd ON sd.student = e.student
-               WHERE s.teacher = $1 AND s.id = $2 AND sd.section = $3
-                 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
-            totalParams = [user.id, courseFilter, sectionFilter]
-        } else if (courseFilter) {
+        if (courseFilter) {
             totalQuery = `SELECT COUNT(DISTINCT e.student) as total_students
                FROM enrollment_data e
                INNER JOIN section s ON e.section = s.id
@@ -72,9 +63,7 @@ export async function GET(req: Request) {
                 FROM enrollment_data e
                 INNER JOIN section s ON e.section = s.id
                 INNER JOIN course c ON s.course = c.id
-                ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = e.student' : ''}
                 WHERE s.teacher = $2 AND s.id = $3
-                ${sectionFilter ? 'AND sd.section = $4' : ''}
                 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ),
             student_best_attendance AS (
@@ -141,7 +130,7 @@ export async function GET(req: Request) {
             FROM student_best_attendance`
 
         const attendanceParams = courseFilter
-            ? (sectionFilter ? [today, user.id, courseFilter, sectionFilter] : [today, user.id, courseFilter])
+            ? [today, user.id, courseFilter]
             : [today, user.id]
         const result = await db.query(attendanceQuery, attendanceParams)
 

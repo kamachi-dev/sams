@@ -26,8 +26,8 @@ export async function GET(req: Request) {
         let attendanceQuery: string
         let params: string[]
 
-        if (courseFilter && sectionFilter) {
-            // Filter by both course and section - use subquery to deduplicate records
+        if (courseFilter) {
+            // Filter by course (section ID)
             attendanceQuery = `SELECT 
                 COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late_count,
@@ -39,24 +39,6 @@ export async function GET(req: Request) {
                 INNER JOIN section s ON r.course = s.id
                 INNER JOIN course c ON s.course = c.id
                 INNER JOIN enrollment_data e ON e.student = r.student AND e.section = s.id
-                LEFT JOIN student_data sd ON sd.student = r.student
-                WHERE s.teacher = $1 AND s.id = $2 AND sd.section = $3
-                  AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-                ORDER BY r.student, DATE(r.time), r.time ASC
-            ) AS first_records`
-
-            params = [user.id, courseFilter, sectionFilter]
-        } else if (courseFilter) {
-            attendanceQuery = `SELECT 
-                COUNT(CASE WHEN first_records.attendance = 1 THEN 1 END) as present_count,
-                COUNT(CASE WHEN first_records.attendance = 2 THEN 1 END) as late_count,
-                COUNT(CASE WHEN first_records.attendance = 0 THEN 1 END) as explicit_absent_count
-            FROM (
-                SELECT DISTINCT ON (r.student, DATE(r.time))
-                    r.attendance
-                FROM record r
-                INNER JOIN section s ON r.course = s.id
-                INNER JOIN course c ON s.course = c.id
                 WHERE s.teacher = $1 AND s.id = $2
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY r.student, DATE(r.time), r.time ASC

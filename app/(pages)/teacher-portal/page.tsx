@@ -49,6 +49,7 @@ interface LowAttendanceStudent {
     email: string;
     courseId: string;
     courseName: string;
+    sectionId: string;
     section: string;
     totalRecords: number;
     presentCount: number;
@@ -459,7 +460,7 @@ export default function Teacher() {
     const [riskStep, setRiskStep] = useState<'courses' | 'sections' | 'list'>('courses');
     const [riskCourse, setRiskCourse] = useState<{ id: string; name: string } | null>(null);
     const [riskSection, setRiskSection] = useState<string>('');
-    const [riskSections, setRiskSections] = useState<Array<{ section: string; studentCount: number; students?: string[] }>>([]);
+    const [riskSections, setRiskSections] = useState<Array<{ section: string; sectionId?: string; studentCount: number; students?: string[] }>>([]);
     const [isLoadingRiskSections, setIsLoadingRiskSections] = useState(false);
 
     // Section Comparison Analytics State
@@ -482,10 +483,10 @@ export default function Teacher() {
 
     // Computed at-risk values from allAtRiskStudents
     const totalAtRiskStudents = new Set(allAtRiskStudents.map(s => s.id)).size;
-    const sectionsWithAtRisk = new Set(allAtRiskStudents.map(s => `${s.courseId}:${s.section}`).filter(Boolean)).size;
-    const atRiskCountByCourse = (courseId: string) => allAtRiskStudents.filter(s => s.courseId === courseId).length;
-    const atRiskStudentsForSection = (courseId: string, section: string) =>
-        allAtRiskStudents.filter(s => s.courseId === courseId && s.section === section);
+    const sectionsWithAtRisk = new Set(allAtRiskStudents.map(s => s.sectionId).filter(Boolean)).size;
+    const atRiskCountByCourse = (courseId: string) => allAtRiskStudents.filter(s => s.sectionId === courseId).length;
+    const atRiskStudentsForSection = (sectionId: string) =>
+        allAtRiskStudents.filter(s => s.sectionId === sectionId);
 
     // Trend Data State
     const [dailyTrendData, setDailyTrendData] = useState<Array<{
@@ -2198,7 +2199,7 @@ export default function Teacher() {
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Sections with Students at Risk</div>
                             <div className="teacher-panel-value">
-                                {new Set(allAtRiskStudents.filter(s => s.courseId === selectedOverviewCourse?.id).map(s => s.section)).size}
+                                {new Set(allAtRiskStudents.filter(s => s.sectionId === selectedOverviewCourse?.id).map(s => s.section)).size}
                             </div>
                             <div className="teacher-panel-sub">Below {lowAttendanceThreshold}% attendance</div>
                         </div>
@@ -2935,7 +2936,7 @@ export default function Teacher() {
                                             return aPin - bPin;
                                         }).map(sec => {
                                             const isPinned = sec.section === pinnedRiskSection;
-                                            const sectionAtRisk = riskCourse ? atRiskStudentsForSection(riskCourse.id, sec.section) : [];
+                                            const sectionAtRisk = riskCourse && sec.sectionId ? atRiskStudentsForSection(sec.sectionId) : [];
                                             return (
                                             <div
                                                 key={sec.section}

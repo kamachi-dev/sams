@@ -45,7 +45,15 @@ export async function GET(req: Request) {
 
         // Get student info
         const studentInfoResult = await db.query(`
-            SELECT a.username, sd.grade_level, sd.section
+            SELECT a.username, sd.grade_level,
+                (
+                    SELECT string_agg(DISTINCT s.name, ', ' ORDER BY s.name)
+                    FROM enrollment_data e
+                    INNER JOIN section s ON e.section = s.id
+                    INNER JOIN course c ON s.course = c.id
+                    WHERE e.student = a.id
+                      AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
+                ) as section
             FROM account a
             LEFT JOIN student_data sd ON sd.student = a.id
             WHERE a.id = $1

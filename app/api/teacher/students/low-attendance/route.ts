@@ -29,7 +29,7 @@ export async function GET(req: Request) {
             params.push(courseFilter)
         }
         if (sectionFilter) {
-            conditions.push(`sd.section = $${paramIdx++}`)
+            conditions.push(`s.name = $${paramIdx++}`)
             params.push(sectionFilter)
         }
         // threshold param added last
@@ -49,7 +49,8 @@ export async function GET(req: Request) {
                     a.email        AS student_email,
                     c.id           AS course_id,
                     c.name         AS course_name,
-                    sd.section     AS student_section,
+                    s.id           AS section_id,
+                    s.name         AS student_section,
                     COUNT(DISTINCT CASE WHEN r.attendance IS NOT NULL THEN DATE(r.time) END) AS school_days,
                     COUNT(CASE WHEN r.attendance = 1 THEN 1 END) AS present_count,
                     COUNT(CASE WHEN r.attendance = 2 THEN 1 END) AS late_count,
@@ -58,12 +59,11 @@ export async function GET(req: Request) {
                 INNER JOIN section s ON e.section = s.id
                 INNER JOIN course c ON s.course = c.id
                 INNER JOIN account a ON e.student = a.id
-                INNER JOIN student_data sd ON sd.student = a.id
                 LEFT JOIN record r ON r.student = a.id
                     AND r.course = s.id
                     AND r.time IS NOT NULL
                 WHERE ${whereClause}
-                GROUP BY a.id, a.username, a.email, c.id, c.name, sd.section
+                GROUP BY a.id, a.username, a.email, c.id, c.name, s.id, s.name
             )
             SELECT
                 student_id,
@@ -71,6 +71,7 @@ export async function GET(req: Request) {
                 student_email,
                 course_id,
                 course_name,
+                section_id,
                 student_section,
                 school_days      AS total_records,
                 present_count,
@@ -100,6 +101,7 @@ export async function GET(req: Request) {
             email: row.student_email,
             courseId: row.course_id,
             courseName: row.course_name,
+            sectionId: row.section_id,
             section: row.student_section || '',
             totalRecords: parseInt(row.total_records),
             presentCount: parseInt(row.present_count),
