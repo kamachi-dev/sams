@@ -1088,10 +1088,10 @@ export default function Admin() {
                                                 return <div className="user-empty" style={{ textAlign: 'center', padding: '2rem' }}>Select a course to view enrolled students</div>;
                                             }
                                             // Teacher info
-                                            let teacherId = selectedSections[0]?.teacher;
-                                            let teacherObj = teacherId ? teachers.find(t => t.id === teacherId) : null;
-                                            let teacherName = teacherObj?.username || teacherObj?.email || teacherId || 'N/A';
-                                            let teacherPfp = teacherObj?.pfp || '/icons/placeholder-pfp.png';
+                                            const teacherId = selectedSections[0]?.teacher;
+                                            const teacherObj = teacherId ? teachers.find(t => t.id === teacherId) : null;
+                                            const teacherName = teacherObj?.username || teacherObj?.email || teacherId || 'N/A';
+                                            const teacherPfp = teacherObj?.pfp || '/icons/placeholder-pfp.png';
                                             return (
                                                 <>
                                                     <div className="course-header-row">
