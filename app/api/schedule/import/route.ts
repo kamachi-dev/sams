@@ -5,10 +5,11 @@ import * as XLSX from 'xlsx'
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
-type ParsedStudent = { name: string; email: string; section: string | null }
+type ParsedStudent = { name: string; email: string }
 type ParsedScheduleSlot = { day: string; start: string; end: string }
-type ParsedCourse = {
+type ParsedCourseBlock = {
     name: string
+    section: string | null
     teacher: string | null
     schedule: ParsedScheduleSlot[]
     students: ParsedStudent[]
@@ -20,22 +21,24 @@ type ParsedCourse = {
  * Expected XLSX layout (one sheet):
  *
  * CourseName
+ *   ,section, Section A
  *   ,teacher, teacher_email
  *   ,schedule
  *     ,,Day, start_time, end_time
  *   ,students
- *     ,,Name, Email, Section
- * NextCourse
+ *     ,,Name, Email
+ * CourseName            (same course, different section)
+ *   ,section, Section B
  *   ...
  */
-function parseScheduleXlsx(buffer: Buffer): ParsedCourse[] {
+function parseScheduleXlsx(buffer: Buffer): ParsedCourseBlock[] {
     const workbook = XLSX.read(buffer)
     const sheet = workbook.Sheets[workbook.SheetNames[0]]
     const rows: (string | null)[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 })
 
-    const courses: ParsedCourse[] = []
-    let current: ParsedCourse | null = null
-    let section: 'schedule' | 'students' | null = null
+    const blocks: ParsedCourseBlock[] = []
+    let current: ParsedCourseBlock | null = null
+    let mode: 'schedule' | 'students' | null = null
 
     for (const row of rows) {
         const col0 = row[0]?.toString().trim() ?? ''
@@ -46,45 +49,52 @@ function parseScheduleXlsx(buffer: Buffer): ParsedCourse[] {
 
         // Course name row – only col0 is filled
         if (col0 && !col1 && !col2) {
-            if (current) courses.push(current)
-            current = { name: col0, teacher: null, schedule: [], students: [] }
-            section = null
+            if (current) blocks.push(current)
+            current = { name: col0, section: null, teacher: null, schedule: [], students: [] }
+            mode = null
             continue
         }
 
-        // Teacher row  – ,teacher,<email>
-        if (!col0 && col1.toLowerCase() === 'teacher' && col2 && current) {
+        if (!current) continue
+
+        // Section row – ,section,<name>
+        if (!col0 && col1.toLowerCase() === 'section' && col2) {
+            current.section = col2
+            continue
+        }
+
+        // Teacher row – ,teacher,<email>
+        if (!col0 && col1.toLowerCase() === 'teacher' && col2) {
             current.teacher = col2
             continue
         }
 
-        // Section header – ,schedule  or  ,students
+        // Mode header – ,schedule  or  ,students
         if (!col0 && col1 && !col2) {
             const lower = col1.toLowerCase()
-            if (lower === 'schedule') section = 'schedule'
-            else if (lower === 'students') section = 'students'
+            if (lower === 'schedule') mode = 'schedule'
+            else if (lower === 'students') mode = 'students'
             continue
         }
 
         // Data rows – ,,value,...
-        if (!col0 && !col1 && col2 && current) {
-            if (section === 'schedule' && col3) {
+        if (!col0 && !col1 && col2) {
+            if (mode === 'schedule') {
                 current.schedule.push({
                     day: col2.toLowerCase(),
                     start: normalizeTime(col3),
                     end: normalizeTime(col4),
                 })
-            } else if (section === 'students') {
+            } else if (mode === 'students') {
                 current.students.push({
                     name: col2,
                     email: col3 || col2,
-                    section: col4 || null,
                 })
             }
         }
     }
-    if (current) courses.push(current)
-    return courses
+    if (current) blocks.push(current)
+    return blocks
 }
 
 /* ── Helpers ───────────────────────────────────────────────────────── */
@@ -132,9 +142,9 @@ export async function POST(req: Request) {
         }
 
         const buffer = Buffer.from(await file.arrayBuffer())
-        const courses = parseScheduleXlsx(buffer)
+        const blocks = parseScheduleXlsx(buffer)
 
-        if (!courses.length) {
+        if (!blocks.length) {
             return NextResponse.json(
                 { success: false, status: 400, data: null, error: 'No courses found in file' },
                 { status: 400 },
@@ -157,37 +167,55 @@ export async function POST(req: Request) {
             studentsExisting: 0,
             studentDataCreated: 0,
             coursesCreated: 0,
+            sectionsCreated: 0,
             enrollments: 0,
-            teachersLinked: 0,
+            teachersCreated: 0,
+            teachersExisting: 0,
             errors: [] as string[],
         }
 
-        for (const course of courses) {
+        // Cache: course name → course id (reuse across blocks)
+        const courseIdByName = new Map<string, string>()
+        // Cache: email → account id (avoid repeated lookups)
+        const accountIdCache = new Map<string, string>()
+
+        async function resolveOrCreateAccount(
+            email: string, name: string, role: number,
+        ): Promise<string | null> {
+            const cached = accountIdCache.get(email)
+            if (cached) return cached
+
+            let accountId = await getAccountIdByEmail(email)
+            if (!accountId) {
+                await db.query(
+                    `INSERT INTO account (id, username, email, role) VALUES ($1, $2, $3, $4)`,
+                    [email, name, email, role],
+                )
+                accountId = await getAccountIdByEmail(email)
+            }
+            if (accountId) accountIdCache.set(email, accountId)
+            return accountId
+        }
+
+        for (const block of blocks) {
             /* ── 1. Resolve / create student accounts ── */
             const studentIds: string[] = []
 
-            for (const s of course.students) {
+            for (const s of block.students) {
                 try {
-                    // Check if account already exists by email
-                    let accountId = await getAccountIdByEmail(s.email)
+                    const existed = await getAccountIdByEmail(s.email)
+                    const accountId = await resolveOrCreateAccount(s.email, s.name, 3)
 
-                    if (accountId) {
+                    if (existed) {
                         results.studentsExisting++
                     } else {
-                        // Create the account (email as temporary id, same as the students import route)
-                        await db.query(
-                            `INSERT INTO account (id, username, email, role) VALUES ($1, $2, $3, 3)`,
-                            [s.email, s.name, s.email],
-                        )
-                        // Re-fetch to get the actual id from the database
-                        accountId = await getAccountIdByEmail(s.email)
                         results.studentsCreated++
                     }
 
-                    // Ensure student_data record exists with the section
                     if (accountId) {
                         studentIds.push(accountId)
 
+                        // Ensure student_data record exists; use section from the block
                         try {
                             const sdExists = await db.query(
                                 `SELECT id FROM student_data WHERE student = $1 LIMIT 1`,
@@ -196,7 +224,7 @@ export async function POST(req: Request) {
                             if (!sdExists.rows.length) {
                                 await db.query(
                                     `INSERT INTO student_data (student, section) VALUES ($1, $2)`,
-                                    [accountId, s.section],
+                                    [accountId, block.section],
                                 )
                                 results.studentDataCreated++
                             }
@@ -209,47 +237,62 @@ export async function POST(req: Request) {
                 }
             }
 
-            /* ── 2. Resolve teacher by email ── */
+            /* ── 2. Resolve / create teacher account ── */
             let teacherId: string | null = null
 
-            if (course.teacher) {
+            if (block.teacher) {
                 try {
-                    teacherId = await getAccountIdByEmail(course.teacher)
-                    if (teacherId) {
-                        results.teachersLinked++
-                    } else {
-                        results.errors.push(
-                            `Teacher "${course.teacher}" not found in accounts. Course will be created without a teacher.`,
-                        )
+                    const existed = await getAccountIdByEmail(block.teacher)
+                    teacherId = await resolveOrCreateAccount(block.teacher, block.teacher.split('@')[0], 1)
+
+                    if (existed) {
+                        results.teachersExisting++
+                    } else if (teacherId) {
+                        results.teachersCreated++
                     }
                 } catch (err) {
-                    results.errors.push(`Teacher lookup "${course.teacher}": ${String(err)}`)
+                    results.errors.push(`Teacher "${block.teacher}": ${String(err)}`)
                 }
             }
 
             /* ── 3. Build schedule JSON ── */
             const scheduleObj: Record<string, { start: string; end: string }> = {}
-            for (const slot of course.schedule) {
+            for (const slot of block.schedule) {
                 scheduleObj[slot.day] = { start: slot.start, end: slot.end }
             }
 
-            /* ── 4. Create course and section ── */
+            /* ── 4. Reuse or create course, then create section ── */
             try {
-                const courseResult = await db.query(
-                    `INSERT INTO course (name, school_year) VALUES ($1, $2) RETURNING id`,
-                    [course.name, activeSchoolYear],
-                )
-                const courseId = courseResult.rows[0].id
-                results.coursesCreated++
+                let courseId = courseIdByName.get(block.name)
 
-                // Create a section for this course with schedule and teacher
+                if (!courseId) {
+                    // Check if a course with this name already exists for this school year
+                    const existing = await db.query(
+                        `SELECT id FROM course WHERE name = $1 AND school_year = $2 LIMIT 1`,
+                        [block.name, activeSchoolYear],
+                    )
+                    if (existing.rows.length) {
+                        courseId = existing.rows[0].id as string
+                    } else {
+                        const courseResult = await db.query(
+                            `INSERT INTO course (name, school_year) VALUES ($1, $2) RETURNING id`,
+                            [block.name, activeSchoolYear],
+                        )
+                        courseId = courseResult.rows[0].id as string
+                        results.coursesCreated++
+                    }
+                    courseIdByName.set(block.name, courseId)
+                }
+
+                // Create a section for this block
                 const sectionResult = await db.query(
                     `INSERT INTO section (name, schedule, teacher, course) VALUES ($1, $2, $3, $4) RETURNING id`,
-                    ['Default', JSON.stringify(scheduleObj), teacherId, courseId],
+                    [block.section ?? 'Default', JSON.stringify(scheduleObj), teacherId, courseId],
                 )
                 const sectionId = sectionResult.rows[0].id
+                results.sectionsCreated++
 
-                /* ── 5. Enroll students using their account IDs ── */
+                /* ── 5. Enroll students ── */
                 if (studentIds.length) {
                     const placeholders = studentIds.map((_, i) => `($1, $${i + 2})`).join(', ')
                     await db.query(
@@ -259,7 +302,7 @@ export async function POST(req: Request) {
                     results.enrollments += studentIds.length
                 }
             } catch (err) {
-                results.errors.push(`Course "${course.name}": ${String(err)}`)
+                results.errors.push(`Course/section "${block.name}" / "${block.section}": ${String(err)}`)
             }
         }
 

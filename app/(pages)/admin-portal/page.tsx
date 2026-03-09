@@ -745,7 +745,7 @@ export default function Admin() {
                                             } else {
                                                 const d = json.data;
                                                 setImportStatus(
-                                                    `Schedule imported: ${d.coursesCreated} courses, ${d.studentsCreated} new students, ${d.studentsExisting} existing, ${d.studentDataCreated} student records, ${d.enrollments} enrollments, ${d.teachersLinked} teachers linked` +
+                                                    `Schedule imported: ${d.coursesCreated} courses, ${d.sectionsCreated} sections, ${d.studentsCreated} new students, ${d.studentsExisting} existing, ${d.studentDataCreated} student records, ${d.enrollments} enrollments, ${d.teachersCreated} new teachers, ${d.teachersExisting} existing teachers` +
                                                     (d.errors?.length ? ` (${d.errors.length} errors)` : '')
                                                 );
                                                 // Refresh counts and lists
