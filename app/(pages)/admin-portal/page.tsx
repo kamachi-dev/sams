@@ -73,12 +73,12 @@ export default function Admin() {
     const [courseStudentSearch, setCourseStudentSearch] = useState<string>('');
 
     // Course viewer state
-    type Course = { id: string; name: string; schedule?: string; teacher?: string };
-    type EnrolledStudent = { id: string; name?: string; email?: string; section?: string };
+    type Course = { id: string; course_id?: string; name: string; section_name?: string; schedule?: string; teacher?: string };
+    type EnrolledStudent = { id: string; name?: string; email?: string; section?: string; sectionId?: string };
     const [coursesList, setCoursesList] = useState<Course[]>([]);
     const [coursesLoading, setCoursesLoading] = useState<boolean>(false);
     const [courseViewerSearch, setCourseViewerSearch] = useState<string>('');
-    const [selectedViewCourse, setSelectedViewCourse] = useState<Course | null>(null);
+    const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
     const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([]);
     const [enrolledLoading, setEnrolledLoading] = useState<boolean>(false);
     const [enrolledSearch, setEnrolledSearch] = useState<string>('');
@@ -86,13 +86,15 @@ export default function Admin() {
 
     // Course deletion state
     const [courseDeleteDialogOpen, setCourseDeleteDialogOpen] = useState<boolean>(false);
-    const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
+    const [courseToDeleteId, setCourseToDeleteId] = useState<string | null>(null);
+    const [courseToDeleteName, setCourseToDeleteName] = useState<string>('');
     const [courseDeleteConfirmText, setCourseDeleteConfirmText] = useState<string>('');
 
     // Add students to course state
     const [addStudentsDialogOpen, setAddStudentsDialogOpen] = useState<boolean>(false);
     const [addStudentsSearch, setAddStudentsSearch] = useState<string>('');
     const [studentsToAdd, setStudentsToAdd] = useState<string[]>([]);
+    const [addToSectionId, setAddToSectionId] = useState<string>('');
 
     // Student schedule view state
     type TimeSlot = { start: string; end: string };
@@ -249,39 +251,53 @@ export default function Admin() {
         setSelectedCourseStudents(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
     }
 
-    async function handleSelectViewCourse(course: Course) {
-        setSelectedViewCourse(course);
+    async function handleSelectCourse(courseId: string) {
+        setSelectedCourseId(courseId);
         setEnrolledStudents([]);
         setEnrolledSearch('');
         setSelectedSection('all');
+        const sections = coursesList.filter(c => c.course_id === courseId);
         try {
             setEnrolledLoading(true);
-            const res = await fetch(`/api/camera/courses?courseId=${encodeURIComponent(course.id)}`).then(r => r.json()).catch(() => null);
-            if (res?.success && res.data?.enrolled_students && Array.isArray(res.data.enrolled_students)) {
-                setEnrolledStudents(res.data.enrolled_students);
-            }
+            const results = await Promise.all(
+                sections.map(section =>
+                    fetch(`/api/camera/courses?courseId=${encodeURIComponent(section.id)}`)
+                        .then(r => r.json()).catch(() => null)
+                )
+            );
+            const allStudents: EnrolledStudent[] = [];
+            results.forEach((res, i) => {
+                if (res?.success && res.data?.enrolled_students && Array.isArray(res.data.enrolled_students)) {
+                    for (const s of res.data.enrolled_students) {
+                        allStudents.push({ ...s, sectionId: sections[i].id, section: sections[i].section_name ?? sections[i].name });
+                    }
+                }
+            });
+            setEnrolledStudents(allStudents);
         } finally {
             setEnrolledLoading(false);
         }
     }
 
-    function openCourseDeleteDialog(course: Course) {
-        setCourseToDelete(course);
+    function openCourseDeleteDialog(courseId: string, courseName: string) {
+        setCourseToDeleteId(courseId);
+        setCourseToDeleteName(courseName);
         setCourseDeleteConfirmText('');
         setCourseDeleteDialogOpen(true);
     }
 
     function closeCourseDeleteDialog() {
         setCourseDeleteDialogOpen(false);
-        setCourseToDelete(null);
+        setCourseToDeleteId(null);
+        setCourseToDeleteName('');
         setCourseDeleteConfirmText('');
     }
 
     async function handleDeleteCourse() {
-        if (!courseToDelete || courseDeleteConfirmText !== 'delete') return;
+        if (!courseToDeleteId || courseDeleteConfirmText !== 'delete') return;
         try {
             const form = new FormData();
-            form.append('id', courseToDelete.id);
+            form.append('id', courseToDeleteId);
             const res = await fetch('/api/courses', { method: 'DELETE', body: form });
             const json = await res.json();
             if (!res.ok || json?.success === false) {
@@ -291,9 +307,9 @@ export default function Admin() {
                 return;
             }
             setImportStatus('Course deleted');
-            setCoursesList(prev => prev.filter(c => c.id !== courseToDelete.id));
-            if (selectedViewCourse?.id === courseToDelete.id) {
-                setSelectedViewCourse(null);
+            setCoursesList(prev => prev.filter(c => c.course_id !== courseToDeleteId));
+            if (selectedCourseId === courseToDeleteId) {
+                setSelectedCourseId(null);
                 setEnrolledStudents([]);
             }
             setClassCount(c => (c ? c - 1 : null));
@@ -311,6 +327,9 @@ export default function Admin() {
     function openAddStudentsDialog() {
         setAddStudentsSearch('');
         setStudentsToAdd([]);
+        // Default to first section of current course
+        const sections = coursesList.filter(c => c.course_id === selectedCourseId);
+        setAddToSectionId(sections[0]?.id ?? '');
         setAddStudentsDialogOpen(true);
     }
 
@@ -325,10 +344,10 @@ export default function Admin() {
     }
 
     async function handleAddStudentsToCourse() {
-        if (!selectedViewCourse || !studentsToAdd.length) return;
+        if (!addToSectionId || !studentsToAdd.length) return;
         try {
             const form = new FormData();
-            form.append('courseId', selectedViewCourse.id);
+            form.append('courseId', addToSectionId);
             form.append('students', studentsToAdd.join(','));
             const res = await fetch('/api/courses/enrollments', { method: 'POST', body: form });
             const json = await res.json();
@@ -342,7 +361,7 @@ export default function Admin() {
             setTimeout(() => setImportStatus(null), 4000);
             closeAddStudentsDialog();
             // Refresh enrolled students
-            handleSelectViewCourse(selectedViewCourse);
+            if (selectedCourseId) handleSelectCourse(selectedCourseId);
         } catch (err: unknown) {
             let message = 'Unknown error';
             if (err instanceof Error) message = err.message;
@@ -352,11 +371,11 @@ export default function Admin() {
         }
     }
 
-    async function handleRemoveStudentFromCourse(studentId: string) {
-        if (!selectedViewCourse) return;
+    async function handleRemoveStudentFromCourse(studentId: string, sectionId: string) {
+        if (!selectedCourseId) return;
         try {
             const form = new FormData();
-            form.append('courseId', selectedViewCourse.id);
+            form.append('courseId', sectionId);
             form.append('studentId', studentId);
             const res = await fetch('/api/courses/enrollments', { method: 'DELETE', body: form });
             const json = await res.json();
@@ -1124,15 +1143,22 @@ export default function Admin() {
                                             {coursesLoading ? <div>Loading courses...</div> : (
                                                 (() => {
                                                     const filtered = coursesList.filter(c => c.name.toLowerCase().includes(courseViewerSearch.toLowerCase()));
-                                                    return filtered.length ? (
-                                                        filtered.map(c => (
+                                                    // Group sections by course_id
+                                                    const groups = new Map<string, Course[]>();
+                                                    for (const c of filtered) {
+                                                        const key = c.course_id ?? c.id;
+                                                        if (!groups.has(key)) groups.set(key, []);
+                                                        groups.get(key)!.push(c);
+                                                    }
+                                                    return groups.size ? (
+                                                        Array.from(groups.entries()).map(([courseId, sections]) => (
                                                             <button
-                                                                key={c.id}
-                                                                className={`course-select-item ${selectedViewCourse?.id === c.id ? 'selected' : ''}`}
-                                                                onClick={() => handleSelectViewCourse(c)}
+                                                                key={courseId}
+                                                                className={`course-select-item ${selectedCourseId === courseId ? 'selected' : ''}`}
+                                                                onClick={() => handleSelectCourse(courseId)}
                                                             >
-                                                                <span className="course-select-name">{c.name}</span>
-                                                                {c.schedule && <span className="course-select-schedule">{typeof c.schedule === 'string' ? c.schedule : Object.keys(c.schedule).join(', ')}</span>}
+                                                                <span className="course-select-name">{sections[0].name}</span>
+                                                                <span className="course-select-schedule">{sections.length} section{sections.length > 1 ? 's' : ''}</span>
                                                             </button>
                                                         ))
                                                     ) : <div className="user-empty">No courses found</div>;
@@ -1141,81 +1167,90 @@ export default function Admin() {
                                         </div>
                                     </div>
                                     <div className="course-viewer-right">
-                                        {selectedViewCourse ? (
-                                            <>
-                                                <div className="course-header-row">
-                                                    <Label.Root className="school-year-form-title">{selectedViewCourse.name}</Label.Root>
-                                                    <button className="school-year-delete-button" onClick={() => openCourseDeleteDialog(selectedViewCourse)} title="Delete course">
-                                                        <TrashIcon />
-                                                    </button>
-                                                </div>
-                                                {selectedViewCourse.schedule && <div className="course-schedule-info">{typeof selectedViewCourse.schedule === 'string' ? selectedViewCourse.schedule : Object.keys(selectedViewCourse.schedule).join(', ')}</div>}
-                                                <Separator.Root orientation="horizontal" className="sams-separator" style={{ margin: '0.75rem 0' }} />
-                                                <div className="section-filter-row">
-                                                    <Label.Root className="form-field-label">Enrolled Students</Label.Root>
-                                                    {enrolledStudents.length > 0 && (
-                                                        <Select.Root value={selectedSection} onValueChange={setSelectedSection}>
-                                                            <Select.Trigger className="section-select-trigger">
-                                                                <Select.Value placeholder="All Sections" />
-                                                                <Select.Icon className="section-select-icon">
-                                                                    <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 5l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                                </Select.Icon>
-                                                            </Select.Trigger>
-                                                            <Select.Portal>
-                                                                <Select.Content className="section-select-content" position="popper" sideOffset={4}>
-                                                                    <Select.Viewport>
-                                                                        <Select.Item value="all" className="section-select-item">
-                                                                            <Select.ItemText>All Sections</Select.ItemText>
-                                                                        </Select.Item>
-                                                                        {Array.from(new Set(enrolledStudents.map(s => s.section ?? 'Unassigned'))).sort().map(sec => (
-                                                                            <Select.Item key={sec} value={sec} className="section-select-item">
-                                                                                <Select.ItemText>{sec}</Select.ItemText>
+                                        {(() => {
+                                            const selectedSections = coursesList.filter(c => c.course_id === selectedCourseId);
+                                            const courseName = selectedSections[0]?.name;
+                                            if (!selectedCourseId || !courseName) {
+                                                return <div className="user-empty" style={{ textAlign: 'center', padding: '2rem' }}>Select a course to view enrolled students</div>;
+                                            }
+                                            return (
+                                                <>
+                                                    <div className="course-header-row">
+                                                        <Label.Root className="school-year-form-title">{courseName}</Label.Root>
+                                                        <button className="school-year-delete-button" onClick={() => openCourseDeleteDialog(selectedCourseId, courseName)} title="Delete course">
+                                                            <TrashIcon />
+                                                        </button>
+                                                    </div>
+                                                    {selectedSections.length > 0 && (
+                                                        <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                                                            {selectedSections.map(s => s.section_name ?? s.name).join(', ')}
+                                                        </div>
+                                                    )}
+                                                    <Separator.Root orientation="horizontal" className="sams-separator" style={{ margin: '0.75rem 0' }} />
+                                                    <div className="section-filter-row">
+                                                        <Label.Root className="form-field-label">Enrolled Students</Label.Root>
+                                                        {enrolledStudents.length > 0 && (
+                                                            <Select.Root value={selectedSection} onValueChange={setSelectedSection}>
+                                                                <Select.Trigger className="section-select-trigger">
+                                                                    <Select.Value placeholder="All Sections" />
+                                                                    <Select.Icon className="section-select-icon">
+                                                                        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 5l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                                    </Select.Icon>
+                                                                </Select.Trigger>
+                                                                <Select.Portal>
+                                                                    <Select.Content className="section-select-content" position="popper" sideOffset={4}>
+                                                                        <Select.Viewport>
+                                                                            <Select.Item value="all" className="section-select-item">
+                                                                                <Select.ItemText>All Sections</Select.ItemText>
                                                                             </Select.Item>
-                                                                        ))}
-                                                                    </Select.Viewport>
-                                                                </Select.Content>
-                                                            </Select.Portal>
-                                                        </Select.Root>
-                                                    )}
-                                                </div>
-                                                <input
-                                                    type="text"
-                                                    value={enrolledSearch}
-                                                    onChange={(e) => setEnrolledSearch(e.target.value)}
-                                                    className="school-year-input"
-                                                    placeholder="Search enrolled students..."
-                                                    style={{ marginBottom: '0.5rem', width: '100%' }}
-                                                />
-                                                <div className="enrolled-students-list">
-                                                    {enrolledLoading ? <div>Loading students...</div> : (
-                                                        (() => {
-                                                            const q = enrolledSearch.toLowerCase();
-                                                            const filtered = enrolledStudents
-                                                                .filter(s => selectedSection === 'all' || (s.section ?? 'Unassigned') === selectedSection)
-                                                                .filter(s => (s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q)));
-                                                            return filtered.length ? (
-                                                                filtered.map(s => (
-                                                                    <div key={s.id} className="enrolled-student-item">
-                                                                        <div className="enrolled-student-info">
-                                                                            <div className="enrolled-student-name">{s.name ?? s.email}</div>
-                                                                            {s.section && <div className="enrolled-student-section">Section: {s.section}</div>}
+                                                                            {Array.from(new Set(enrolledStudents.map(s => s.section ?? 'Unassigned'))).sort().map(sec => (
+                                                                                <Select.Item key={sec} value={sec} className="section-select-item">
+                                                                                    <Select.ItemText>{sec}</Select.ItemText>
+                                                                                </Select.Item>
+                                                                            ))}
+                                                                        </Select.Viewport>
+                                                                    </Select.Content>
+                                                                </Select.Portal>
+                                                            </Select.Root>
+                                                        )}
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={enrolledSearch}
+                                                        onChange={(e) => setEnrolledSearch(e.target.value)}
+                                                        className="school-year-input"
+                                                        placeholder="Search enrolled students..."
+                                                        style={{ marginBottom: '0.5rem', width: '100%' }}
+                                                    />
+                                                    <div className="enrolled-students-list">
+                                                        {enrolledLoading ? <div>Loading students...</div> : (
+                                                            (() => {
+                                                                const q = enrolledSearch.toLowerCase();
+                                                                const filtered = enrolledStudents
+                                                                    .filter(s => selectedSection === 'all' || (s.section ?? 'Unassigned') === selectedSection)
+                                                                    .filter(s => (s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q)));
+                                                                return filtered.length ? (
+                                                                    filtered.map(s => (
+                                                                        <div key={`${s.sectionId}-${s.id}`} className="enrolled-student-item">
+                                                                            <div className="enrolled-student-info">
+                                                                                <div className="enrolled-student-name">{s.name ?? s.email}</div>
+                                                                                {s.section && <div className="enrolled-student-section">{s.section}</div>}
+                                                                            </div>
+                                                                            <button className="student-remove-button" onClick={() => handleRemoveStudentFromCourse(s.id, s.sectionId ?? '')} title="Remove from course">
+                                                                                <TrashIcon />
+                                                                            </button>
                                                                         </div>
-                                                                        <button className="student-remove-button" onClick={() => handleRemoveStudentFromCourse(s.id)} title="Remove from course">
-                                                                            <TrashIcon />
-                                                                        </button>
-                                                                    </div>
-                                                                ))
-                                                            ) : <div className="user-empty">No enrolled students{enrolledStudents.length ? ' matching search' : ''}</div>;
-                                                        })()
-                                                    )}
-                                                </div>
-                                                <button className="import-button" onClick={openAddStudentsDialog} style={{ marginTop: '0.75rem', alignSelf: 'flex-start' }}>
-                                                    <Label.Root>Add Students</Label.Root>
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <div className="user-empty" style={{ textAlign: 'center', padding: '2rem' }}>Select a course to view enrolled students</div>
-                                        )}
+                                                                    ))
+                                                                ) : <div className="user-empty">No enrolled students{enrolledStudents.length ? ' matching search' : ''}</div>;
+                                                            })()
+                                                        )}
+                                                    </div>
+                                                    <button className="import-button" onClick={openAddStudentsDialog} style={{ marginTop: '0.75rem', alignSelf: 'flex-start' }}>
+                                                        <Label.Root>Add Students</Label.Root>
+                                                    </button>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </Tabs.Content>
@@ -1427,7 +1462,7 @@ export default function Admin() {
                     <Dialog.Content className="dialog-content">
                         <Dialog.Title className="dialog-title">Confirm Course Deletion</Dialog.Title>
                         <Dialog.Description className="dialog-description">
-                            This will delete the course <strong>{courseToDelete?.name}</strong> and all its enrollments. Type <strong>delete</strong> to confirm.
+                            This will delete the course <strong>{courseToDeleteName}</strong> and all its enrollments. Type <strong>delete</strong> to confirm.
                         </Dialog.Description>
                         <div className="form-field-group" style={{ marginTop: '1rem' }}>
                             <Label.Root className="form-field-label">Type &apos;delete&apos; to confirm</Label.Root>
@@ -1472,11 +1507,29 @@ export default function Admin() {
                 <Dialog.Portal>
                     <Dialog.Overlay className="dialog-overlay" />
                     <Dialog.Content className="dialog-content" style={{ maxWidth: '32rem' }}>
-                        <Dialog.Title className="dialog-title">Add Students to {selectedViewCourse?.name}</Dialog.Title>
+                        <Dialog.Title className="dialog-title">Add Students to {coursesList.find(c => c.course_id === selectedCourseId)?.name}</Dialog.Title>
                         <Dialog.Description className="dialog-description">
                             Select students to add to this course.
                         </Dialog.Description>
                         <div className="form-field-group" style={{ marginTop: '1rem' }}>
+                            {(() => {
+                                const sections = coursesList.filter(c => c.course_id === selectedCourseId);
+                                return sections.length > 1 ? (
+                                    <>
+                                        <Label.Root className="form-field-label">Add to Section</Label.Root>
+                                        <select
+                                            value={addToSectionId}
+                                            onChange={(e) => setAddToSectionId(e.target.value)}
+                                            className="school-year-input"
+                                            style={{ marginBottom: '0.5rem' }}
+                                        >
+                                            {sections.map(s => (
+                                                <option key={s.id} value={s.id}>{s.section_name ?? s.name}</option>
+                                            ))}
+                                        </select>
+                                    </>
+                                ) : null;
+                            })()}
                             <Label.Root className="form-field-label">Search Students</Label.Root>
                             <input
                                 type="text"
