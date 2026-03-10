@@ -434,7 +434,7 @@ export default function Teacher() {
     // Overview drill-down state
     const [overviewStep, setOverviewStep] = useState<'courses' | 'sections' | 'stats'>('courses');
     const [selectedOverviewCourse, setSelectedOverviewCourse] = useState<{ id: string; name: string } | null>(null);
-    const [courseSections, setCourseSections] = useState<Array<{ section: string; studentCount: number; students?: string[] }>>([]);
+    const [courseSections, setCourseSections] = useState<Array<{ section: string; sectionId?: string; studentCount: number; students?: string[] }>>([]);
     const [selectedSection, setSelectedSection] = useState<string>("");
     const [isLoadingSections, setIsLoadingSections] = useState(false);
 
@@ -2181,27 +2181,17 @@ export default function Teacher() {
                         </div>
                     </div>,
 
-                    <div key="student-count" className="teacher-panel-card present">
-                        <PersonIcon className="teacher-panel-icon" />
-                        <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Number of Sections</div>
-                            <div className="teacher-panel-value">
-                                {courseSections.length}
-                            </div>
-                            <div className="teacher-panel-sub">
-                                In {selectedOverviewCourse?.name || 'this course'}
-                            </div>
-                        </div>
-                    </div>,
-
-                    <div key="at-risk-sections" className="teacher-panel-card low-attendance-alert">
+                    <div key="at-risk-section" className="teacher-panel-card low-attendance-alert">
                         <ExclamationTriangleIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Sections with Students at Risk</div>
+                            <div className="teacher-panel-label">Students at Risk</div>
                             <div className="teacher-panel-value">
-                                {new Set(allAtRiskStudents.filter(s => s.sectionId === selectedOverviewCourse?.id).map(s => s.section)).size}
+                                {(() => {
+                                    const sectionData = courseSections.find(s => s.section === selectedSection);
+                                    return sectionData?.sectionId ? atRiskStudentsForSection(sectionData.sectionId).length : 0;
+                                })()}
                             </div>
-                            <div className="teacher-panel-sub">Below {lowAttendanceThreshold}% attendance</div>
+                            <div className="teacher-panel-sub">Below {lowAttendanceThreshold}% in {selectedSection}</div>
                         </div>
                     </div>,
                 ] : [
@@ -2214,17 +2204,6 @@ export default function Teacher() {
                         </div>
                     </div>,
 
-                    <div key="attendance-rate" className="teacher-panel-card attendance">
-                        <CalendarIcon className="teacher-panel-icon" />
-                        <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Overall Attendance Rate</div>
-                            <div className="teacher-panel-value">{semesterAttendance.attendanceRate}%</div>
-                            <div className="teacher-panel-sub">
-                                {semesterAttendance.present} present out of {semesterAttendance.total} records
-                            </div>
-                        </div>
-                    </div>,
-
                     <div key="section-count" className="teacher-panel-card present">
                         <PersonIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
@@ -2234,6 +2213,17 @@ export default function Teacher() {
                             </div>
                             <div className="teacher-panel-sub">
                                 Across all your courses
+                            </div>
+                        </div>
+                    </div>,
+
+                    <div key="attendance-rate" className="teacher-panel-card attendance">
+                        <CalendarIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Overall Attendance Rate</div>
+                            <div className="teacher-panel-value">{semesterAttendance.attendanceRate}%</div>
+                            <div className="teacher-panel-sub">
+                                {semesterAttendance.present} present out of {semesterAttendance.total} records
                             </div>
                         </div>
                     </div>,

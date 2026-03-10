@@ -77,8 +77,8 @@ export async function GET(req: Request) {
 
         // Attendance rate = present out of all actual records
         const attendanceRate = total > 0
-            ? ((present / total) * 100).toFixed(1)
-            : '0.0'
+            ? ((present / total) * 100).toFixed(2)
+            : '0.00'
 
         return NextResponse.json({
             success: true,

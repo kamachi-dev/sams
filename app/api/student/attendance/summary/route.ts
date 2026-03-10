@@ -35,8 +35,8 @@ export async function GET() {
 
         // Attendance rate = present out of all actual records (matches teacher portal)
         const attendanceRate = totalDays > 0
-            ? ((presentDays / totalDays) * 100).toFixed(1)
-            : '0.0'
+            ? ((presentDays / totalDays) * 100).toFixed(2)
+            : '0.00'
 
         // Get total courses enrolled
         const enrollmentResult = await db.query(`
