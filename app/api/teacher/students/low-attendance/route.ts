@@ -37,12 +37,25 @@ export async function GET(req: Request) {
 
         const whereClause = conditions.join(' AND ')
 
-        // Per-student attendance counts using explicit DB records only.
-        // school_days = distinct days this student has ANY record (present/late/absent).
-        // absent_count = explicit attendance=0 records only (camera pushes these at class end).
-        // attendance_rate = present / school_days (only present counts toward the rate).
+        // Per-student attendance counts using best-status-per-day deduplication.
+        // For each student+section+day, keep only the best record: Present(1) > Late(2) > Absent(0).
+        // This matches the SF2 export logic exactly.
+        // attendance_rate = present / total_records (P + L + A after dedup).
         const query = `
-            WITH student_attendance AS (
+            WITH best_records AS (
+                SELECT DISTINCT ON (r.student, r.course, DATE(r.time))
+                    r.student,
+                    r.course,
+                    r.attendance
+                FROM record r
+                INNER JOIN section s ON r.course = s.id
+                INNER JOIN course c ON s.course = c.id
+                WHERE ${whereClause}
+                  AND r.time IS NOT NULL
+                ORDER BY r.student, r.course, DATE(r.time),
+                    CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC
+            ),
+            student_attendance AS (
                 SELECT
                     a.id           AS student_id,
                     a.username     AS student_name,
@@ -51,17 +64,16 @@ export async function GET(req: Request) {
                     c.name         AS course_name,
                     s.id           AS section_id,
                     s.name         AS student_section,
-                    COUNT(DISTINCT CASE WHEN r.attendance IS NOT NULL THEN DATE(r.time) END) AS school_days,
-                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) AS present_count,
-                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) AS late_count,
-                    COUNT(CASE WHEN r.attendance = 0 THEN 1 END) AS absent_count
+                    COUNT(br.attendance)                              AS total_records,
+                    COUNT(CASE WHEN br.attendance = 1 THEN 1 END)    AS present_count,
+                    COUNT(CASE WHEN br.attendance = 2 THEN 1 END)    AS late_count,
+                    COUNT(CASE WHEN br.attendance = 0 THEN 1 END)    AS absent_count
                 FROM enrollment_data e
                 INNER JOIN section s ON e.section = s.id
                 INNER JOIN course c ON s.course = c.id
                 INNER JOIN account a ON e.student = a.id
-                LEFT JOIN record r ON r.student = a.id
-                    AND r.course = s.id
-                    AND r.time IS NOT NULL
+                LEFT JOIN best_records br ON br.student = a.id
+                    AND br.course = s.id
                 WHERE ${whereClause}
                 GROUP BY a.id, a.username, a.email, c.id, c.name, s.id, s.name
             )
@@ -73,19 +85,19 @@ export async function GET(req: Request) {
                 course_name,
                 section_id,
                 student_section,
-                school_days      AS total_records,
+                total_records,
                 present_count,
                 late_count,
                 absent_count,
                 CASE
-                    WHEN school_days > 0 THEN
-                        ROUND((present_count * 1.0 / school_days * 100)::numeric, 1)
+                    WHEN total_records > 0 THEN
+                        ROUND((present_count * 1.0 / total_records * 100)::numeric, 1)
                     ELSE 0
                 END AS attendance_rate
             FROM student_attendance
-            WHERE school_days > 0
+            WHERE total_records > 0
               AND CASE
-                    WHEN school_days > 0 THEN (present_count * 1.0 / school_days * 100)
+                    WHEN total_records > 0 THEN (present_count * 1.0 / total_records * 100)
                     ELSE 0
                   END < $${thresholdIdx}
             ORDER BY attendance_rate ASC, student_name ASC

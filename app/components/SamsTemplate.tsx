@@ -26,6 +26,8 @@ interface Props {
         panels: React.ReactNode[];
         content: React.ReactNode
     }[];
+    activeTab?: string;
+    onTabChange?: (tab: string) => void;
 }
 
 function toggleTheme(checked: boolean) {
@@ -50,7 +52,7 @@ async function getUserData() {
     return user;
 }
 
-export default function SamsTemplate({ links }: Props) {
+export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
     const { isLoaded, isSignedIn } = useAuth();
     const defaultTab = links && links.length > 0 ? links[0].label : undefined;
     const pathname = usePathname() ?? '';
@@ -93,7 +95,10 @@ export default function SamsTemplate({ links }: Props) {
     };
 
     return (
-        <Tabs.Root defaultValue={defaultTab} className={`sams ${isMobile ? 'sams-mobile' : ''}`}>
+        <Tabs.Root
+            {...(activeTab ? { value: activeTab, onValueChange: onTabChange } : { defaultValue: defaultTab })}
+            className={`sams ${isMobile ? 'sams-mobile' : ''}`}
+        >
             <nav className={`sams-nav ${isMobileMenuOpen ? 'sams-nav-mobile-open' : ''}`}>
                 <div className="sams-nav-header">
                     {isMobile && (
