@@ -5,7 +5,6 @@ import XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
-  ThickArrowRightIcon,
   CalendarIcon,
   DownloadIcon,
   PersonIcon,
@@ -41,7 +40,6 @@ function getLateReason(record: any) {
   return `Arrival recorded at (${record.recordedTime}), exceeding the 15 minute grace period (${record.classStart}).`;
 }
 
-const wanton = 1;
 export default function Student() {
   const [selectedView, setSelectedView] = useState<
     "daily" | "weekly" | "monthly" | "quarterly"
@@ -54,9 +52,6 @@ export default function Student() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "analytics" | "courses"
-  >("overview");
 
   // 👉 notifications specific
   const [activeSemester, setActiveSemester] = useState<"first" | "second">("first");
@@ -99,7 +94,6 @@ export default function Student() {
   const [dailyRecords, setDailyRecords] = useState<any[]>([]);
   const [allNotifications, setAllNotifications] = useState<any[]>([]);
   const [dbAppeals, setDbAppeals] = useState<any[]>([]);
-  const [isLoadingDynamicData, setIsLoadingDynamicData] = useState(false);
 
   // Student Appeal - filter records where status is LATE or ABSENT
   const appealableRecords = dailyRecords.filter(
@@ -233,7 +227,6 @@ export default function Student() {
   // Fetch dynamic data from new database-driven endpoints
   useEffect(() => {
     const fetchDynamicData = async () => {
-      setIsLoadingDynamicData(true);
       try {
         const [dailyRes, notifRes, appealsRes] = await Promise.all([
           fetch('/api/student/attendance/daily'),
@@ -260,8 +253,6 @@ export default function Student() {
         }
       } catch (error) {
         console.error('Error fetching dynamic data:', error);
-      } finally {
-        setIsLoadingDynamicData(false);
       }
     };
 
@@ -338,7 +329,6 @@ export default function Student() {
 
       const sf2 = result.data;
       const courses = sf2.courses;
-      const schoolDays: number[] = sf2.schoolDays;
       const detectionLog = sf2.detectionLog;
       const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -441,7 +431,6 @@ export default function Student() {
           }),
         ];
 
-        const totalCols = 2 + allDays.length + 5;
         const fixedNameW = Math.min(50, Math.max(35, contentW * 0.18));
         const fixedSumW = 9;
         const fixedNoW = 7;

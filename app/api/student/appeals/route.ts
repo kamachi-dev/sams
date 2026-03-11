@@ -108,7 +108,7 @@ export async function POST(request: Request) {
         // Verify the student owns this record
         const recordCheck = await db.query(`
             SELECT r.id, r.student, r.course, r.attendance, r.time,
-                   s.id as section_id, c.id as course_id
+                   s.id as section_id, c.id as course_id, c.name as course_name
             FROM record r
             INNER JOIN section s ON r.course = s.id
             INNER JOIN course c ON s.course = c.id
