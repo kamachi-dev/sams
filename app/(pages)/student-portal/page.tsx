@@ -528,6 +528,68 @@ export default function Student() {
         doc.setTextColor(...navy);
         doc.text(`Total Courses: ${sf2.totalCourses}     |     School Days: ${sf2.totalSchoolDays}     |     Legend:  P = Present    L = Late    A = Absent    - = No Detection`, mL + 4, curY + 6);
 
+        // ── Overall Attendance Rate Calculation ──
+        curY += 16;
+        let actualGP = 0, actualGL = 0, actualGA = 0, actualGR = 0;
+        for (const c of courses) {
+          actualGP += c.totalPresent;
+          actualGL += c.totalLate;
+          actualGA += c.totalAbsent ?? 0;
+          actualGR += c.actualRecords ?? (c.totalPresent + c.totalLate + (c.totalAbsent ?? 0));
+        }
+        const overallR = actualGR > 0 ? ((actualGP / actualGR) * 100).toFixed(2) : '0.00';
+        const rateColor = parseFloat(overallR) >= 80 ? green : parseFloat(overallR) >= 50 ? yellow : red;
+
+        // Card background
+        const cardY = curY;
+        doc.setFillColor(...lightBg);
+        doc.roundedRect(mL, cardY, contentW, 70, 2, 2, 'F');
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(46, 125, 50);
+        doc.text('Overall Attendance Rate', mL + 4, curY + 6);
+
+        let leftY = curY + 13;
+        doc.setFontSize(8);
+        const kvPairs: [string, string, [number, number, number]?][] = [
+          ['Formula:', '(Total Present ÷ Total Actual Records) × 100'],
+          ['Total Present:', String(actualGP), green],
+          ['Total Late:', String(actualGL), yellow],
+          ['Total Absent:', String(actualGA), red],
+          ['Total Records (P+L+A):', String(actualGR), navy],
+          ['Calculation:', `(${actualGP} ÷ ${actualGR}) × 100 = ${overallR}%`],
+        ];
+        kvPairs.forEach(([label, value, color]) => {
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...darkText);
+          doc.text(label, mL + 6, leftY);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...(color || [79, 79, 79] as [number, number, number]));
+          doc.text(value, mL + 46, leftY);
+          leftY += 4.5;
+        });
+
+        // Big highlighted rate
+        leftY += 2;
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(mL + 6, leftY - 4, contentW - 12, 12, 1.5, 1.5, 'F');
+        doc.setDrawColor(200, 200, 200);
+        doc.roundedRect(mL + 6, leftY - 4, contentW - 12, 12, 1.5, 1.5, 'S');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...navy);
+        doc.text('Overall Attendance Rate:', mL + 10, leftY + 3);
+        doc.setFontSize(14);
+        doc.setTextColor(...rateColor);
+        doc.text(`${overallR}%`, mL + contentW - 10, leftY + 4, { align: 'right' });
+
+        leftY += 13;
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(140, 140, 140);
+        doc.text('Days with no detection are excluded from this calculation.', mL + 6, leftY);
+
 
         // ════════════════════════════════════════════════════
         // ── PAGE 2: Detection Log ──
@@ -821,6 +883,66 @@ export default function Student() {
 
         // Legend
         setCell(R, 0, 'Legend:  ✓ = Present    L = Late    ✗ = Absent    — = No Detection', { font: { sz: 10, italic: true, color: { rgb: '666666' } } });
+        R += 2;
+
+        // ── Overall Attendance Rate Calculation ──
+        const analyticLabelStyle = { font: { bold: true, sz: 10, color: { rgb: '555555' } } };
+        const analyticValueStyle = { font: { sz: 10, color: { rgb: '4F4F4F' } }, border, alignment: { horizontal: 'center' as const } };
+        const analyticHighlightStyle = { font: { bold: true, sz: 12, color: { rgb: '1F2F57' } }, border, alignment: { horizontal: 'center' as const } };
+        const sectionTitleStyle = { font: { bold: true, sz: 11, color: { rgb: '2E7D32' } } };
+        const shortMergeSpan = 2;
+        const wideMergeSpan = Math.min(totalExcelCols - 2, 6);
+
+        const setCellSpan = (r: number, c: number, span: number, v: any, s?: any) => {
+          setCell(r, c, v, s);
+          for (let i = 1; i < span; i++) {
+            setCell(r, c + i, '', s);
+          }
+          if (span > 1) {
+            merges.push({ s: { r, c }, e: { r, c: c + span - 1 } });
+          }
+        };
+
+        setCell(R, 0, 'Overall Attendance Rate', sectionTitleStyle);
+        R += 1;
+
+        let xlGP = 0, xlGL = 0, xlGA = 0, xlGR = 0;
+        for (const course of courses) {
+          xlGP += course.totalPresent;
+          xlGL += course.totalLate;
+          xlGA += course.totalAbsent ?? 0;
+          xlGR += course.actualRecords ?? (course.totalPresent + course.totalLate + (course.totalAbsent ?? 0));
+        }
+        const xlOverallRate = xlGR > 0 ? ((xlGP / xlGR) * 100).toFixed(2) : '0.00';
+
+        setCell(R, 1, 'Formula:', analyticLabelStyle);
+        setCellSpan(R, 2, wideMergeSpan, '(Total Present ÷ Total Actual Records) × 100', analyticValueStyle);
+        R++;
+        setCell(R, 1, 'Total Present:', analyticLabelStyle);
+        setCellSpan(R, 2, shortMergeSpan, xlGP, { ...analyticValueStyle, font: { bold: true, sz: 10, color: { rgb: '0F9D58' } } });
+        R++;
+        setCell(R, 1, 'Total Late:', analyticLabelStyle);
+        setCellSpan(R, 2, shortMergeSpan, xlGL, { ...analyticValueStyle, font: { bold: true, sz: 10, color: { rgb: 'F4B400' } } });
+        R++;
+        setCell(R, 1, 'Total Absent:', analyticLabelStyle);
+        setCellSpan(R, 2, shortMergeSpan, xlGA, { ...analyticValueStyle, font: { bold: true, sz: 10, color: { rgb: 'DB4437' } } });
+        R++;
+        setCell(R, 1, 'Total Actual Records (P + L + A):', analyticLabelStyle);
+        setCellSpan(R, 2, shortMergeSpan, xlGR, analyticHighlightStyle);
+        R++;
+        setCell(R, 1, 'Calculation:', analyticLabelStyle);
+        setCellSpan(R, 2, wideMergeSpan, `(${xlGP} ÷ ${xlGR}) × 100 = ${xlOverallRate}%`, analyticValueStyle);
+        R++;
+        setCell(R, 1, 'Overall Attendance Rate:', { ...analyticLabelStyle, font: { bold: true, sz: 12, color: { rgb: '1F2F57' } } });
+        setCellSpan(R, 2, shortMergeSpan, `${xlOverallRate}%`, {
+          font: { bold: true, sz: 14, color: { rgb: parseFloat(xlOverallRate) >= 80 ? '0F9D58' : parseFloat(xlOverallRate) >= 50 ? 'F4B400' : 'DB4437' } },
+          border,
+          alignment: { horizontal: 'center' },
+        });
+        R++;
+
+        setCell(R, 1, 'Note:', { font: { bold: true, italic: true, sz: 9, color: { rgb: '888888' } } });
+        setCellSpan(R, 2, wideMergeSpan, 'Only actual database records are counted. Days with no detection (—) are not counted toward this rate.', { font: { italic: true, sz: 9, color: { rgb: '888888' } } });
         R += 2;
 
         // Sheet config

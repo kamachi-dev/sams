@@ -16,15 +16,23 @@ export async function GET() {
 
         // Get attendance summary for the student
         // attendance: 1=present, 2=late, 0=absent
+        // Deduplicate: keep best status per course per day (Present > Late > Absent)
         const result = await db.query(`
             SELECT 
-                COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_days,
-                COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_days,
-                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_days,
+                COUNT(CASE WHEN best.attendance = 1 THEN 1 END) as present_days,
+                COUNT(CASE WHEN best.attendance = 2 THEN 1 END) as late_days,
+                COUNT(CASE WHEN best.attendance = 0 THEN 1 END) as absent_days,
                 COUNT(*) as total_days
-            FROM record r
-            WHERE r.student = $1
-              AND r.course IN (SELECT s.id FROM section s INNER JOIN course c ON s.course = c.id WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1'))
+            FROM (
+                SELECT DISTINCT ON (r.course, DATE(r.time))
+                    r.attendance
+                FROM record r
+                WHERE r.student = $1
+                  AND r.time IS NOT NULL
+                  AND r.course IN (SELECT s.id FROM section s INNER JOIN course c ON s.course = c.id WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1'))
+                ORDER BY r.course, DATE(r.time),
+                    CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC
+            ) AS best
         `, [user.id])
 
         const data = result.rows[0]
