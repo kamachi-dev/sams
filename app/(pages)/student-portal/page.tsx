@@ -32,33 +32,16 @@ import {
 import "./styles.css";
 import "../teacher-portal/styles.css";
 import {
-  studentInfo,
-  dailyAttendance,
-  weeklyTrend,
-  monthlyData,
-  quarterlyData,
-  notifications,
-  courseAttendance,
   chartColors,
-  attendanceAppeals,
 } from "./constants";
 
-const totalDays = 40;
-const presentDays = 37;
-const lateDays = 2;
-const absentDays = 1;
-const warnings = 4;
-const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
-const attendanceAlerts = (presentDays + lateDays);
-const totalCourses = courseAttendance.length;
-
 function getLateReason(record: any) {
-  if (record.status !== "LATE") return "";
+  if (record.status !== "Late") return "";
 
   return `Arrival recorded at (${record.recordedTime}), exceeding the 15 minute grace period (${record.classStart}).`;
 }
 
-
+const wanton = 1;
 export default function Student() {
   const [selectedView, setSelectedView] = useState<
     "daily" | "weekly" | "monthly" | "quarterly"
@@ -79,7 +62,7 @@ export default function Student() {
   const [activeSemester, setActiveSemester] = useState<"first" | "second">("first");
 
   const [selectedNotification, setSelectedNotification] =
-    useState<(typeof notifications)[number] | null>(null);
+    useState<any>(null);
 
   // Real data from database
   const [studentData, setStudentData] = useState<{
@@ -112,19 +95,25 @@ export default function Student() {
   const [trendsData, setTrendsData] = useState<any[]>([]);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
 
-  // Student Appeal
-  const appealableRecords = dailyAttendance.filter(
-    (record) => record.status === "LATE" || record.status === "ABSENT"
+  // Database-driven data (previously hardcoded constants)
+  const [dailyRecords, setDailyRecords] = useState<any[]>([]);
+  const [allNotifications, setAllNotifications] = useState<any[]>([]);
+  const [dbAppeals, setDbAppeals] = useState<any[]>([]);
+  const [isLoadingDynamicData, setIsLoadingDynamicData] = useState(false);
+
+  // Student Appeal - filter records where status is LATE or ABSENT
+  const appealableRecords = dailyRecords.filter(
+    (record) => record.status === "Late" || record.status === "Absent"
   );
 
   // Appeal stats
   const availableAppealsCount = appealableRecords.length;
 
-  const pendingAppealsCount = attendanceAppeals.filter(
+  const pendingAppealsCount = dbAppeals.filter(
     appeal => appeal.status === "pending"
   ).length;
 
-  const completedAppealsCount = attendanceAppeals.filter(
+  const completedAppealsCount = dbAppeals.filter(
     appeal => appeal.status === "approved" || appeal.status === "rejected"
   ).length;
 
@@ -132,36 +121,47 @@ export default function Student() {
     (typeof appealableRecords)[number] | null
   >(null);
 
-  const [appeals, setAppeals] = useState(attendanceAppeals);
+  const [appeals, setAppeals] = useState(dbAppeals);
   const [records, setRecords] = useState(appealableRecords);
   const [appealReason, setAppealReason] = useState("");
 
-  const handleSubmitAppeal = () => {
+  const handleSubmitAppeal = async () => {
     if (!selectedRecord || !appealReason.trim()) return;
-    const newAppeal = {
-      id: Date.now(),
-      course: selectedRecord.course,
-      date: selectedRecord.date,
-      recordedStatus: selectedRecord.status,
-      requestedStatus: "Present",
-      reason: appealReason,
-      status: "pending",
-      submittedAt: new Date().toISOString(),
-      reviewedBy: null,
-      teacherResponse: null,
-    };
-    // move to RIGHT (history)
-    setAppeals(prev => [newAppeal, ...prev]);
-    // remove from LEFT (issues)
-    setRecords(prev =>
-      prev.filter(r =>
-        !(r.course === selectedRecord.course && 
-          r.date === selectedRecord.date)
-      )
-    );
-    // clear form
-    setSelectedRecord(null);
-    setAppealReason("");
+
+    try {
+      // Find the matching record in dailyRecords to get its ID
+      const recordId = selectedRecord.id;
+
+      const response = await fetch('/api/student/appeals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          record_id: recordId,
+          student_reason: appealReason
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Add new appeal to the list
+        setAppeals(prev => [result.data, ...prev]);
+        // Remove from appealable records
+        setRecords(prev =>
+          prev.filter(r => r.id !== recordId)
+        );
+        // Clear form
+        setSelectedRecord(null);
+        setAppealReason("");
+      } else {
+        alert(result.error || 'Failed to submit appeal');
+      }
+    } catch (error) {
+      console.error('Error submitting appeal:', error);
+      alert('Failed to submit appeal. Please try again.');
+    }
   };
 
   // Fetch student data
@@ -209,14 +209,14 @@ export default function Student() {
         const params = new URLSearchParams({
           view: selectedView
         });
-        
+
         if (selectedCourse && selectedCourse !== 'all') {
           params.append('course', selectedCourse);
         }
-        
+
         const response = await fetch(`/api/student/attendance/trends?${params}`);
         const data = await response.json();
-        
+
         if (data.success) {
           setTrendsData(data.data);
         }
@@ -230,7 +230,49 @@ export default function Student() {
     fetchTrendsData();
   }, [selectedView, selectedCourse]);
 
+  // Fetch dynamic data from new database-driven endpoints
+  useEffect(() => {
+    const fetchDynamicData = async () => {
+      setIsLoadingDynamicData(true);
+      try {
+        const [dailyRes, notifRes, appealsRes] = await Promise.all([
+          fetch('/api/student/attendance/daily'),
+          fetch('/api/student/notifications'),
+          fetch('/api/student/appeals')
+        ]);
+
+        const [dailyData, notifData, appealsData] = await Promise.all([
+          dailyRes.json(),
+          notifRes.json(),
+          appealsRes.json()
+        ]);
+
+        if (dailyData.success) {
+          setDailyRecords(dailyData.data);
+        }
+
+        if (notifData.success) {
+          setAllNotifications(notifData.data);
+        }
+
+        if (appealsData.success) {
+          setDbAppeals(appealsData.data);
+        }
+      } catch (error) {
+        console.error('Error fetching dynamic data:', error);
+      } finally {
+        setIsLoadingDynamicData(false);
+      }
+    };
+
+    fetchDynamicData();
+  }, []);
+
   const { presentDays, lateDays, absentDays, totalDays, attendanceRate, totalCourses } = attendanceSummary;
+
+  // Calculate attendance alerts and warnings from notifications
+  const attendanceAlerts = allNotifications.filter(n => n.type === 'late' || n.type === 'absent').length;
+  const warnings = allNotifications.filter(n => n.type === 'warning').length;
 
   const pieData = [
     { name: "Present", value: presentDays, color: "var(--present)" },
@@ -1001,13 +1043,13 @@ export default function Student() {
                       <div>
                         <div className="student-info-field-label">Student Name</div>
                         <div className="student-info-field-value">
-                          {isLoading ? "Loading..." : (studentData?.username || studentInfo.name)}
+                          {isLoading ? "Loading..." : (studentData?.username || "N/A")}
                         </div>
                       </div>
                       <div>
                         <div className="student-info-field-label">Grade Level</div>
                         <div className="student-info-field-value">
-                          {isLoading ? "Loading..." : (studentData?.grade_level || studentInfo.grade)}
+                          {isLoading ? "Loading..." : (studentData?.grade_level || "N/A")}
                         </div>
                       </div>
                       <div>
@@ -1467,13 +1509,13 @@ export default function Student() {
                               Class: {record.classStart} – {record.classEnd}
                             </div>
 
-                            {record.status === "LATE" && (
+                            {record.status === "Late" && (
                               <div className="appeal-item-reason">
                                 {getLateReason(record)}
                               </div>
                             )}
 
-                            {record.status === "ABSENT" && (
+                            {record.status === "Absent" && (
                               <div className="appeal-item-reason">
                                 No face recognition detected during class session.
                               </div>
@@ -1665,12 +1707,12 @@ export default function Student() {
                     </div>
 
                     <div className="notifications-scroll">
-                    {notifications.filter(n => n.semester === activeSemester).length === 0 ? (
+                    {allNotifications.filter(n => n.semester === activeSemester).length === 0 ? (
                         <div className="notifications-empty">
                         No notifications for this semester
                         </div>
                     ) : (
-                        notifications
+                        allNotifications
                         .filter(n => n.semester === activeSemester)
                         .map((n, i) => (
                             <div
@@ -1685,10 +1727,6 @@ export default function Student() {
                             </div>
 
                             <div className="notification-body">
-                                <div className="notification-code">
-                                {n.code.replace("_", " ")}
-                                </div>
-
                                 <div className="notification-title-row">
                                 <span className="notification-title">{n.course}</span>
                                 <span className="notification-prof">{n.prof}</span>
@@ -1738,7 +1776,7 @@ export default function Student() {
                     </div>
 
                     <div className="preview-prof">
-                        {selectedNotification.code} · {selectedNotification.prof}
+                        {selectedNotification.prof}
                     </div>
 
                     <p className="preview-text">
