@@ -16,7 +16,6 @@ export async function POST(req: Request) {
     }
 
     let targetUserIds: string[] = [];
-    let targetUsers = [];
 
     // Determine who should receive the notification
     switch (type) {
@@ -29,10 +28,10 @@ export async function POST(req: Request) {
         // Get the student and send to their parents
         if (userId) {
           const studentResult = await db.query(
-            `SELECT parent_id FROM student_parent WHERE student_id = $1`,
+            `SELECT parent FROM student_data WHERE student = $1 AND parent IS NOT NULL`,
             [userId]
           );
-          targetUserIds = studentResult.rows.map((row: any) => row.parent_id);
+          targetUserIds = studentResult.rows.map((row: any) => row.parent);
         }
         break;
 
@@ -40,11 +39,11 @@ export async function POST(req: Request) {
         // Send to teacher when student makes an appeal
         if (data?.courseId) {
           const teacherResult = await db.query(
-            `SELECT user_id FROM course_teacher WHERE course_id = $1 LIMIT 1`,
+            `SELECT teacher FROM section WHERE id = $1 AND teacher IS NOT NULL LIMIT 1`,
             [data.courseId]
           );
           if (teacherResult.rows.length > 0) {
-            targetUserIds = [teacherResult.rows[0].user_id];
+            targetUserIds = [teacherResult.rows[0].teacher];
           }
         }
         break;
@@ -54,10 +53,10 @@ export async function POST(req: Request) {
         if (userId) {
           targetUserIds = [userId];
           const parentResult = await db.query(
-            `SELECT parent_id FROM student_parent WHERE student_id = $1`,
+            `SELECT parent FROM student_data WHERE student = $1 AND parent IS NOT NULL`,
             [userId]
           );
-          targetUserIds.push(...parentResult.rows.map((row: any) => row.parent_id));
+          targetUserIds.push(...parentResult.rows.map((row: any) => row.parent));
         }
         break;
 

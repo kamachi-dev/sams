@@ -103,6 +103,18 @@ export async function GET() {
         });
     }
 
+    // Auto-create notification_preferences if not yet present for this user
+    try {
+        await db.query(
+            `INSERT INTO notification_preferences (user_id)
+             VALUES ($1)
+             ON CONFLICT (user_id) DO NOTHING`,
+            [user.id]
+        );
+    } catch (npErr) {
+        console.error("Failed to ensure notification_preferences:", npErr);
+    }
+
     const role: number = userData.role;
     switch (role) {
         case 0:
