@@ -10,7 +10,7 @@ import { currentUser } from '@clerk/nextjs/server'
  */
 export async function GET(
     request: Request,
-    { params }: { params: { childId: string } }
+    { params }: { params: Promise<{ childId: string }> }
 ) {
     try {
         const user = await currentUser()
@@ -22,7 +22,7 @@ export async function GET(
             }, { status: 401 })
         }
 
-        const childId = params.childId
+        const { childId } = await params
 
         // Verify parent owns this child
         const childCheck = await db.query(`
