@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Popover, Separator, Tabs, Switch } from "radix-ui";
-import { GearIcon, ExitIcon, Half2Icon, HamburgerMenuIcon, Cross2Icon } from "@radix-ui/react-icons";
+import { GearIcon, ExitIcon, Half2Icon, HamburgerMenuIcon, Cross2Icon, BellIcon } from "@radix-ui/react-icons";
 import { useAuth, SignOutButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import { usePathname } from 'next/navigation';
 import { Error } from "@/app/components/SamsError";
 import { useRouter } from "next/navigation";
+import NotificationSettings from "@/app/components/NotificationSettings";
 
 
 type Account = {
@@ -60,6 +61,7 @@ export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
     const [user, setUser] = React.useState<Account | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [showNotificationSettings, setShowNotificationSettings] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -150,6 +152,16 @@ export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
                     </Popover.Trigger>
                     <Popover.Portal>
                         <Popover.Content className="sams-nav-settings-content">
+                            <div 
+                                className="flex items-center justify-between cursor-pointer hover:opacity-80"
+                                onClick={() => setShowNotificationSettings(true)}
+                                role="button"
+                                tabIndex={0}
+                                style={{ padding: '8px 0', marginBottom: '8px', borderBottom: '1px solid #eee' }}
+                            >
+                                <BellIcon className="mr-2" />
+                                Notifications
+                            </div>
                             <div className="flex items-center justify-between">
                                 <Half2Icon className="mr-2" />
                                 Dark Mode
@@ -183,6 +195,10 @@ export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
                     <div className="sams-content-body">{content}</div>
                 </Tabs.Content>
             ))}
+            <NotificationSettings 
+                isOpen={showNotificationSettings} 
+                onClose={() => setShowNotificationSettings(false)} 
+            />
         </Tabs.Root>
     );
 }
