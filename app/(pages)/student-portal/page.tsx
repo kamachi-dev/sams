@@ -1548,6 +1548,142 @@ export default function Student() {
             </div>
           ),
         },
+        {
+            // NOTIFICATIONS
+            label: "Notifications",
+            Icon: BellIcon,
+            panels: [
+                <div key="total-courses" className="student-panel-card notifications">
+                <BookmarkIcon className="student-panel-icon" />
+                <div className="student-panel-content">
+                    <div className="student-panel-label">Total Unread Notifications</div>
+                    <div className="student-panel-value">{totalCourses}</div>
+                    <div className="student-panel-sub">From current semester</div>
+                </div>
+                </div>,
+
+                <div key="attendance-rate" className="student-panel-card alerts">
+                <ExclamationTriangleIcon className="student-panel-icon" />
+                <div className="student-panel-content">
+                    <div className="student-panel-label">Attendance Alerts</div>
+                    <div className="student-panel-value">{attendanceAlerts}</div>
+                    <div className="student-panel-sub">Recorded late and absence incidents</div>
+                </div>
+                </div>,
+
+                <div key="present-days" className="student-panel-card warnings">
+                <ExclamationTriangleIcon className="student-panel-icon" />
+                <div className="student-panel-content">
+                    <div className="student-panel-label">Warnings Messages Recieved</div>
+                    <div className="student-panel-value">{warnings}</div>
+                    <div className="student-panel-sub">Messages regarding attendance issues</div>
+                </div>
+                </div>,
+            ],
+            content: (
+                // inside the Notifications link -> content:
+                <div className="notifications-container">
+                {/* LEFT LIST */}
+                <div className="notifications-list">
+                    <div className="notifications-tabs">
+                    <button
+                        className={`notif-tab ${activeSemester === "first" ? "active" : ""}`}
+                        onClick={() => setActiveSemester("first")}
+                    >
+                        1st Sem
+                    </button>
+
+                    <button
+                        className={`notif-tab ${activeSemester === "second" ? "active" : ""}`}
+                        onClick={() => setActiveSemester("second")}
+                    >
+                        2nd Sem
+                    </button>
+                    </div>
+
+                    <div className="notifications-scroll">
+                    {allNotifications.filter(n => n.semester === activeSemester).length === 0 ? (
+                        <div className="notifications-empty">
+                        No notifications for this semester
+                        </div>
+                    ) : (
+                        allNotifications
+                        .filter(n => n.semester === activeSemester)
+                        .map((n, i) => (
+                            <div
+                            key={i}
+                            className={`notification-item ${n.type} ${
+                                selectedNotification === n ? "active" : ""
+                            }`}
+                            onClick={() => setSelectedNotification(n)}
+                            >
+                            <div className="notification-type">
+                                {n.type.toUpperCase()}
+                            </div>
+
+                            <div className="notification-body">
+                                <div className="notification-title-row">
+                                <span className="notification-title">{n.course}</span>
+                                <span className="notification-prof">{n.prof}</span>
+                                </div>
+
+                                <div className="notification-message">
+                                {n.message.length > 50
+                                    ? n.message.slice(0, 50) + "..."
+                                    : n.message}
+                                </div>
+                            </div>
+
+                            <div className="notification-time">
+                                {n.time}
+                            </div>
+                            </div>
+                        ))
+                    )}
+                    </div>
+                </div>
+
+                {/* RIGHT DETAILS */}
+                <div
+                className={`notification-preview ${
+                    !selectedNotification ? "is-empty" : ""
+                }`}
+                >
+                {!selectedNotification ? (
+                    <div className="preview-empty">
+                    <EnvelopeClosedIcon className="preview-empty-icon" />
+                    <div className="preview-empty-text">
+                        Select a Notification to View Details
+                    </div>
+                    </div>
+                ) : (
+                    <>
+                    <div className="preview-time">
+                        {selectedNotification.time}
+                    </div>
+
+                    <h2 className={`preview-title ${selectedNotification.type}`}>
+                        {selectedNotification.type.toUpperCase()}
+                    </h2>
+
+                    <div className="preview-course">
+                        {selectedNotification.course}
+                    </div>
+
+                    <div className="preview-prof">
+                        {selectedNotification.prof}
+                    </div>
+
+                    <p className="preview-text">
+                        {selectedNotification.message}
+                    </p>
+                    </>
+                )}
+                </div>
+
+                </div>
+            )
+        },
           // ATTENDANCE APPEAL
           {
             label: "Attendance Appeal",
@@ -1773,143 +1909,7 @@ export default function Student() {
                 </div>
               </div>
             )
-          },
-        {
-            // NOTIFICATIONS
-            label: "Notifications",
-            Icon: BellIcon,
-            panels: [
-                <div key="total-courses" className="student-panel-card notifications">
-                <BookmarkIcon className="student-panel-icon" />
-                <div className="student-panel-content">
-                    <div className="student-panel-label">Total Unread Notifications</div>
-                    <div className="student-panel-value">{totalCourses}</div>
-                    <div className="student-panel-sub">From current semester</div>
-                </div>
-                </div>,
-
-                <div key="attendance-rate" className="student-panel-card alerts">
-                <ExclamationTriangleIcon className="student-panel-icon" />
-                <div className="student-panel-content">
-                    <div className="student-panel-label">Attendance Alerts</div>
-                    <div className="student-panel-value">{attendanceAlerts}</div>
-                    <div className="student-panel-sub">Recorded late and absence incidents</div>
-                </div>
-                </div>,
-
-                <div key="present-days" className="student-panel-card warnings">
-                <ExclamationTriangleIcon className="student-panel-icon" />
-                <div className="student-panel-content">
-                    <div className="student-panel-label">Warnings Messages Recieved</div>
-                    <div className="student-panel-value">{warnings}</div>
-                    <div className="student-panel-sub">Messages regarding attendance issues</div>
-                </div>
-                </div>,
-            ],
-            content: (
-                // inside the Notifications link -> content:
-                <div className="notifications-container">
-                {/* LEFT LIST */}
-                <div className="notifications-list">
-                    <div className="notifications-tabs">
-                    <button
-                        className={`notif-tab ${activeSemester === "first" ? "active" : ""}`}
-                        onClick={() => setActiveSemester("first")}
-                    >
-                        1st Sem
-                    </button>
-
-                    <button
-                        className={`notif-tab ${activeSemester === "second" ? "active" : ""}`}
-                        onClick={() => setActiveSemester("second")}
-                    >
-                        2nd Sem
-                    </button>
-                    </div>
-
-                    <div className="notifications-scroll">
-                    {allNotifications.filter(n => n.semester === activeSemester).length === 0 ? (
-                        <div className="notifications-empty">
-                        No notifications for this semester
-                        </div>
-                    ) : (
-                        allNotifications
-                        .filter(n => n.semester === activeSemester)
-                        .map((n, i) => (
-                            <div
-                            key={i}
-                            className={`notification-item ${n.type} ${
-                                selectedNotification === n ? "active" : ""
-                            }`}
-                            onClick={() => setSelectedNotification(n)}
-                            >
-                            <div className="notification-type">
-                                {n.type.toUpperCase()}
-                            </div>
-
-                            <div className="notification-body">
-                                <div className="notification-title-row">
-                                <span className="notification-title">{n.course}</span>
-                                <span className="notification-prof">{n.prof}</span>
-                                </div>
-
-                                <div className="notification-message">
-                                {n.message.length > 50
-                                    ? n.message.slice(0, 50) + "..."
-                                    : n.message}
-                                </div>
-                            </div>
-
-                            <div className="notification-time">
-                                {n.time}
-                            </div>
-                            </div>
-                        ))
-                    )}
-                    </div>
-                </div>
-
-                {/* RIGHT DETAILS */}
-                <div
-                className={`notification-preview ${
-                    !selectedNotification ? "is-empty" : ""
-                }`}
-                >
-                {!selectedNotification ? (
-                    <div className="preview-empty">
-                    <EnvelopeClosedIcon className="preview-empty-icon" />
-                    <div className="preview-empty-text">
-                        Select a Notification to View Details
-                    </div>
-                    </div>
-                ) : (
-                    <>
-                    <div className="preview-time">
-                        {selectedNotification.time}
-                    </div>
-
-                    <h2 className={`preview-title ${selectedNotification.type}`}>
-                        {selectedNotification.type.toUpperCase()}
-                    </h2>
-
-                    <div className="preview-course">
-                        {selectedNotification.course}
-                    </div>
-
-                    <div className="preview-prof">
-                        {selectedNotification.prof}
-                    </div>
-
-                    <p className="preview-text">
-                        {selectedNotification.message}
-                    </p>
-                    </>
-                )}
-                </div>
-
-                </div>
-            )
-        }
+          }
       ]}
     />
   );

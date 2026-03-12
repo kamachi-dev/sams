@@ -417,7 +417,7 @@ export default function Parent() {
             color: childRecordFilters.yesterday ? "var(--background1)" : "var(--foreground1)",
             border: childRecordFilters.yesterday ? "3px solid white" : "3px solid transparent",
           }}
-          onClick={() => setChildRecordFilters(prev => ({ ...prev, yesterday: !prev.yesterday }))}
+          onClick={() => setChildRecordFilters(prev => ({ yesterday: !prev.yesterday, warning: false }))}
         >
           <CalendarIcon className="student-panel-icon" />
           <div className="student-panel-content">
@@ -437,7 +437,7 @@ export default function Parent() {
             color: childRecordFilters.warning ? "var(--background1)" : "var(--accent1)",
             border: childRecordFilters.warning ? "3px solid white" : "3px solid transparent",
           }}
-          onClick={() => setChildRecordFilters(prev => ({ ...prev, warning: !prev.warning }))}
+          onClick={() => setChildRecordFilters(prev => ({ warning: !prev.warning, yesterday: false }))}
         >
           <ExclamationTriangleIcon className="student-panel-icon" />
 
