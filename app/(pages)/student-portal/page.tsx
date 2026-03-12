@@ -5,6 +5,7 @@ import XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
+  ThickArrowRightIcon,
   CalendarIcon,
   DownloadIcon,
   PersonIcon,
@@ -14,7 +15,7 @@ import {
   EnvelopeClosedIcon,
   ExclamationTriangleIcon
 } from "@radix-ui/react-icons";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -31,14 +32,32 @@ import {
 import "./styles.css";
 import "../teacher-portal/styles.css";
 import {
+  studentInfo,
+  dailyAttendance,
+  weeklyTrend,
+  monthlyData,
+  quarterlyData,
+  notifications,
+  courseAttendance,
   chartColors,
+  attendanceAppeals,
 } from "./constants";
 
+const totalDays = 40;
+const presentDays = 37;
+const lateDays = 2;
+const absentDays = 1;
+const warnings = 4;
+const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
+const attendanceAlerts = (presentDays + lateDays);
+const totalCourses = courseAttendance.length;
+
 function getLateReason(record: any) {
-  if (record.status !== "Late") return "";
+  if (record.status !== "LATE") return "";
 
   return `Arrival recorded at (${record.recordedTime}), exceeding the 15 minute grace period (${record.classStart}).`;
 }
+
 
 export default function Student() {
   const [selectedView, setSelectedView] = useState<
@@ -52,12 +71,15 @@ export default function Student() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "analytics" | "courses"
+  >("overview");
 
   // 👉 notifications specific
   const [activeSemester, setActiveSemester] = useState<"first" | "second">("first");
 
   const [selectedNotification, setSelectedNotification] =
-    useState<any>(null);
+    useState<(typeof notifications)[number] | null>(null);
 
   // Real data from database
   const [studentData, setStudentData] = useState<{
@@ -65,7 +87,7 @@ export default function Student() {
     grade_level: string;
     section: string;
   } | null>(null);
-
+  
   const [attendanceSummary, setAttendanceSummary] = useState({
     presentDays: 0,
     lateDays: 0,
@@ -85,74 +107,61 @@ export default function Student() {
   }>>([]);
 
   const [isLoading, setIsLoading] = useState(true);
-
+  
   // Attendance trends data
   const [trendsData, setTrendsData] = useState<any[]>([]);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
 
-  // Database-driven data (previously hardcoded constants)
-  const [dailyRecords, setDailyRecords] = useState<any[]>([]);
-  const [allNotifications, setAllNotifications] = useState<any[]>([]);
-  const [dbAppeals, setDbAppeals] = useState<any[]>([]);
-
-  const [selectedRecord, setSelectedRecord] = useState<any>(null);
-  const [appeals, setAppeals] = useState<any[]>([]);
-  const [records, setRecords] = useState<any[]>([]);
-  const [appealReason, setAppealReason] = useState("");
-
-  // Student Appeal - filter records where status is LATE or ABSENT
-  const appealableRecords = useMemo(() => dailyRecords.filter(
-    (record) => record.status === "Late" || record.status === "Absent"
-  ), [dailyRecords]);
+  // Student Appeal
+  const appealableRecords = dailyAttendance.filter(
+    (record) => record.status === "LATE" || record.status === "ABSENT"
+  );
 
   // Appeal stats
   const availableAppealsCount = appealableRecords.length;
 
-  const pendingAppealsCount = dbAppeals.filter(
+  const pendingAppealsCount = attendanceAppeals.filter(
     appeal => appeal.status === "pending"
   ).length;
 
-  const completedAppealsCount = dbAppeals.filter(
+  const completedAppealsCount = attendanceAppeals.filter(
     appeal => appeal.status === "approved" || appeal.status === "rejected"
   ).length;
 
-  const handleSubmitAppeal = async () => {
+  const [selectedRecord, setSelectedRecord] = useState<
+    (typeof appealableRecords)[number] | null
+  >(null);
+
+  const [appeals, setAppeals] = useState(attendanceAppeals);
+  const [records, setRecords] = useState(appealableRecords);
+  const [appealReason, setAppealReason] = useState("");
+
+  const handleSubmitAppeal = () => {
     if (!selectedRecord || !appealReason.trim()) return;
-
-    try {
-      // Find the matching record in dailyRecords to get its ID
-      const recordId = selectedRecord.id;
-
-      const response = await fetch('/api/student/appeals', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          record_id: recordId,
-          student_reason: appealReason
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Add new appeal to the list
-        setAppeals(prev => [result.data, ...prev]);
-        // Remove from appealable records
-        setRecords(prev =>
-          prev.filter(r => r.id !== recordId)
-        );
-        // Clear form
-        setSelectedRecord(null);
-        setAppealReason("");
-      } else {
-        alert(result.error || 'Failed to submit appeal');
-      }
-    } catch (error) {
-      console.error('Error submitting appeal:', error);
-      alert('Failed to submit appeal. Please try again.');
-    }
+    const newAppeal = {
+      id: Date.now(),
+      course: selectedRecord.course,
+      date: selectedRecord.date,
+      recordedStatus: selectedRecord.status,
+      requestedStatus: "Present",
+      reason: appealReason,
+      status: "pending",
+      submittedAt: new Date().toISOString(),
+      reviewedBy: null,
+      teacherResponse: null,
+    };
+    // move to RIGHT (history)
+    setAppeals(prev => [newAppeal, ...prev]);
+    // remove from LEFT (issues)
+    setRecords(prev =>
+      prev.filter(r =>
+        !(r.course === selectedRecord.course && 
+          r.date === selectedRecord.date)
+      )
+    );
+    // clear form
+    setSelectedRecord(null);
+    setAppealReason("");
   };
 
   // Fetch student data
@@ -200,14 +209,14 @@ export default function Student() {
         const params = new URLSearchParams({
           view: selectedView
         });
-
+        
         if (selectedCourse && selectedCourse !== 'all') {
           params.append('course', selectedCourse);
         }
-
+        
         const response = await fetch(`/api/student/attendance/trends?${params}`);
         const data = await response.json();
-
+        
         if (data.success) {
           setTrendsData(data.data);
         }
@@ -221,59 +230,7 @@ export default function Student() {
     fetchTrendsData();
   }, [selectedView, selectedCourse]);
 
-  // Fetch dynamic data from new database-driven endpoints
-  useEffect(() => {
-    const fetchDynamicData = async () => {
-      try {
-        const [dailyRes, notifRes, appealsRes] = await Promise.all([
-          fetch('/api/student/attendance/daily'),
-          fetch('/api/student/notifications'),
-          fetch('/api/student/appeals')
-        ]);
-
-        const [dailyData, notifData, appealsData] = await Promise.all([
-          dailyRes.json(),
-          notifRes.json(),
-          appealsRes.json()
-        ]);
-
-        if (dailyData.success) {
-          setDailyRecords(dailyData.data);
-        }
-
-        if (notifData.success) {
-          setAllNotifications(notifData.data);
-        }
-
-        if (appealsData.success) {
-          setDbAppeals(appealsData.data);
-        }
-      } catch (error) {
-        console.error('Error fetching dynamic data:', error);
-      }
-    };
-
-    fetchDynamicData();
-  }, []);
-
-  // Sync records state with appealable records (filtered by daily records and excluding already appealed ones)
-  useEffect(() => {
-    const newRecords = appealableRecords.filter(record =>
-      !appeals.some(appeal => appeal.recordId === record.id)
-    );
-    setRecords(newRecords);
-  }, [appealableRecords, appeals]);
-
-  // Sync appeals with dbAppeals from database
-  useEffect(() => {
-    setAppeals(dbAppeals);
-  }, [dbAppeals]);
-
   const { presentDays, lateDays, absentDays, totalDays, attendanceRate, totalCourses } = attendanceSummary;
-
-  // Calculate attendance alerts and warnings from notifications
-  const attendanceAlerts = allNotifications.filter(n => n.type === 'late' || n.type === 'absent').length;
-  const warnings = allNotifications.filter(n => n.type === 'warning').length;
 
   const pieData = [
     { name: "Present", value: presentDays, color: "var(--present)" },
@@ -339,6 +296,7 @@ export default function Student() {
 
       const sf2 = result.data;
       const courses = sf2.courses;
+      const schoolDays: number[] = sf2.schoolDays;
       const detectionLog = sf2.detectionLog;
       const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -441,6 +399,7 @@ export default function Student() {
           }),
         ];
 
+        const totalCols = 2 + allDays.length + 5;
         const fixedNameW = Math.min(50, Math.max(35, contentW * 0.18));
         const fixedSumW = 9;
         const fixedNoW = 7;
@@ -1164,13 +1123,13 @@ export default function Student() {
                       <div>
                         <div className="student-info-field-label">Student Name</div>
                         <div className="student-info-field-value">
-                          {isLoading ? "Loading..." : (studentData?.username || "N/A")}
+                          {isLoading ? "Loading..." : (studentData?.username || studentInfo.name)}
                         </div>
                       </div>
                       <div>
                         <div className="student-info-field-label">Grade Level</div>
                         <div className="student-info-field-value">
-                          {isLoading ? "Loading..." : (studentData?.grade_level || "N/A")}
+                          {isLoading ? "Loading..." : (studentData?.grade_level || studentInfo.grade)}
                         </div>
                       </div>
                       <div>
@@ -1548,142 +1507,6 @@ export default function Student() {
             </div>
           ),
         },
-        {
-            // NOTIFICATIONS
-            label: "Notifications",
-            Icon: BellIcon,
-            panels: [
-                <div key="total-courses" className="student-panel-card notifications">
-                <BookmarkIcon className="student-panel-icon" />
-                <div className="student-panel-content">
-                    <div className="student-panel-label">Total Unread Notifications</div>
-                    <div className="student-panel-value">{totalCourses}</div>
-                    <div className="student-panel-sub">From current semester</div>
-                </div>
-                </div>,
-
-                <div key="attendance-rate" className="student-panel-card alerts">
-                <ExclamationTriangleIcon className="student-panel-icon" />
-                <div className="student-panel-content">
-                    <div className="student-panel-label">Attendance Alerts</div>
-                    <div className="student-panel-value">{attendanceAlerts}</div>
-                    <div className="student-panel-sub">Recorded late and absence incidents</div>
-                </div>
-                </div>,
-
-                <div key="present-days" className="student-panel-card warnings">
-                <ExclamationTriangleIcon className="student-panel-icon" />
-                <div className="student-panel-content">
-                    <div className="student-panel-label">Warnings Messages Recieved</div>
-                    <div className="student-panel-value">{warnings}</div>
-                    <div className="student-panel-sub">Messages regarding attendance issues</div>
-                </div>
-                </div>,
-            ],
-            content: (
-                // inside the Notifications link -> content:
-                <div className="notifications-container">
-                {/* LEFT LIST */}
-                <div className="notifications-list">
-                    <div className="notifications-tabs">
-                    <button
-                        className={`notif-tab ${activeSemester === "first" ? "active" : ""}`}
-                        onClick={() => setActiveSemester("first")}
-                    >
-                        1st Sem
-                    </button>
-
-                    <button
-                        className={`notif-tab ${activeSemester === "second" ? "active" : ""}`}
-                        onClick={() => setActiveSemester("second")}
-                    >
-                        2nd Sem
-                    </button>
-                    </div>
-
-                    <div className="notifications-scroll">
-                    {allNotifications.filter(n => n.semester === activeSemester).length === 0 ? (
-                        <div className="notifications-empty">
-                        No notifications for this semester
-                        </div>
-                    ) : (
-                        allNotifications
-                        .filter(n => n.semester === activeSemester)
-                        .map((n, i) => (
-                            <div
-                            key={i}
-                            className={`notification-item ${n.type} ${
-                                selectedNotification === n ? "active" : ""
-                            }`}
-                            onClick={() => setSelectedNotification(n)}
-                            >
-                            <div className="notification-type">
-                                {n.type.toUpperCase()}
-                            </div>
-
-                            <div className="notification-body">
-                                <div className="notification-title-row">
-                                <span className="notification-title">{n.course}</span>
-                                <span className="notification-prof">{n.prof}</span>
-                                </div>
-
-                                <div className="notification-message">
-                                {n.message.length > 50
-                                    ? n.message.slice(0, 50) + "..."
-                                    : n.message}
-                                </div>
-                            </div>
-
-                            <div className="notification-time">
-                                {n.time}
-                            </div>
-                            </div>
-                        ))
-                    )}
-                    </div>
-                </div>
-
-                {/* RIGHT DETAILS */}
-                <div
-                className={`notification-preview ${
-                    !selectedNotification ? "is-empty" : ""
-                }`}
-                >
-                {!selectedNotification ? (
-                    <div className="preview-empty">
-                    <EnvelopeClosedIcon className="preview-empty-icon" />
-                    <div className="preview-empty-text">
-                        Select a Notification to View Details
-                    </div>
-                    </div>
-                ) : (
-                    <>
-                    <div className="preview-time">
-                        {selectedNotification.time}
-                    </div>
-
-                    <h2 className={`preview-title ${selectedNotification.type}`}>
-                        {selectedNotification.type.toUpperCase()}
-                    </h2>
-
-                    <div className="preview-course">
-                        {selectedNotification.course}
-                    </div>
-
-                    <div className="preview-prof">
-                        {selectedNotification.prof}
-                    </div>
-
-                    <p className="preview-text">
-                        {selectedNotification.message}
-                    </p>
-                    </>
-                )}
-                </div>
-
-                </div>
-            )
-        },
           // ATTENDANCE APPEAL
           {
             label: "Attendance Appeal",
@@ -1736,7 +1559,7 @@ export default function Student() {
 
                       {records.length === 0 ? (
                         <div className="appeal-empty">
-                          No attendance issues
+                          No attendance issues today
                         </div>
                       ) : (
                         records.map((record, index) => (
@@ -1766,13 +1589,13 @@ export default function Student() {
                               Class: {record.classStart} – {record.classEnd}
                             </div>
 
-                            {record.status === "Late" && (
+                            {record.status === "LATE" && (
                               <div className="appeal-item-reason">
                                 {getLateReason(record)}
                               </div>
                             )}
 
-                            {record.status === "Absent" && (
+                            {record.status === "ABSENT" && (
                               <div className="appeal-item-reason">
                                 No face recognition detected during class session.
                               </div>
@@ -1909,7 +1732,147 @@ export default function Student() {
                 </div>
               </div>
             )
-          }
+          },
+        {
+            // NOTIFICATIONS
+            label: "Notifications",
+            Icon: BellIcon,
+            panels: [
+                <div key="total-courses" className="student-panel-card notifications">
+                <BookmarkIcon className="student-panel-icon" />
+                <div className="student-panel-content">
+                    <div className="student-panel-label">Total Unread Notifications</div>
+                    <div className="student-panel-value">{totalCourses}</div>
+                    <div className="student-panel-sub">From current semester</div>
+                </div>
+                </div>,
+
+                <div key="attendance-rate" className="student-panel-card alerts">
+                <ExclamationTriangleIcon className="student-panel-icon" />
+                <div className="student-panel-content">
+                    <div className="student-panel-label">Attendance Alerts</div>
+                    <div className="student-panel-value">{attendanceAlerts}</div>
+                    <div className="student-panel-sub">Recorded late and absence incidents</div>
+                </div>
+                </div>,
+
+                <div key="present-days" className="student-panel-card warnings">
+                <ExclamationTriangleIcon className="student-panel-icon" />
+                <div className="student-panel-content">
+                    <div className="student-panel-label">Warnings Messages Recieved</div>
+                    <div className="student-panel-value">{warnings}</div>
+                    <div className="student-panel-sub">Messages regarding attendance issues</div>
+                </div>
+                </div>,
+            ],
+            content: (
+                // inside the Notifications link -> content:
+                <div className="notifications-container">
+                {/* LEFT LIST */}
+                <div className="notifications-list">
+                    <div className="notifications-tabs">
+                    <button
+                        className={`notif-tab ${activeSemester === "first" ? "active" : ""}`}
+                        onClick={() => setActiveSemester("first")}
+                    >
+                        1st Sem
+                    </button>
+
+                    <button
+                        className={`notif-tab ${activeSemester === "second" ? "active" : ""}`}
+                        onClick={() => setActiveSemester("second")}
+                    >
+                        2nd Sem
+                    </button>
+                    </div>
+
+                    <div className="notifications-scroll">
+                    {notifications.filter(n => n.semester === activeSemester).length === 0 ? (
+                        <div className="notifications-empty">
+                        No notifications for this semester
+                        </div>
+                    ) : (
+                        notifications
+                        .filter(n => n.semester === activeSemester)
+                        .map((n, i) => (
+                            <div
+                            key={i}
+                            className={`notification-item ${n.type} ${
+                                selectedNotification === n ? "active" : ""
+                            }`}
+                            onClick={() => setSelectedNotification(n)}
+                            >
+                            <div className="notification-type">
+                                {n.type.toUpperCase()}
+                            </div>
+
+                            <div className="notification-body">
+                                <div className="notification-code">
+                                {n.code.replace("_", " ")}
+                                </div>
+
+                                <div className="notification-title-row">
+                                <span className="notification-title">{n.course}</span>
+                                <span className="notification-prof">{n.prof}</span>
+                                </div>
+
+                                <div className="notification-message">
+                                {n.message.length > 50
+                                    ? n.message.slice(0, 50) + "..."
+                                    : n.message}
+                                </div>
+                            </div>
+
+                            <div className="notification-time">
+                                {n.time}
+                            </div>
+                            </div>
+                        ))
+                    )}
+                    </div>
+                </div>
+
+                {/* RIGHT DETAILS */}
+                <div
+                className={`notification-preview ${
+                    !selectedNotification ? "is-empty" : ""
+                }`}
+                >
+                {!selectedNotification ? (
+                    <div className="preview-empty">
+                    <EnvelopeClosedIcon className="preview-empty-icon" />
+                    <div className="preview-empty-text">
+                        Select a Notification to View Details
+                    </div>
+                    </div>
+                ) : (
+                    <>
+                    <div className="preview-time">
+                        {selectedNotification.time}
+                    </div>
+
+                    <h2 className={`preview-title ${selectedNotification.type}`}>
+                        {selectedNotification.type.toUpperCase()}
+                    </h2>
+
+                    <div className="preview-course">
+                        {selectedNotification.course}
+                    </div>
+
+                    <div className="preview-prof">
+                        {selectedNotification.code} · {selectedNotification.prof}
+                    </div>
+
+                    <p className="preview-text">
+                        {selectedNotification.message}
+                    </p>
+                    </>
+                )}
+                </div>
+
+                </div>
+            )
+        }
       ]}
     />
   );

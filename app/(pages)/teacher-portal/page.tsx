@@ -40,6 +40,7 @@ import {
 import { useState, useEffect, useRef } from "react";
 import './styles.css';
 import '../student-portal/styles.css';
+import { attendanceAppeals } from "../teacher-portal/constants";
 
 // Types for low attendance students
 interface LowAttendanceStudent {
@@ -76,41 +77,25 @@ interface SectionComparisonData {
     sectionNames: string[];
 }
 
-interface Appeal {
-    id: number;
-    studentName: string;
-    section: string;
-    courseId: string;
-    course: string;
-    date: string;
-    recordedStatus: string;
-    requestedStatus: string;
-    reason: string;
-    status: "pending" | "approved" | "rejected";
-    submittedAt: string;
-    reviewedBy: string | null;
-    teacherResponse: string | null;
-}
+//Temporary for student appeal
+function TeacherAppealsSection({ courses }: any) {
 
-//Teacher Appeal Section - Database-driven
-function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals }: { courses: any[]; appeals: Appeal[]; setAppeals: (appeals: Appeal[] | ((prev: Appeal[]) => Appeal[])) => void; isLoadingAppeals: boolean }) {
-
-    const [selectedAppeal, setSelectedAppeal] = useState<Appeal | null>(null);
-    const [appealError, setAppealError] = useState<string | null>(null);
-    const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
+    const [appeals, setAppeals] = useState(attendanceAppeals);
+    const [selectedAppeal, setSelectedAppeal] = useState<any>(null);
 
     const [selectedCourseFilter, setSelectedCourseFilter] = useState("all");
     const [selectedSectionFilter, setSelectedSectionFilter] = useState("all");
 
     const [teacherResponse, setTeacherResponse] = useState("");
 
+    // Appeals would normally be fetched from the database, but for this demo we use hardcoded data from constants.ts. The filtering and review logic is implemented here to demonstrate the UI and interactions.
     const pendingAppeals = appeals.filter(a => a.status === "pending");
 
     const appealHistory = appeals.filter(
         a => a.status === "approved" || a.status === "rejected"
     );
-
     const filteredAppeals = pendingAppeals.filter(a => {
+
         if (selectedCourseFilter !== "all" && a.courseId !== selectedCourseFilter)
             return false;
 
@@ -119,58 +104,30 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
 
         return true;
     });
+    // End of Temporary for student appeal
 
-    const handleDecision = async (decision: "approved" | "rejected") => {
-        if (!selectedAppeal || !teacherResponse.trim()) {
-            alert('Please enter a response before submitting');
-            return;
-        }
 
-        try {
-            setIsSubmittingDecision(true);
-            const response = await fetch(`/api/teacher/appeals/${selectedAppeal.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    decision,
-                    teacherResponse
-                })
-            });
+    const handleDecision = (status: "approved" | "rejected") => {
+        if (!selectedAppeal) return;
+        setAppeals(prev =>
+            prev.map(a =>
+                a.id === selectedAppeal.id
+                    ? {
+                        ...a,
+                        status,
+                        teacherResponse,
+                        reviewedBy: "Your"
+                    }
+                    : a
+            )
+        );
+        // CLEAR SELECTION
+        setSelectedAppeal(null);
+        // CLEAR RESPONSE FIELD
+        setTeacherResponse("");
 
-            const result = await response.json();
-
-            if (result.success) {
-                // Update appeals state - remove from pending and add to history
-                setAppeals(prev => prev.map(a =>
-                    a.id === selectedAppeal.id
-                        ? {
-                            ...a,
-                            status: decision,
-                            teacherResponse,
-                            reviewedBy: "You"
-                        }
-                        : a
-                ));
-
-                // Clear selection
-                setSelectedAppeal(null);
-                setTeacherResponse("");
-            } else {
-                alert(result.error || 'Failed to review appeal');
-            }
-        } catch (error) {
-            console.error('Error submitting decision:', error);
-            alert('Failed to submit decision. Please try again.');
-        } finally {
-            setIsSubmittingDecision(false);
-        }
     };
 
-    if (isLoadingAppeals) {
-        return <div className="appeal-container"><div style={{ padding: '20px' }}>Loading appeals...</div></div>;
-    }
 
     return (
 
@@ -282,23 +239,23 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
                                         <textarea
                                             value={teacherResponse}
                                             onChange={(e) => setTeacherResponse(e.target.value)}
-                                            disabled={!selectedAppeal || isSubmittingDecision}
+                                            disabled={!selectedAppeal}
                                         />
                                     </div>
                                     <div className="teacher-appeal-actions">
                                         <button
                                             className="teacher-approve-btn"
                                             onClick={() => handleDecision("approved")}
-                                            disabled={!selectedAppeal || isSubmittingDecision}
+                                            disabled={!selectedAppeal}
                                         >
-                                            {isSubmittingDecision ? 'Submitting...' : 'Approve'}
+                                            Approve
                                         </button>
                                         <button
                                             className="teacher-reject-btn"
                                             onClick={() => handleDecision("rejected")}
-                                            disabled={!selectedAppeal || isSubmittingDecision}
+                                            disabled={!selectedAppeal}
                                         >
-                                            {isSubmittingDecision ? 'Submitting...' : 'Reject'}
+                                            Reject
                                         </button>
                                     </div>
                                 </div>
@@ -351,7 +308,7 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
         </div>
     );
 }
-// End of Teacher Appeal Section
+// End of temporary component
 
 export default function Teacher() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -470,8 +427,6 @@ export default function Teacher() {
     }>>([]);
     const [isLoadingRecords, setIsLoadingRecords] = useState(true);
     const [courses, setCourses] = useState<Array<{ id: string; name: string; schedule?: string; studentCount?: number; sectionCount?: number; sectionNames?: string[]; sections?: Array<{ name: string; studentCount: number }> }>>([]);
-    const [appeals, setAppeals] = useState<Appeal[]>([]);
-    const [isLoadingAppeals, setIsLoadingAppeals] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState("");
     const [selectedChartCourse, setSelectedChartCourse] = useState("all");
     const [semesterAttendance, setSemesterAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
@@ -675,27 +630,6 @@ export default function Teacher() {
         };
         
         fetchStudentCount();
-    }, []);
-
-    // Fetch appeals from database
-    useEffect(() => {
-        const fetchAppealsCounts = async () => {
-            try {
-                setIsLoadingAppeals(true);
-                const response = await fetch('/api/teacher/appeals');
-                const result = await response.json();
-
-                if (result.success) {
-                    setAppeals(result.data);
-                }
-            } catch (error) {
-                console.error('Error fetching appeals:', error);
-            } finally {
-                setIsLoadingAppeals(false);
-            }
-        };
-
-        fetchAppealsCounts();
     }, []);
 
     // Fetch all at-risk students across all courses (for overview card + annotations)
@@ -2279,6 +2213,12 @@ export default function Teacher() {
                                                 className={`overview-section-card${isPinned ? ' overview-card-pinned' : ''}`}
                                                 onClick={() => {
                                                     setSelectedSection(sec.section);
+                                                    // Update selectedOverviewCourse.id to this section's
+                                                    // specific ID so all downstream API calls target
+                                                    // the correct section (not the representative one).
+                                                    if (sec.sectionId && selectedOverviewCourse) {
+                                                        setSelectedOverviewCourse({ id: sec.sectionId, name: selectedOverviewCourse.name });
+                                                    }
                                                     setOverviewStep('stats');
                                                 }}
                                             >
@@ -3281,7 +3221,7 @@ export default function Teacher() {
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Pending Appeals</div>
                             <div className="teacher-panel-value">
-                                {isLoadingAppeals ? '-' : appeals.filter(a => a.status === "pending").length}
+                                {attendanceAppeals.filter(a => a.status === "pending").length}
                             </div>
                             <div className="teacher-panel-sub">Awaiting your decision</div>
                         </div>
@@ -3292,7 +3232,7 @@ export default function Teacher() {
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Approved Appeals</div>
                             <div className="teacher-panel-value">
-                                {isLoadingAppeals ? '-' : appeals.filter(a => a.status === "approved").length}
+                                {attendanceAppeals.filter(a => a.status === "approved").length}
                             </div>
                             <div className="teacher-panel-sub">Successfully approved</div>
                         </div>
@@ -3303,7 +3243,7 @@ export default function Teacher() {
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Rejected Appeals</div>
                             <div className="teacher-panel-value">
-                                {isLoadingAppeals ? '-' : appeals.filter(a => a.status === "rejected").length}
+                                {attendanceAppeals.filter(a => a.status === "rejected").length}
                             </div>
                             <div className="teacher-panel-sub">Marked as invalid</div>
                         </div>
@@ -3311,7 +3251,7 @@ export default function Teacher() {
                 ],
 
                 content: (
-                    <TeacherAppealsSection courses={courses} appeals={appeals} setAppeals={setAppeals} isLoadingAppeals={isLoadingAppeals} />
+                    <TeacherAppealsSection courses={courses} />
                 )
             }
 
