@@ -1,5 +1,5 @@
 export const runtime = 'nodejs'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 
@@ -9,7 +9,7 @@ import { currentUser } from '@clerk/nextjs/server'
  * Returns: Array of courses with attendance counts and percentage
  */
 export async function GET(
-    request: Request,
+    request: NextRequest,
     { params }: { params: Promise<{ childId: string }> }
 ) {
     try {

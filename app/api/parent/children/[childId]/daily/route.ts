@@ -1,5 +1,5 @@
 export const runtime = 'nodejs'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 
@@ -9,8 +9,8 @@ import { currentUser } from '@clerk/nextjs/server'
  * Returns: Array of record objects with date, course, time, status, etc.
  */
 export async function GET(
-    request: Request,
-    { params }: { params: { childId: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ childId: string }> }
 ) {
     try {
         const user = await currentUser()
@@ -22,7 +22,7 @@ export async function GET(
             }, { status: 401 })
         }
 
-        const childId = params.childId
+        const { childId } = await params
 
         // Verify parent owns this child
         const childCheck = await db.query(`

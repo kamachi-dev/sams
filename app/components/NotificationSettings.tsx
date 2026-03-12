@@ -21,6 +21,8 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
     updatePreferences
   } = usePushNotifications();
 
+  type NotificationPreferenceKey = keyof NonNullable<typeof preferences>;
+
   const [isSaving, setIsSaving] = useState(false);
 
   if (!isOpen) return null;
@@ -44,7 +46,7 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
     setIsSaving(false);
   };
 
-  const handleTogglePreference = async (key: keyof typeof preferences, value: boolean) => {
+  const handleTogglePreference = async (key: NotificationPreferenceKey, value: boolean) => {
     if (!preferences) return;
     setIsSaving(true);
     await updatePreferences({ [key]: value });

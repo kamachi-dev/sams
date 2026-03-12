@@ -1,5 +1,5 @@
 export const runtime = 'nodejs'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 import { notifyStudentNotification } from '@/lib/notification-triggers'
@@ -10,8 +10,8 @@ import { notifyStudentNotification } from '@/lib/notification-triggers'
  * Returns: Updated appeal object
  */
 export async function PATCH(
-    request: Request,
-    { params }: { params: { appealId: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ appealId: string }> }
 ) {
     try {
         const user = await currentUser()
@@ -23,7 +23,7 @@ export async function PATCH(
             }, { status: 401 })
         }
 
-        const { appealId } = params
+        const { appealId } = await params
         const body = await request.json()
         const { decision, teacherResponse } = body
 
