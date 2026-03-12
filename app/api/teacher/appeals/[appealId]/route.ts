@@ -2,6 +2,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
+import { notifyStudentNotification } from '@/lib/notification-triggers'
 
 /**
  * PATCH: Review an appeal (approve/reject with teacher response)
@@ -88,6 +89,31 @@ export async function PATCH(
         }
 
         const updatedAppeal = result.rows[0]
+
+        // Query to get student_id for notification
+        const studentInfo = await db.query(`
+            SELECT student_id FROM attendance_appeal WHERE id = $1
+        `, [appealId]);
+
+        // 🚀 NOTIFY STUDENT ABOUT APPEAL DECISION
+        if (studentInfo.rows.length > 0) {
+          const studentId = studentInfo.rows[0].student_id;
+          const message = decision === 'approved'
+            ? 'Your appeal has been approved! The attendance record has been corrected.'
+            : `Your appeal has been rejected. Teacher's response: ${teacherResponse || 'No response provided'}`;
+
+          await notifyStudentNotification(
+            studentId,
+            `Appeal ${decision === 'approved' ? '✅ Approved' : '❌ Rejected'}`,
+            message,
+            {
+              appealId: updatedAppeal.id,
+              decision,
+              type: 'appeal_decision',
+              url: '/student-portal'
+            }
+          );
+        }
 
         return NextResponse.json({
             success: true,

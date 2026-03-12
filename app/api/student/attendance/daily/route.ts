@@ -36,7 +36,7 @@ export async function GET() {
                 INNER JOIN enrollment_data e ON e.section = s.id AND e.student = r.student
                 WHERE r.student = $1
                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-                  AND r.time >= NOW() - INTERVAL '7 days'
+                  AND r.time::date = CURRENT_DATE
                   AND r.time IS NOT NULL
                 ORDER BY r.id
             ) sub

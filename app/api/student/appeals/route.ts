@@ -2,6 +2,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
+import { notifyTeacherAppeal } from '@/lib/notification-triggers'
 
 /**
  * GET: Fetch all appeals filed by the current student
@@ -132,6 +133,20 @@ export async function POST(request: Request) {
             }, { status: 400 })
         }
 
+        // Enforce same-day appeal window
+        const recordDate = new Date(record.time)
+        const now = new Date()
+        const isSameDay = recordDate.getFullYear() === now.getFullYear()
+            && recordDate.getMonth() === now.getMonth()
+            && recordDate.getDate() === now.getDate()
+
+        if (!isSameDay) {
+            return NextResponse.json({
+                success: false,
+                error: 'Appeals can only be submitted on the same day as the attendance record'
+            }, { status: 400 })
+        }
+
         // Check if appeal already exists for this record
         const existingAppeal = await db.query(`
             SELECT id FROM attendance_appeal
@@ -166,6 +181,22 @@ export async function POST(request: Request) {
 
         const appeal = result.rows[0]
         const recordedStatus = record.attendance === 2 ? 'Late' : 'Absent'
+
+        // 🚀 TRIGGER NOTIFICATION TO TEACHER
+        await notifyTeacherAppeal(
+          record.course_id,
+          'New Student Appeal',
+          `A student submitted an appeal for their ${recordedStatus} attendance.`,
+          {
+            appealId: appeal.id,
+            studentId: user.id,
+            courseId: record.course_id,
+            recordDate: record.time,
+            reason: student_reason,
+            type: 'new_appeal',
+            url: '/teacher-portal'
+          }
+        );
 
         return NextResponse.json({
             success: true,
