@@ -14,7 +14,7 @@ import {
   EnvelopeClosedIcon,
   ExclamationTriangleIcon
 } from "@radix-ui/react-icons";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -65,7 +65,7 @@ export default function Student() {
     grade_level: string;
     section: string;
   } | null>(null);
-  
+
   const [attendanceSummary, setAttendanceSummary] = useState({
     presentDays: 0,
     lateDays: 0,
@@ -85,7 +85,7 @@ export default function Student() {
   }>>([]);
 
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Attendance trends data
   const [trendsData, setTrendsData] = useState<any[]>([]);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
@@ -95,10 +95,42 @@ export default function Student() {
   const [allNotifications, setAllNotifications] = useState<any[]>([]);
   const [dbAppeals, setDbAppeals] = useState<any[]>([]);
 
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [appeals, setAppeals] = useState<any[]>([]);
+  const [records, setRecords] = useState<any[]>([]);
+  const [appealReason, setAppealReason] = useState("");
+  const [recordFilter, setRecordFilter] = useState<"none" | "yesterday" | "warning">("none");
+
   // Student Appeal - filter records where status is LATE or ABSENT
-  const appealableRecords = dailyRecords.filter(
+  const appealableRecords = useMemo(() => dailyRecords.filter(
     (record) => record.status === "Late" || record.status === "Absent"
-  );
+  ), [dailyRecords]);
+
+  // Filter records based on selected filter
+  const getFilteredRecords = () => {
+    if (recordFilter === "none") return records;
+
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    if (recordFilter === "yesterday") {
+      return records.filter(record => {
+        const recordDate = new Date(record.date);
+        return recordDate.toDateString() === yesterday.toDateString();
+      });
+    }
+
+    if (recordFilter === "warning") {
+      return records.filter(record => {
+        const courseData = courseAttendance.find(c => c.course === record.course);
+        return courseData && courseData.percentage < 75;
+      });
+    }
+
+    return records;
+  };
+
+  const filteredRecords = useMemo(() => getFilteredRecords(), [recordFilter, records, courseAttendance]);
 
   // Appeal stats
   const availableAppealsCount = appealableRecords.length;
@@ -110,14 +142,6 @@ export default function Student() {
   const completedAppealsCount = dbAppeals.filter(
     appeal => appeal.status === "approved" || appeal.status === "rejected"
   ).length;
-
-  const [selectedRecord, setSelectedRecord] = useState<
-    (typeof appealableRecords)[number] | null
-  >(null);
-
-  const [appeals, setAppeals] = useState(dbAppeals);
-  const [records, setRecords] = useState(appealableRecords);
-  const [appealReason, setAppealReason] = useState("");
 
   const handleSubmitAppeal = async () => {
     if (!selectedRecord || !appealReason.trim()) return;
@@ -258,6 +282,19 @@ export default function Student() {
 
     fetchDynamicData();
   }, []);
+
+  // Sync records state with appealable records (filtered by daily records and excluding already appealed ones)
+  useEffect(() => {
+    const newRecords = appealableRecords.filter(record =>
+      !appeals.some(appeal => appeal.recordId === record.id)
+    );
+    setRecords(newRecords);
+  }, [appealableRecords, appeals]);
+
+  // Sync appeals with dbAppeals from database
+  useEffect(() => {
+    setAppeals(dbAppeals);
+  }, [dbAppeals]);
 
   const { presentDays, lateDays, absentDays, totalDays, attendanceRate, totalCourses } = attendanceSummary;
 
@@ -1586,14 +1623,35 @@ export default function Student() {
                       Attendance Issues
                     </div>
 
+                    <div className="appeal-filter-chips">
+                      <button
+                        className={`appeal-chip ${recordFilter === "none" ? "active" : ""}`}
+                        onClick={() => setRecordFilter("none")}
+                      >
+                        All Issues
+                      </button>
+                      <button
+                        className={`appeal-chip ${recordFilter === "yesterday" ? "active" : ""}`}
+                        onClick={() => setRecordFilter("yesterday")}
+                      >
+                        Absent Yesterday
+                      </button>
+                      <button
+                        className={`appeal-chip ${recordFilter === "warning" ? "active" : ""}`}
+                        onClick={() => setRecordFilter("warning")}
+                      >
+                        Warning Level
+                      </button>
+                    </div>
+
                     <div className="appeal-list-scroll">
 
-                      {records.length === 0 ? (
+                      {filteredRecords.length === 0 ? (
                         <div className="appeal-empty">
-                          No attendance issues today
+                          No attendance issues
                         </div>
                       ) : (
-                        records.map((record, index) => (
+                        filteredRecords.map((record, index) => (
                           <div
                             key={index}
                             className={`appeal-item ${

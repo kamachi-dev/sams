@@ -19,6 +19,7 @@
     align-items: center;
     gap: 20px;
     border: none;
+    box-sizing: border-box;
 }
 /*Dashboard*/
 .student-panel-card.attendance {
@@ -49,9 +50,13 @@
 .student-panel-card.current {
     background: var(--absent);
     color: var(--foreground1);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 .student-panel-card.overall {
     background: var(--present);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 .student-panel-card.children {
     background: var(--background1);
@@ -673,7 +678,7 @@
 .parent-records-wrapper {
   min-height: 100%;
   display: flex;
-    align-items: center;
+  align-items: center;
 }
 
 

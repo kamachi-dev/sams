@@ -1010,6 +1010,39 @@
   border-radius: 6px 6px 0 0;
 }
 
+.appeal-filter-chips {
+  display: flex;
+  gap: 8px;
+  padding: 10px 8px;
+  background: var(--foreground5);
+  border-bottom: 1px solid #F2F2F2;
+  flex-wrap: wrap;
+}
+
+.appeal-chip {
+  padding: 6px 14px;
+  border-radius: 14px;
+  border: 1px solid #BDBDBD;
+  background: var(--background1);
+  color: var(--foreground2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.appeal-chip:hover {
+  border-color: var(--accent1);
+}
+
+.appeal-chip.active {
+  background: var(--accent1);
+  color: var(--background1);
+  border-color: var(--accent1);
+  font-weight: 600;
+}
+
 .appeal-list-scroll {
   flex: 1;
   overflow-y: auto;

@@ -12,9 +12,10 @@ import {
   EnvelopeClosedIcon,
   ExclamationTriangleIcon
 } from "@radix-ui/react-icons";
-import { 
+import {
   useState,
-  useEffect
+  useEffect,
+  useMemo
 } from "react";
 import {
   LineChart,
@@ -33,17 +34,32 @@ import {
 } from "recharts";
 import "./styles.css";
 import {
-  studentInfo,
-  dailyAttendance,
-  weeklyTrend,
-  monthlyData,
-  quarterlyData,
-  courseAttendance,
-  notifications,
-  children,
   chartColors,
 } from "./constants";
 import { useDragScroll } from "./useDragScroll";
+
+// Helper function to calculate weekly trend from daily records
+const calculateWeeklyTrend = (daily: any[]) => {
+  const weeks: { [key: string]: { present: number; late: number; absent: number } } = {};
+
+  daily.forEach(record => {
+    const date = new Date(record.date);
+    const week = `Week ${Math.ceil(date.getDate() / 7)}`;
+
+    if (!weeks[week]) {
+      weeks[week] = { present: 0, late: 0, absent: 0 };
+    }
+
+    if (record.status === 'Present') weeks[week].present++;
+    else if (record.status === 'Late') weeks[week].late++;
+    else weeks[week].absent++;
+  });
+
+  return Object.entries(weeks).map(([week, data]) => ({
+    week,
+    ...data
+  }));
+};
 
 const totalDays = 40;
 const presentDays = 37;
@@ -52,16 +68,28 @@ const absentDays = 1;
 const warnings = 4;
 const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
 const attendanceAlerts = (presentDays + lateDays);
-const totalCourses = courseAttendance.length;
-const pieData = [
-  { name: "Present", value: presentDays, color: "var(--present)" },
-  { name: "Late", value: lateDays, color: "var(--late)" },
-  { name: "Absent", value: absentDays, color: "var(--absent)" },
-];
 
 export default function Parent() {
   const dragScroll = useDragScroll<HTMLDivElement>();
-  const [showAbsentYesterdayOnly, setShowAbsentYesterdayOnly] = useState(false);
+
+  // API-fetched data
+  const [children, setChildren] = useState<any[]>([]);
+  const [dailyAttendance, setDailyAttendance] = useState<any[]>([]);
+  const [courseAttendance, setCourseAttendance] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [selectedChildData, setSelectedChildData] = useState<any>(null);
+  const [weeklyTrend, setWeeklyTrend] = useState<any[]>([]);
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [quarterlyData, setQuarterlyData] = useState<any[]>([]);
+
+  // Loading states
+  const [loading, setLoading] = useState(true);
+  const [childDetailsLoading, setChildDetailsLoading] = useState(false);
+
+  const [childRecordFilters, setChildRecordFilters] = useState({
+    yesterday: false,
+    warning: false
+  });
   const [selectedView, setSelectedView] = useState<
     "daily" | "weekly" | "monthly" | "quarterly"
   >("weekly");
@@ -75,13 +103,149 @@ export default function Parent() {
   >("overview");
 
   // 👉 notifications specific
-  const [selectedSchoolYear, setSelectedSchoolYear] = useState("2025-2026");
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState<string>("");
   const [activeSemester, setActiveSemester] = useState<"first" | "second">("first");
   const [selectedStudent, setSelectedStudent] = useState("all");
-  const [showWarningOnly, setShowWarningOnly] = useState(false);
+
+  // Available options derived from notifications
+  const [availableSchoolYears, setAvailableSchoolYears] = useState<string[]>([]);
+  const [availableSemesters, setAvailableSemesters] = useState<("first" | "second")[]>([]);
 
   const [selectedNotification, setSelectedNotification] =
-  useState<(typeof notifications)[number] | null>(null);
+  useState<any>(null);
+
+  // Fetch children list on component mount
+  useEffect(() => {
+    const fetchChildren = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/parent/children');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          // Transform API data to match UI format
+          const transformedChildren = result.data.map((child: any) => ({
+            id: child.id,
+            name: child.name,
+            isAbsentYesterday: "no",
+            status: "present",
+            present: 0,
+            late: 0,
+            absent: 0,
+            percentage: 0,
+            today: {
+              statusLabel: "PRESENT",
+              classTime: "10:15 AM",
+              teacher: "Unknown",
+              course: "Unknown",
+              lastChecked: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+            }
+          }));
+          setChildren(transformedChildren);
+
+          // Fetch summary data for each child
+          for (const child of transformedChildren) {
+            try {
+              const summaryRes = await fetch(`/api/parent/children/${child.id}/summary`);
+              const summaryData = await summaryRes.json();
+
+              if (summaryData.success && summaryData.data) {
+                child.present = summaryData.data.present;
+                child.late = summaryData.data.late;
+                child.absent = summaryData.data.absent;
+                child.percentage = summaryData.data.percentage;
+                child.isAbsentYesterday = summaryData.data.absentYesterday ? "yes" : "no";
+              }
+            } catch (err) {
+              console.error('Error fetching child summary:', err);
+            }
+          }
+
+          setChildren([...transformedChildren]);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching children:', error);
+        setLoading(false);
+      }
+    };
+
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch('/api/parent/notifications');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setNotifications(result.data);
+
+          // Extract unique school years and semesters from notifications
+          const schoolYears = Array.from(new Set(result.data.map((n: any) => n.schoolYear)));
+          const semesters = Array.from(new Set(result.data.map((n: any) => n.semester))) as ("first" | "second")[];
+
+          setAvailableSchoolYears(schoolYears as string[]);
+          setAvailableSemesters(semesters);
+
+          // Set first available school year and semester
+          if (schoolYears.length > 0) {
+            setSelectedSchoolYear(schoolYears[0] as string);
+          }
+          if (semesters.length > 0) {
+            setActiveSemester(semesters[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
+    fetchChildren();
+    fetchNotifications();
+  }, []);
+
+  // Fetch detailed data when a child is selected in dashboard view
+  useEffect(() => {
+    if (view === "dashboard" && selectedChild) {
+      const fetchChildDetails = async () => {
+        try {
+          setChildDetailsLoading(true);
+
+          // Fetch daily records
+          const dailyRes = await fetch(`/api/parent/children/${selectedChild.id}/daily`);
+          const dailyData = await dailyRes.json();
+          if (dailyData.success) {
+            setDailyAttendance(dailyData.data || []);
+            // Calculate weekly trend from daily data
+            setWeeklyTrend(calculateWeeklyTrend(dailyData.data || []));
+          }
+
+          // Fetch courses
+          const coursesRes = await fetch(`/api/parent/children/${selectedChild.id}/courses`);
+          const coursesData = await coursesRes.json();
+          if (coursesData.success) {
+            setCourseAttendance(coursesData.data || []);
+          }
+
+          // Set placeholder data for monthly and quarterly
+          setMonthlyData([
+            { month: "This Month", percentage: selectedChild.percentage || 0 }
+          ]);
+          setQuarterlyData([
+            { name: "Current Quarter", present: selectedChild.present || 0, late: selectedChild.late || 0, absent: selectedChild.absent || 0 }
+          ]);
+
+          // Set selected child data
+          setSelectedChildData(selectedChild);
+
+          setChildDetailsLoading(false);
+        } catch (error) {
+          console.error('Error fetching child details:', error);
+          setChildDetailsLoading(false);
+        }
+      };
+
+      fetchChildDetails();
+    }
+  }, [view, selectedChild]);
 
   // ==========================
   // ATTENDANCE CALCULATIONS
@@ -102,7 +266,7 @@ export default function Parent() {
   const absentYesterdayCount = children.filter(
     child => child.isAbsentYesterday === "yes"
   ).length
-  
+
   const overallAttendanceRate =
     totalStudents > 0
       ? (
@@ -110,6 +274,26 @@ export default function Parent() {
           totalStudents
         ).toFixed(1)
       : "0.0";
+
+  // For selected child detail view - calculate pie data
+  const selectedChildStats = selectedChildData ? {
+    present: selectedChildData.present || 0,
+    late: selectedChildData.late || 0,
+    absent: selectedChildData.absent || 0,
+  } : null;
+
+  const pieData = selectedChildStats ? [
+    { name: "Present", value: selectedChildStats.present, color: "var(--present)" },
+    { name: "Late", value: selectedChildStats.late, color: "var(--late)" },
+    { name: "Absent", value: selectedChildStats.absent, color: "var(--absent)" },
+  ] : [
+    { name: "Present", value: 0, color: "var(--present)" },
+    { name: "Late", value: 0, color: "var(--late)" },
+    { name: "Absent", value: 0, color: "var(--absent)" },
+  ];
+
+  const totalCourses = courseAttendance.length;
+  const attendanceAlerts = dailyAttendance.filter(r => r.status === "Late" || r.status === "Absent").length;
 
   // ==========================
   // COLOR LOGIC
@@ -147,27 +331,31 @@ export default function Parent() {
   };
 
   // Filters for student records
-  let filteredChildren = children;
+  const getFilteredChildren = () => {
+    let filtered = children;
 
-  if (showAbsentYesterdayOnly) {
-    filteredChildren = filteredChildren.filter(
-      child => child.isAbsentYesterday === "yes"
-    );
-  }
+    if (childRecordFilters.yesterday) {
+      filtered = filtered.filter(child => child.isAbsentYesterday === "yes");
+    }
 
-  if (showWarningOnly) {
-    filteredChildren = filteredChildren.filter(
-      child => child.percentage > WARNING_THRESHOLD &&
-              child.percentage <= WARNING_APPROACH
-    );
-  }
+    if (childRecordFilters.warning) {
+      filtered = filtered.filter(
+        child => child.percentage > WARNING_THRESHOLD &&
+                child.percentage <= WARNING_APPROACH
+      );
+    }
+
+    return filtered;
+  };
+
+  const filteredChildren = useMemo(() => getFilteredChildren(), [children, childRecordFilters]);
 
   // Filters for notifications
-  const filteredNotifications = notifications.filter(n =>
+  const filteredNotifications = useMemo(() => notifications.filter(n =>
     n.schoolYear === selectedSchoolYear &&
     n.semester === activeSemester &&
     (selectedStudent === "all" || n.studentName === selectedStudent)
-  );
+  ), [notifications, selectedSchoolYear, activeSemester, selectedStudent]);
 
   return (
   <SamsTemplate
@@ -225,11 +413,11 @@ export default function Parent() {
           key="attendance-today"
           className="student-panel-card current"
           style={{
-            background: chartColors.absent,
-            border: showAbsentYesterdayOnly ? "3px solid var(--background1)" : "3px solid transparent",
-            cursor: "pointer"
+            background: childRecordFilters.yesterday ? "var(--accent1)" : chartColors.absent,
+            color: childRecordFilters.yesterday ? "var(--background1)" : "var(--foreground1)",
+            border: childRecordFilters.yesterday ? "3px solid white" : "3px solid transparent",
           }}
-          onClick={() => setShowAbsentYesterdayOnly(prev => !prev)}
+          onClick={() => setChildRecordFilters(prev => ({ ...prev, yesterday: !prev.yesterday }))}
         >
           <CalendarIcon className="student-panel-icon" />
           <div className="student-panel-content">
@@ -245,11 +433,11 @@ export default function Parent() {
           key="approaching-warning"
           className="student-panel-card overall"
           style={{
-            background: chartColors.late,
-            border: showWarningOnly ? "3px solid var(--background1)" : "3px solid transparent",
-            cursor: "pointer"
+            background: childRecordFilters.warning ? "var(--accent1)" : chartColors.late,
+            color: childRecordFilters.warning ? "var(--background1)" : "var(--accent1)",
+            border: childRecordFilters.warning ? "3px solid white" : "3px solid transparent",
           }}
-          onClick={() => setShowWarningOnly(prev => !prev)}
+          onClick={() => setChildRecordFilters(prev => ({ ...prev, warning: !prev.warning }))}
         >
           <ExclamationTriangleIcon className="student-panel-icon" />
 
@@ -271,6 +459,9 @@ export default function Parent() {
         content:
           view === "records" ? (
             <div className="parent-records-wrapper">
+              {loading ? (
+                <div style={{ padding: '20px', textAlign: 'center' }}>Loading children...</div>
+              ) : (
               <div className="parent-records-grid"
                   ref={dragScroll.ref}
                   onMouseDown={dragScroll.onMouseDown}
@@ -378,9 +569,13 @@ export default function Parent() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           ) : (
             <div className="student-main-container">
+              {childDetailsLoading ? (
+                <div style={{ padding: '20px', textAlign: 'center' }}>Loading child details...</div>
+              ) : (
               <div className="student-split-layout">
 
                 {/* LEFT */}
@@ -399,7 +594,7 @@ export default function Parent() {
                           Student Name
                         </div>
                         <div className="student-info-field-value">
-                          {studentInfo.name}
+                          {selectedChildData?.name || 'Loading...'}
                         </div>
                       </div>
                       <div>
@@ -407,7 +602,7 @@ export default function Parent() {
                           Student ID
                         </div>
                         <div className="student-info-field-value">
-                          {studentInfo.studentId}
+                          {selectedChildData?.id || 'N/A'}
                         </div>
                       </div>
                       <div>
@@ -415,7 +610,7 @@ export default function Parent() {
                           Grade Level
                         </div>
                         <div className="student-info-field-value">
-                          {studentInfo.grade}
+                          {selectedChildData?.gradeLevel || 'N/A'}
                         </div>
                       </div>
                       <div>
@@ -423,7 +618,7 @@ export default function Parent() {
                           Section
                         </div>
                         <div className="student-info-field-value">
-                          {studentInfo.section}
+                          {selectedChildData?.section || 'N/A'}
                         </div>
                       </div>
                     </div>
@@ -674,6 +869,7 @@ export default function Parent() {
                 </div>
 
               </div>
+              )}
             </div>
           ),
         },
@@ -714,6 +910,7 @@ export default function Parent() {
                 <div className="notifications-container">
                   {/* LEFT LIST */}
                   <div className="notifications-list">
+                      {notifications.length > 0 && (
                       <div className="notifications-tabs">
                         {/* School Year */}
                         <select
@@ -721,8 +918,9 @@ export default function Parent() {
                           value={selectedSchoolYear}
                           onChange={(e) => setSelectedSchoolYear(e.target.value)}
                         >
-                          <option value="2024-2025">2024-2025</option>
-                          <option value="2025-2026">2025-2026</option>
+                          {availableSchoolYears.map((year) => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
                         </select>
 
                         {/* Semester */}
@@ -733,8 +931,9 @@ export default function Parent() {
                             setActiveSemester(e.target.value as "first" | "second")
                           }
                         >
-                          <option value="first">1st Semester</option>
-                          <option value="second">2nd Semester</option>
+                          {availableSemesters.map((sem) => (
+                            <option key={sem} value={sem}>{sem === 'first' ? '1st Semester' : '2nd Semester'}</option>
+                          ))}
                         </select>
 
                         {/* Student */}
@@ -752,8 +951,8 @@ export default function Parent() {
                           ))}
 
                         </select>
-
                       </div>
+                      )}
 
                     <div className="notifications-scroll">
                     {filteredNotifications.length === 0 ? (
@@ -775,7 +974,7 @@ export default function Parent() {
 
                             <div className="notification-body">
                                 <div className="notification-code">
-                                {n.code.replace("_", " ")}
+                                {n.studentName} - {n.course}
                                 </div>
 
                                 <div className="notification-title-row">
@@ -827,7 +1026,7 @@ export default function Parent() {
                     </div>
 
                     <div className="preview-prof">
-                        {selectedNotification.code} · {selectedNotification.prof}
+                        {selectedNotification.prof}
                     </div>
 
                     <div className="preview-student">
