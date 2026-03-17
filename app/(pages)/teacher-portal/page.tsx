@@ -2278,6 +2278,7 @@ export default function Teacher() {
                                                 key={sec.section} 
                                                 className={`overview-section-card${isPinned ? ' overview-card-pinned' : ''}`}
                                                 onClick={() => {
+                                                    setSelectedOverviewCourse({ id: sec.sectionId!, name: selectedOverviewCourse!.name });
                                                     setSelectedSection(sec.section);
                                                     setOverviewStep('stats');
                                                 }}
