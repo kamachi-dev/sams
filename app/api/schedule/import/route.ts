@@ -5,11 +5,12 @@ import * as XLSX from 'xlsx'
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
-type ParsedStudent = { name: string; email: string; parentEmail?: string }
+type ParsedStudent = { name: string; email: string; parentName?: string; parentEmail?: string }
 type ParsedScheduleSlot = { day: string; start: string; end: string }
 type ParsedCourseBlock = {
     name: string
     section: string | null
+    classroom: string | null
     teacher: string | null
     schedule: ParsedScheduleSlot[]
     students: ParsedStudent[]
@@ -46,11 +47,12 @@ function parseScheduleXlsx(buffer: Buffer): ParsedCourseBlock[] {
         const col2 = row[2]?.toString().trim() ?? ''
         const col3 = row[3]?.toString().trim() ?? ''
         const col4 = row[4]?.toString().trim() ?? ''
+        const col5 = row[5]?.toString().trim() ?? ''
 
         // Course name row – only col0 is filled
         if (col0 && !col1 && !col2) {
             if (current) blocks.push(current)
-            current = { name: col0, section: null, teacher: null, schedule: [], students: [] }
+            current = { name: col0, section: null, classroom: null, teacher: null, schedule: [], students: [] }
             mode = null
             continue
         }
@@ -60,6 +62,12 @@ function parseScheduleXlsx(buffer: Buffer): ParsedCourseBlock[] {
         // Section row – ,section,<name>
         if (!col0 && col1.toLowerCase() === 'section' && col2) {
             current.section = col2
+            continue
+        }
+
+        // Classroom row – ,classroom,<name>
+        if (!col0 && col1.toLowerCase() === 'classroom' && col2) {
+            current.classroom = col2
             continue
         }
 
@@ -86,10 +94,12 @@ function parseScheduleXlsx(buffer: Buffer): ParsedCourseBlock[] {
                     end: normalizeTime(col4),
                 })
             } else if (mode === 'students') {
+                // New format: ,,StudentName, StudentEmail, ParentName, ParentEmail
                 current.students.push({
                     name: col2,
                     email: col3 || col2,
-                    parentEmail: col4 || undefined,
+                    parentName: col4 || undefined,
+                    parentEmail: col5 || undefined,
                 })
             }
         }
@@ -323,8 +333,8 @@ export async function POST(req: Request) {
 
                 // Create a section for this block
                 const sectionResult = await db.query(
-                    `INSERT INTO section (name, schedule, teacher, course) VALUES ($1, $2, $3, $4) RETURNING id`,
-                    [block.section ?? 'Default', JSON.stringify(scheduleObj), teacherId, courseId],
+                    `INSERT INTO section (name, schedule, teacher, course, classroom) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+                    [block.section ?? 'Default', JSON.stringify(scheduleObj), teacherId, courseId, block.classroom],
                 )
                 const sectionId = sectionResult.rows[0].id
                 results.sectionsCreated++
