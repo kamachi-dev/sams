@@ -151,6 +151,10 @@ a {
     z-index: 2;
 }
 
+.sams-content-panels:has(> :first-child:last-child) {
+    justify-content: flex-start !important;
+}
+
 .sams-content-body {
     flex: 1;
     min-height: 0;

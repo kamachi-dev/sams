@@ -55,7 +55,6 @@ export async function GET(req: Request) {
             INNER JOIN section s ON e.section = s.id
             INNER JOIN course c ON s.course = c.id
             INNER JOIN account a ON e.student = a.id
-            ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = a.id' : ''}
             LEFT JOIN record r ON r.student = a.id 
                 AND r.time IS NOT NULL
                 AND DATE(r.time) >= $1
@@ -63,7 +62,6 @@ export async function GET(req: Request) {
                 AND r.course = s.id
             WHERE s.teacher = $3 AND s.id = $4
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-            ${sectionFilter ? 'AND sd.section = $5' : ''}
             ORDER BY 
                 a.id,
                 CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC,
@@ -80,26 +78,20 @@ export async function GET(req: Request) {
             INNER JOIN section s ON e.section = s.id
             INNER JOIN course c ON s.course = c.id
             INNER JOIN account a ON e.student = a.id
-            ${sectionFilter ? 'LEFT JOIN student_data sd ON sd.student = a.id' : ''}
             LEFT JOIN record r ON r.student = a.id 
                 AND r.time IS NOT NULL
                 AND DATE(r.time) = $1
                 AND r.course = s.id
             WHERE s.teacher = $2 AND s.id = $3
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-            ${sectionFilter ? 'AND sd.section = $4' : ''}
             ORDER BY 
                 a.id,
                 CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC,
                 r.created_at ASC NULLS LAST`
 
         const params = useDateRange
-            ? (sectionFilter
-                ? [startDate, endDate, user.id, courseFilter, sectionFilter]
-                : [startDate, endDate, user.id, courseFilter])
-            : (sectionFilter
-                ? [date, user.id, courseFilter, sectionFilter]
-                : [date, user.id, courseFilter])
+            ? [startDate, endDate, user.id, courseFilter]
+            : [date, user.id, courseFilter]
 
         console.log('Query params:', params)
         const result = await db.query(query, params)

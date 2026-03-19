@@ -5,7 +5,6 @@ import XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
-  ThickArrowRightIcon,
   CalendarIcon,
   DownloadIcon,
   PersonIcon,
@@ -15,7 +14,7 @@ import {
   EnvelopeClosedIcon,
   ExclamationTriangleIcon
 } from "@radix-ui/react-icons";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -32,32 +31,14 @@ import {
 import "./styles.css";
 import "../teacher-portal/styles.css";
 import {
-  studentInfo,
-  dailyAttendance,
-  weeklyTrend,
-  monthlyData,
-  quarterlyData,
-  notifications,
-  courseAttendance,
   chartColors,
-  attendanceAppeals,
 } from "./constants";
 
-const totalDays = 40;
-const presentDays = 37;
-const lateDays = 2;
-const absentDays = 1;
-const warnings = 4;
-const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
-const attendanceAlerts = (presentDays + lateDays);
-const totalCourses = courseAttendance.length;
-
 function getLateReason(record: any) {
-  if (record.status !== "LATE") return "";
+  if (record.status !== "Late") return "";
 
   return `Arrival recorded at (${record.recordedTime}), exceeding the 15 minute grace period (${record.classStart}).`;
 }
-
 
 export default function Student() {
   const [selectedView, setSelectedView] = useState<
@@ -71,15 +52,12 @@ export default function Student() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "analytics" | "courses"
-  >("overview");
 
   // 👉 notifications specific
   const [activeSemester, setActiveSemester] = useState<"first" | "second">("first");
 
   const [selectedNotification, setSelectedNotification] =
-    useState<(typeof notifications)[number] | null>(null);
+    useState<any>(null);
 
   // Real data from database
   const [studentData, setStudentData] = useState<{
@@ -87,7 +65,7 @@ export default function Student() {
     grade_level: string;
     section: string;
   } | null>(null);
-  
+
   const [attendanceSummary, setAttendanceSummary] = useState({
     presentDays: 0,
     lateDays: 0,
@@ -107,61 +85,74 @@ export default function Student() {
   }>>([]);
 
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Attendance trends data
   const [trendsData, setTrendsData] = useState<any[]>([]);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
 
-  // Student Appeal
-  const appealableRecords = dailyAttendance.filter(
-    (record) => record.status === "LATE" || record.status === "ABSENT"
-  );
+  // Database-driven data (previously hardcoded constants)
+  const [dailyRecords, setDailyRecords] = useState<any[]>([]);
+  const [allNotifications, setAllNotifications] = useState<any[]>([]);
+  const [dbAppeals, setDbAppeals] = useState<any[]>([]);
+
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [appeals, setAppeals] = useState<any[]>([]);
+  const [records, setRecords] = useState<any[]>([]);
+  const [appealReason, setAppealReason] = useState("");
+
+  // Student Appeal - filter records where status is LATE or ABSENT
+  const appealableRecords = useMemo(() => dailyRecords.filter(
+    (record) => record.status === "Late" || record.status === "Absent"
+  ), [dailyRecords]);
 
   // Appeal stats
   const availableAppealsCount = appealableRecords.length;
 
-  const pendingAppealsCount = attendanceAppeals.filter(
+  const pendingAppealsCount = dbAppeals.filter(
     appeal => appeal.status === "pending"
   ).length;
 
-  const completedAppealsCount = attendanceAppeals.filter(
+  const completedAppealsCount = dbAppeals.filter(
     appeal => appeal.status === "approved" || appeal.status === "rejected"
   ).length;
 
-  const [selectedRecord, setSelectedRecord] = useState<
-    (typeof appealableRecords)[number] | null
-  >(null);
-
-  const [appeals, setAppeals] = useState(attendanceAppeals);
-  const [records, setRecords] = useState(appealableRecords);
-  const [appealReason, setAppealReason] = useState("");
-
-  const handleSubmitAppeal = () => {
+  const handleSubmitAppeal = async () => {
     if (!selectedRecord || !appealReason.trim()) return;
-    const newAppeal = {
-      id: Date.now(),
-      course: selectedRecord.course,
-      date: selectedRecord.date,
-      recordedStatus: selectedRecord.status,
-      requestedStatus: "Present",
-      reason: appealReason,
-      status: "pending",
-      submittedAt: new Date().toISOString(),
-      reviewedBy: null,
-      teacherResponse: null,
-    };
-    // move to RIGHT (history)
-    setAppeals(prev => [newAppeal, ...prev]);
-    // remove from LEFT (issues)
-    setRecords(prev =>
-      prev.filter(r =>
-        !(r.course === selectedRecord.course && 
-          r.date === selectedRecord.date)
-      )
-    );
-    // clear form
-    setSelectedRecord(null);
-    setAppealReason("");
+
+    try {
+      // Find the matching record in dailyRecords to get its ID
+      const recordId = selectedRecord.id;
+
+      const response = await fetch('/api/student/appeals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          record_id: recordId,
+          student_reason: appealReason
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Add new appeal to the list
+        setAppeals(prev => [result.data, ...prev]);
+        // Remove from appealable records
+        setRecords(prev =>
+          prev.filter(r => r.id !== recordId)
+        );
+        // Clear form
+        setSelectedRecord(null);
+        setAppealReason("");
+      } else {
+        alert(result.error || 'Failed to submit appeal');
+      }
+    } catch (error) {
+      console.error('Error submitting appeal:', error);
+      alert('Failed to submit appeal. Please try again.');
+    }
   };
 
   // Fetch student data
@@ -209,14 +200,14 @@ export default function Student() {
         const params = new URLSearchParams({
           view: selectedView
         });
-        
+
         if (selectedCourse && selectedCourse !== 'all') {
           params.append('course', selectedCourse);
         }
-        
+
         const response = await fetch(`/api/student/attendance/trends?${params}`);
         const data = await response.json();
-        
+
         if (data.success) {
           setTrendsData(data.data);
         }
@@ -230,7 +221,59 @@ export default function Student() {
     fetchTrendsData();
   }, [selectedView, selectedCourse]);
 
+  // Fetch dynamic data from new database-driven endpoints
+  useEffect(() => {
+    const fetchDynamicData = async () => {
+      try {
+        const [dailyRes, notifRes, appealsRes] = await Promise.all([
+          fetch('/api/student/attendance/daily'),
+          fetch('/api/student/notifications'),
+          fetch('/api/student/appeals')
+        ]);
+
+        const [dailyData, notifData, appealsData] = await Promise.all([
+          dailyRes.json(),
+          notifRes.json(),
+          appealsRes.json()
+        ]);
+
+        if (dailyData.success) {
+          setDailyRecords(dailyData.data);
+        }
+
+        if (notifData.success) {
+          setAllNotifications(notifData.data);
+        }
+
+        if (appealsData.success) {
+          setDbAppeals(appealsData.data);
+        }
+      } catch (error) {
+        console.error('Error fetching dynamic data:', error);
+      }
+    };
+
+    fetchDynamicData();
+  }, []);
+
+  // Sync records state with appealable records (filtered by daily records and excluding already appealed ones)
+  useEffect(() => {
+    const newRecords = appealableRecords.filter(record =>
+      !appeals.some(appeal => appeal.recordId === record.id)
+    );
+    setRecords(newRecords);
+  }, [appealableRecords, appeals]);
+
+  // Sync appeals with dbAppeals from database
+  useEffect(() => {
+    setAppeals(dbAppeals);
+  }, [dbAppeals]);
+
   const { presentDays, lateDays, absentDays, totalDays, attendanceRate, totalCourses } = attendanceSummary;
+
+  // Calculate attendance alerts and warnings from notifications
+  const attendanceAlerts = allNotifications.filter(n => n.type === 'late' || n.type === 'absent').length;
+  const warnings = allNotifications.filter(n => n.type === 'warning').length;
 
   const pieData = [
     { name: "Present", value: presentDays, color: "var(--present)" },
@@ -296,7 +339,6 @@ export default function Student() {
 
       const sf2 = result.data;
       const courses = sf2.courses;
-      const schoolDays: number[] = sf2.schoolDays;
       const detectionLog = sf2.detectionLog;
       const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -399,7 +441,6 @@ export default function Student() {
           }),
         ];
 
-        const totalCols = 2 + allDays.length + 5;
         const fixedNameW = Math.min(50, Math.max(35, contentW * 0.18));
         const fixedSumW = 9;
         const fixedNoW = 7;
@@ -527,6 +568,68 @@ export default function Student() {
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...navy);
         doc.text(`Total Courses: ${sf2.totalCourses}     |     School Days: ${sf2.totalSchoolDays}     |     Legend:  P = Present    L = Late    A = Absent    - = No Detection`, mL + 4, curY + 6);
+
+        // ── Overall Attendance Rate Calculation ──
+        curY += 16;
+        let actualGP = 0, actualGL = 0, actualGA = 0, actualGR = 0;
+        for (const c of courses) {
+          actualGP += c.totalPresent;
+          actualGL += c.totalLate;
+          actualGA += c.totalAbsent ?? 0;
+          actualGR += c.actualRecords ?? (c.totalPresent + c.totalLate + (c.totalAbsent ?? 0));
+        }
+        const overallR = actualGR > 0 ? ((actualGP / actualGR) * 100).toFixed(2) : '0.00';
+        const rateColor = parseFloat(overallR) >= 80 ? green : parseFloat(overallR) >= 50 ? yellow : red;
+
+        // Card background
+        const cardY = curY;
+        doc.setFillColor(...lightBg);
+        doc.roundedRect(mL, cardY, contentW, 70, 2, 2, 'F');
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(46, 125, 50);
+        doc.text('Overall Attendance Rate', mL + 4, curY + 6);
+
+        let leftY = curY + 13;
+        doc.setFontSize(8);
+        const kvPairs: [string, string, [number, number, number]?][] = [
+          ['Formula:', '(Total Present ÷ Total Actual Records) × 100'],
+          ['Total Present:', String(actualGP), green],
+          ['Total Late:', String(actualGL), yellow],
+          ['Total Absent:', String(actualGA), red],
+          ['Total Records (P+L+A):', String(actualGR), navy],
+          ['Calculation:', `(${actualGP} ÷ ${actualGR}) × 100 = ${overallR}%`],
+        ];
+        kvPairs.forEach(([label, value, color]) => {
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...darkText);
+          doc.text(label, mL + 6, leftY);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...(color || [79, 79, 79] as [number, number, number]));
+          doc.text(value, mL + 46, leftY);
+          leftY += 4.5;
+        });
+
+        // Big highlighted rate
+        leftY += 2;
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(mL + 6, leftY - 4, contentW - 12, 12, 1.5, 1.5, 'F');
+        doc.setDrawColor(200, 200, 200);
+        doc.roundedRect(mL + 6, leftY - 4, contentW - 12, 12, 1.5, 1.5, 'S');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...navy);
+        doc.text('Overall Attendance Rate:', mL + 10, leftY + 3);
+        doc.setFontSize(14);
+        doc.setTextColor(...rateColor);
+        doc.text(`${overallR}%`, mL + contentW - 10, leftY + 4, { align: 'right' });
+
+        leftY += 13;
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(140, 140, 140);
+        doc.text('Days with no detection are excluded from this calculation.', mL + 6, leftY);
 
 
         // ════════════════════════════════════════════════════
@@ -823,6 +926,66 @@ export default function Student() {
         setCell(R, 0, 'Legend:  ✓ = Present    L = Late    ✗ = Absent    — = No Detection', { font: { sz: 10, italic: true, color: { rgb: '666666' } } });
         R += 2;
 
+        // ── Overall Attendance Rate Calculation ──
+        const analyticLabelStyle = { font: { bold: true, sz: 10, color: { rgb: '555555' } } };
+        const analyticValueStyle = { font: { sz: 10, color: { rgb: '4F4F4F' } }, border, alignment: { horizontal: 'center' as const } };
+        const analyticHighlightStyle = { font: { bold: true, sz: 12, color: { rgb: '1F2F57' } }, border, alignment: { horizontal: 'center' as const } };
+        const sectionTitleStyle = { font: { bold: true, sz: 11, color: { rgb: '2E7D32' } } };
+        const shortMergeSpan = 2;
+        const wideMergeSpan = Math.min(totalExcelCols - 2, 6);
+
+        const setCellSpan = (r: number, c: number, span: number, v: any, s?: any) => {
+          setCell(r, c, v, s);
+          for (let i = 1; i < span; i++) {
+            setCell(r, c + i, '', s);
+          }
+          if (span > 1) {
+            merges.push({ s: { r, c }, e: { r, c: c + span - 1 } });
+          }
+        };
+
+        setCell(R, 0, 'Overall Attendance Rate', sectionTitleStyle);
+        R += 1;
+
+        let xlGP = 0, xlGL = 0, xlGA = 0, xlGR = 0;
+        for (const course of courses) {
+          xlGP += course.totalPresent;
+          xlGL += course.totalLate;
+          xlGA += course.totalAbsent ?? 0;
+          xlGR += course.actualRecords ?? (course.totalPresent + course.totalLate + (course.totalAbsent ?? 0));
+        }
+        const xlOverallRate = xlGR > 0 ? ((xlGP / xlGR) * 100).toFixed(2) : '0.00';
+
+        setCell(R, 1, 'Formula:', analyticLabelStyle);
+        setCellSpan(R, 2, wideMergeSpan, '(Total Present ÷ Total Actual Records) × 100', analyticValueStyle);
+        R++;
+        setCell(R, 1, 'Total Present:', analyticLabelStyle);
+        setCellSpan(R, 2, shortMergeSpan, xlGP, { ...analyticValueStyle, font: { bold: true, sz: 10, color: { rgb: '0F9D58' } } });
+        R++;
+        setCell(R, 1, 'Total Late:', analyticLabelStyle);
+        setCellSpan(R, 2, shortMergeSpan, xlGL, { ...analyticValueStyle, font: { bold: true, sz: 10, color: { rgb: 'F4B400' } } });
+        R++;
+        setCell(R, 1, 'Total Absent:', analyticLabelStyle);
+        setCellSpan(R, 2, shortMergeSpan, xlGA, { ...analyticValueStyle, font: { bold: true, sz: 10, color: { rgb: 'DB4437' } } });
+        R++;
+        setCell(R, 1, 'Total Actual Records (P + L + A):', analyticLabelStyle);
+        setCellSpan(R, 2, shortMergeSpan, xlGR, analyticHighlightStyle);
+        R++;
+        setCell(R, 1, 'Calculation:', analyticLabelStyle);
+        setCellSpan(R, 2, wideMergeSpan, `(${xlGP} ÷ ${xlGR}) × 100 = ${xlOverallRate}%`, analyticValueStyle);
+        R++;
+        setCell(R, 1, 'Overall Attendance Rate:', { ...analyticLabelStyle, font: { bold: true, sz: 12, color: { rgb: '1F2F57' } } });
+        setCellSpan(R, 2, shortMergeSpan, `${xlOverallRate}%`, {
+          font: { bold: true, sz: 14, color: { rgb: parseFloat(xlOverallRate) >= 80 ? '0F9D58' : parseFloat(xlOverallRate) >= 50 ? 'F4B400' : 'DB4437' } },
+          border,
+          alignment: { horizontal: 'center' },
+        });
+        R++;
+
+        setCell(R, 1, 'Note:', { font: { bold: true, italic: true, sz: 9, color: { rgb: '888888' } } });
+        setCellSpan(R, 2, wideMergeSpan, 'Only actual database records are counted. Days with no detection (—) are not counted toward this rate.', { font: { italic: true, sz: 9, color: { rgb: '888888' } } });
+        R += 2;
+
         // Sheet config
         ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: R, c: totalExcelCols - 1 } });
         ws['!merges'] = merges;
@@ -1001,13 +1164,13 @@ export default function Student() {
                       <div>
                         <div className="student-info-field-label">Student Name</div>
                         <div className="student-info-field-value">
-                          {isLoading ? "Loading..." : (studentData?.username || studentInfo.name)}
+                          {isLoading ? "Loading..." : (studentData?.username || "N/A")}
                         </div>
                       </div>
                       <div>
                         <div className="student-info-field-label">Grade Level</div>
                         <div className="student-info-field-value">
-                          {isLoading ? "Loading..." : (studentData?.grade_level || studentInfo.grade)}
+                          {isLoading ? "Loading..." : (studentData?.grade_level || "N/A")}
                         </div>
                       </div>
                       <div>
@@ -1385,6 +1548,142 @@ export default function Student() {
             </div>
           ),
         },
+        {
+            // NOTIFICATIONS
+            label: "Notifications",
+            Icon: BellIcon,
+            panels: [
+                <div key="total-courses" className="student-panel-card notifications">
+                <BookmarkIcon className="student-panel-icon" />
+                <div className="student-panel-content">
+                    <div className="student-panel-label">Total Unread Notifications</div>
+                    <div className="student-panel-value">{totalCourses}</div>
+                    <div className="student-panel-sub">From current semester</div>
+                </div>
+                </div>,
+
+                <div key="attendance-rate" className="student-panel-card alerts">
+                <ExclamationTriangleIcon className="student-panel-icon" />
+                <div className="student-panel-content">
+                    <div className="student-panel-label">Attendance Alerts</div>
+                    <div className="student-panel-value">{attendanceAlerts}</div>
+                    <div className="student-panel-sub">Recorded late and absence incidents</div>
+                </div>
+                </div>,
+
+                <div key="present-days" className="student-panel-card warnings">
+                <ExclamationTriangleIcon className="student-panel-icon" />
+                <div className="student-panel-content">
+                    <div className="student-panel-label">Warnings Messages Recieved</div>
+                    <div className="student-panel-value">{warnings}</div>
+                    <div className="student-panel-sub">Messages regarding attendance issues</div>
+                </div>
+                </div>,
+            ],
+            content: (
+                // inside the Notifications link -> content:
+                <div className="notifications-container">
+                {/* LEFT LIST */}
+                <div className="notifications-list">
+                    <div className="notifications-tabs">
+                    <button
+                        className={`notif-tab ${activeSemester === "first" ? "active" : ""}`}
+                        onClick={() => setActiveSemester("first")}
+                    >
+                        1st Sem
+                    </button>
+
+                    <button
+                        className={`notif-tab ${activeSemester === "second" ? "active" : ""}`}
+                        onClick={() => setActiveSemester("second")}
+                    >
+                        2nd Sem
+                    </button>
+                    </div>
+
+                    <div className="notifications-scroll">
+                    {allNotifications.filter(n => n.semester === activeSemester).length === 0 ? (
+                        <div className="notifications-empty">
+                        No notifications for this semester
+                        </div>
+                    ) : (
+                        allNotifications
+                        .filter(n => n.semester === activeSemester)
+                        .map((n, i) => (
+                            <div
+                            key={i}
+                            className={`notification-item ${n.type} ${
+                                selectedNotification === n ? "active" : ""
+                            }`}
+                            onClick={() => setSelectedNotification(n)}
+                            >
+                            <div className="notification-type">
+                                {n.type.toUpperCase()}
+                            </div>
+
+                            <div className="notification-body">
+                                <div className="notification-title-row">
+                                <span className="notification-title">{n.course}</span>
+                                <span className="notification-prof">{n.prof}</span>
+                                </div>
+
+                                <div className="notification-message">
+                                {n.message.length > 50
+                                    ? n.message.slice(0, 50) + "..."
+                                    : n.message}
+                                </div>
+                            </div>
+
+                            <div className="notification-time">
+                                {n.time}
+                            </div>
+                            </div>
+                        ))
+                    )}
+                    </div>
+                </div>
+
+                {/* RIGHT DETAILS */}
+                <div
+                className={`notification-preview ${
+                    !selectedNotification ? "is-empty" : ""
+                }`}
+                >
+                {!selectedNotification ? (
+                    <div className="preview-empty">
+                    <EnvelopeClosedIcon className="preview-empty-icon" />
+                    <div className="preview-empty-text">
+                        Select a Notification to View Details
+                    </div>
+                    </div>
+                ) : (
+                    <>
+                    <div className="preview-time">
+                        {selectedNotification.time}
+                    </div>
+
+                    <h2 className={`preview-title ${selectedNotification.type}`}>
+                        {selectedNotification.type.toUpperCase()}
+                    </h2>
+
+                    <div className="preview-course">
+                        {selectedNotification.course}
+                    </div>
+
+                    <div className="preview-prof">
+                        {selectedNotification.prof}
+                    </div>
+
+                    <p className="preview-text">
+                        {selectedNotification.message}
+                    </p>
+                    </>
+                )}
+                </div>
+
+                </div>
+            )
+        },
           // ATTENDANCE APPEAL
           {
             label: "Attendance Appeal",
@@ -1437,7 +1736,7 @@ export default function Student() {
 
                       {records.length === 0 ? (
                         <div className="appeal-empty">
-                          No attendance issues today
+                          No attendance issues
                         </div>
                       ) : (
                         records.map((record, index) => (
@@ -1467,13 +1766,13 @@ export default function Student() {
                               Class: {record.classStart} – {record.classEnd}
                             </div>
 
-                            {record.status === "LATE" && (
+                            {record.status === "Late" && (
                               <div className="appeal-item-reason">
                                 {getLateReason(record)}
                               </div>
                             )}
 
-                            {record.status === "ABSENT" && (
+                            {record.status === "Absent" && (
                               <div className="appeal-item-reason">
                                 No face recognition detected during class session.
                               </div>
@@ -1610,147 +1909,7 @@ export default function Student() {
                 </div>
               </div>
             )
-          },
-        {
-            // NOTIFICATIONS
-            label: "Notifications",
-            Icon: BellIcon,
-            panels: [
-                <div key="total-courses" className="student-panel-card notifications">
-                <BookmarkIcon className="student-panel-icon" />
-                <div className="student-panel-content">
-                    <div className="student-panel-label">Total Unread Notifications</div>
-                    <div className="student-panel-value">{totalCourses}</div>
-                    <div className="student-panel-sub">From current semester</div>
-                </div>
-                </div>,
-
-                <div key="attendance-rate" className="student-panel-card alerts">
-                <ExclamationTriangleIcon className="student-panel-icon" />
-                <div className="student-panel-content">
-                    <div className="student-panel-label">Attendance Alerts</div>
-                    <div className="student-panel-value">{attendanceAlerts}</div>
-                    <div className="student-panel-sub">Recorded late and absence incidents</div>
-                </div>
-                </div>,
-
-                <div key="present-days" className="student-panel-card warnings">
-                <ExclamationTriangleIcon className="student-panel-icon" />
-                <div className="student-panel-content">
-                    <div className="student-panel-label">Warnings Messages Recieved</div>
-                    <div className="student-panel-value">{warnings}</div>
-                    <div className="student-panel-sub">Messages regarding attendance issues</div>
-                </div>
-                </div>,
-            ],
-            content: (
-                // inside the Notifications link -> content:
-                <div className="notifications-container">
-                {/* LEFT LIST */}
-                <div className="notifications-list">
-                    <div className="notifications-tabs">
-                    <button
-                        className={`notif-tab ${activeSemester === "first" ? "active" : ""}`}
-                        onClick={() => setActiveSemester("first")}
-                    >
-                        1st Sem
-                    </button>
-
-                    <button
-                        className={`notif-tab ${activeSemester === "second" ? "active" : ""}`}
-                        onClick={() => setActiveSemester("second")}
-                    >
-                        2nd Sem
-                    </button>
-                    </div>
-
-                    <div className="notifications-scroll">
-                    {notifications.filter(n => n.semester === activeSemester).length === 0 ? (
-                        <div className="notifications-empty">
-                        No notifications for this semester
-                        </div>
-                    ) : (
-                        notifications
-                        .filter(n => n.semester === activeSemester)
-                        .map((n, i) => (
-                            <div
-                            key={i}
-                            className={`notification-item ${n.type} ${
-                                selectedNotification === n ? "active" : ""
-                            }`}
-                            onClick={() => setSelectedNotification(n)}
-                            >
-                            <div className="notification-type">
-                                {n.type.toUpperCase()}
-                            </div>
-
-                            <div className="notification-body">
-                                <div className="notification-code">
-                                {n.code.replace("_", " ")}
-                                </div>
-
-                                <div className="notification-title-row">
-                                <span className="notification-title">{n.course}</span>
-                                <span className="notification-prof">{n.prof}</span>
-                                </div>
-
-                                <div className="notification-message">
-                                {n.message.length > 50
-                                    ? n.message.slice(0, 50) + "..."
-                                    : n.message}
-                                </div>
-                            </div>
-
-                            <div className="notification-time">
-                                {n.time}
-                            </div>
-                            </div>
-                        ))
-                    )}
-                    </div>
-                </div>
-
-                {/* RIGHT DETAILS */}
-                <div
-                className={`notification-preview ${
-                    !selectedNotification ? "is-empty" : ""
-                }`}
-                >
-                {!selectedNotification ? (
-                    <div className="preview-empty">
-                    <EnvelopeClosedIcon className="preview-empty-icon" />
-                    <div className="preview-empty-text">
-                        Select a Notification to View Details
-                    </div>
-                    </div>
-                ) : (
-                    <>
-                    <div className="preview-time">
-                        {selectedNotification.time}
-                    </div>
-
-                    <h2 className={`preview-title ${selectedNotification.type}`}>
-                        {selectedNotification.type.toUpperCase()}
-                    </h2>
-
-                    <div className="preview-course">
-                        {selectedNotification.course}
-                    </div>
-
-                    <div className="preview-prof">
-                        {selectedNotification.code} · {selectedNotification.prof}
-                    </div>
-
-                    <p className="preview-text">
-                        {selectedNotification.message}
-                    </p>
-                    </>
-                )}
-                </div>
-
-                </div>
-            )
-        }
+          }
       ]}
     />
   );

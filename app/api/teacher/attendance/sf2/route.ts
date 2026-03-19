@@ -31,10 +31,10 @@ export async function GET(req: Request) {
         const monthStr = searchParams.get('month')
         const yearStr = searchParams.get('year')
 
-        if (!courseId || !section || !monthStr || !yearStr) {
+        if (!courseId || !monthStr || !yearStr) {
             return NextResponse.json({
                 success: false,
-                error: 'course, section, month, and year parameters are required'
+                error: 'course, month, and year parameters are required'
             }, { status: 400 })
         }
 
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
 
         // Verify teacher owns this section
         const courseCheck = await db.query(
-            `SELECT s.id, c.name FROM section s INNER JOIN course c ON s.course = c.id WHERE s.id = $1 AND s.teacher = $2 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
+            `SELECT s.id, c.name, s.name as section_name FROM section s INNER JOIN course c ON s.course = c.id WHERE s.id = $1 AND s.teacher = $2 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
             [courseId, user.id]
         )
 
@@ -56,6 +56,7 @@ export async function GET(req: Request) {
         }
 
         const courseName = courseCheck.rows[0].name
+        const sectionName = courseCheck.rows[0].section_name
 
         // Get the teacher's display name
         const teacherResult = await db.query(
@@ -76,11 +77,9 @@ export async function GET(req: Request) {
                 a.username as name
             FROM enrollment_data e
             INNER JOIN account a ON e.student = a.id
-            LEFT JOIN student_data sd ON sd.student = a.id
             WHERE e.section = $1
-              AND COALESCE(sd.section, 'Unassigned') = $2
             ORDER BY a.username ASC
-        `, [courseId, section])
+        `, [courseId])
 
         const students = studentsResult.rows
 
@@ -228,7 +227,7 @@ export async function GET(req: Request) {
             success: true,
             data: {
                 courseName,
-                section,
+                section: sectionName,
                 month: monthNames[month - 1],
                 monthNum: month,
                 year,

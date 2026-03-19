@@ -24,56 +24,66 @@ export async function GET(req: Request) {
             }, { status: 400 })
         }
 
-        // Verify teacher owns this course
-        const courseCheck = await db.query(
-            `SELECT s.id, c.name FROM section s INNER JOIN course c ON s.course = c.id WHERE s.id = $1 AND s.teacher = $2 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
+        // Find the parent course for this section, then get all sibling sections
+        const parentResult = await db.query(
+            `SELECT s.course FROM section s WHERE s.id = $1 AND s.teacher = $2`,
             [courseId, user.id]
         )
 
-        if (courseCheck.rows.length === 0) {
+        if (parentResult.rows.length === 0) {
             return NextResponse.json({
                 success: false,
                 error: 'Course not found or not assigned to you'
             }, { status: 404 })
         }
 
-        // Get all sections for this course
-        const sectionsResult = await db.query(`
-            SELECT DISTINCT COALESCE(sd.section, 'Unassigned') as section
-            FROM enrollment_data e
-            INNER JOIN account a ON e.student = a.id
-            LEFT JOIN student_data sd ON sd.student = a.id
-            WHERE e.section = $1
-            ORDER BY section
-        `, [courseId])
+        const parentCourseId = parentResult.rows[0].course
 
-        const sections = sectionsResult.rows.map(r => r.section)
+        // Get course name
+        const courseNameResult = await db.query(
+            `SELECT name FROM course WHERE id = $1 AND school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
+            [parentCourseId]
+        )
+
+        if (courseNameResult.rows.length === 0) {
+            return NextResponse.json({
+                success: false,
+                error: 'Course not found in active school year'
+            }, { status: 404 })
+        }
+
+        const courseName = courseNameResult.rows[0].name
+
+        // Get all sibling sections of this course taught by this teacher
+        const sectionsResult = await db.query(`
+            SELECT s.id, s.name
+            FROM section s
+            WHERE s.course = $1 AND s.teacher = $2
+            ORDER BY s.name
+        `, [parentCourseId, user.id])
+
+        const sections = sectionsResult.rows // { id, name }
 
         // For each section, calculate attendance rate and breakdown
-        const sectionStats = await Promise.all(sections.map(async (section) => {
-            // Get enrolled students count in this section
+        const sectionStats = await Promise.all(sections.map(async (sec) => {
+            // Get enrolled students count
             const enrolledResult = await db.query(`
                 SELECT COUNT(DISTINCT e.student) as enrolled_count
                 FROM enrollment_data e
-                INNER JOIN account a ON e.student = a.id
-                LEFT JOIN student_data sd ON sd.student = a.id
-                WHERE e.section = $1 AND COALESCE(sd.section, 'Unassigned') = $2
-            `, [courseId, section])
+                WHERE e.section = $1
+            `, [sec.id])
             const enrolledCount = parseInt(enrolledResult.rows[0]?.enrolled_count || '0')
 
-            // Get explicit attendance counts from DB only (no formula inference)
-            // absent = only rows with attendance=0 (camera pushes these at class end)
+            // Get attendance counts from records
             const attendanceResult = await db.query(`
                 SELECT 
                     COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
                     COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
                     COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
                 FROM record r
-                INNER JOIN student_data sd ON r.student = sd.student
                 WHERE r.course = $1
-                  AND COALESCE(sd.section, 'Unassigned') = $2
                   AND r.time IS NOT NULL
-            `, [courseId, section])
+            `, [sec.id])
 
             const presentCount = parseInt(attendanceResult.rows[0]?.present_count || '0')
             const lateCount = parseInt(attendanceResult.rows[0]?.late_count || '0')
@@ -84,7 +94,7 @@ export async function GET(req: Request) {
                 : 0
 
             return {
-                section,
+                section: sec.name,
                 studentCount: enrolledCount,
                 presentCount,
                 lateCount,
@@ -101,42 +111,49 @@ export async function GET(req: Request) {
             : 0
 
         // Get monthly breakdown per section for trend chart
+        const sectionIds = sections.map(s => s.id)
         const monthlyResult = await db.query(`
             SELECT 
-                COALESCE(sd.section, 'Unassigned') as section,
+                r.course as section_id,
                 TO_CHAR(r.time, 'Mon') as month,
                 EXTRACT(MONTH FROM r.time) as month_num,
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
             FROM record r
-            INNER JOIN student_data sd ON r.student = sd.student
-            WHERE r.course = $1
+            WHERE r.course = ANY($1::uuid[])
               AND r.time IS NOT NULL
-            GROUP BY sd.section, TO_CHAR(r.time, 'Mon'), EXTRACT(MONTH FROM r.time)
+            GROUP BY r.course, TO_CHAR(r.time, 'Mon'), EXTRACT(MONTH FROM r.time)
             ORDER BY month_num
-        `, [courseId])
+        `, [sectionIds])
+
+        // Build a map from section ID to section name
+        const sectionNameMap: Record<string, string> = {}
+        for (const sec of sections) {
+            sectionNameMap[sec.id] = sec.name
+        }
 
         // Build monthly comparison data
         const monthNums = [...new Set(monthlyResult.rows.map(r => parseInt(r.month_num)))].sort((a, b) => a - b)
+        const sectionNames = sections.map(s => s.name)
         const monthlyComparison = monthNums.map(monthNum => {
             const monthRow = monthlyResult.rows.find(r => parseInt(r.month_num) === monthNum)
             const entry: Record<string, any> = {
                 month: monthRow?.month || '',
             }
 
-            for (const section of sections) {
+            for (const sec of sections) {
                 const sectionRow = monthlyResult.rows.find(
-                    r => parseInt(r.month_num) === monthNum && r.section === section
+                    r => parseInt(r.month_num) === monthNum && r.section_id === sec.id
                 )
                 if (sectionRow) {
                     const present = parseInt(sectionRow.present_count)
                     const late = parseInt(sectionRow.late_count)
                     const absent = parseInt(sectionRow.absent_count)
                     const total = present + late + absent
-                    entry[section] = total > 0 ? Math.round((present / total) * 100 * 10) / 10 : 0
+                    entry[sec.name] = total > 0 ? Math.round((present / total) * 100 * 10) / 10 : 0
                 } else {
-                    entry[section] = 0
+                    entry[sec.name] = 0
                 }
             }
 
@@ -146,11 +163,11 @@ export async function GET(req: Request) {
         return NextResponse.json({
             success: true,
             data: {
-                courseName: courseCheck.rows[0].name,
+                courseName,
                 sections: sectionStats,
                 courseAvgRate,
                 monthlyComparison,
-                sectionNames: sections
+                sectionNames
             }
         })
     } catch (error) {

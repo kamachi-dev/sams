@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx'
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
-type ParsedStudent = { name: string; email: string }
+type ParsedStudent = { name: string; email: string; parentEmail?: string }
 type ParsedScheduleSlot = { day: string; start: string; end: string }
 type ParsedCourseBlock = {
     name: string
@@ -26,7 +26,7 @@ type ParsedCourseBlock = {
  *   ,schedule
  *     ,,Day, start_time, end_time
  *   ,students
- *     ,,Name, Email
+ *     ,,Name, Email, ParentEmail(optional)
  * CourseName            (same course, different section)
  *   ,section, Section B
  *   ...
@@ -89,6 +89,7 @@ function parseScheduleXlsx(buffer: Buffer): ParsedCourseBlock[] {
                 current.students.push({
                     name: col2,
                     email: col3 || col2,
+                    parentEmail: col4 || undefined,
                 })
             }
         }
@@ -166,6 +167,10 @@ export async function POST(req: Request) {
             studentsCreated: 0,
             studentsExisting: 0,
             studentDataCreated: 0,
+            parentLinksUpserted: 0,
+            parentsCreated: 0,
+            parentsExisting: 0,
+            teacherDataUpserted: 0,
             coursesCreated: 0,
             sectionsCreated: 0,
             enrollments: 0,
@@ -215,18 +220,50 @@ export async function POST(req: Request) {
                     if (accountId) {
                         studentIds.push(accountId)
 
-                        // Ensure student_data record exists; use section from the block
+                        // Ensure student_data record exists.
                         try {
                             const sdExists = await db.query(
                                 `SELECT id FROM student_data WHERE student = $1 LIMIT 1`,
                                 [accountId],
                             )
                             if (!sdExists.rows.length) {
-                                await db.query(
-                                    `INSERT INTO student_data (student, section) VALUES ($1, $2)`,
-                                    [accountId, block.section],
-                                )
+                                // Keep compatibility across schema variants.
+                                // Some environments define student_data.section, some do not.
+                                try {
+                                    await db.query(
+                                        `INSERT INTO student_data (student, section) VALUES ($1, $2)`,
+                                        [accountId, block.section],
+                                    )
+                                } catch {
+                                    await db.query(
+                                        `INSERT INTO student_data (student) VALUES ($1)`,
+                                        [accountId],
+                                    )
+                                }
                                 results.studentDataCreated++
+                            }
+
+                            // If a parent email is provided, ensure parent account exists and link it.
+                            if (s.parentEmail) {
+                                const parentExisted = await getAccountIdByEmail(s.parentEmail)
+                                const parentId = await resolveOrCreateAccount(s.parentEmail, s.parentEmail.split('@')[0], 2)
+
+                                if (parentExisted) {
+                                    results.parentsExisting++
+                                } else if (parentId) {
+                                    results.parentsCreated++
+                                }
+
+                                if (parentId) {
+                                    await db.query(
+                                        `UPDATE student_data
+                                         SET parent = $2
+                                         WHERE student = $1
+                                           AND (parent IS DISTINCT FROM $2)`,
+                                        [accountId, parentId],
+                                    )
+                                    results.parentLinksUpserted++
+                                }
                             }
                         } catch (sdErr) {
                             results.errors.push(`student_data for ${s.name} (${s.email}): ${String(sdErr)}`)
@@ -291,6 +328,19 @@ export async function POST(req: Request) {
                 )
                 const sectionId = sectionResult.rows[0].id
                 results.sectionsCreated++
+
+                // Keep teacher_data synchronized with imported section ownership.
+                if (teacherId) {
+                    await db.query(
+                        `INSERT INTO teacher_data (teacher_id, course_id, advisory_section)
+                         VALUES ($1, $2, $3)
+                         ON CONFLICT (teacher_id)
+                         DO UPDATE SET course_id = EXCLUDED.course_id,
+                                       advisory_section = EXCLUDED.advisory_section`,
+                        [teacherId, sectionId, block.section],
+                    )
+                    results.teacherDataUpserted++
+                }
 
                 /* ── 5. Enroll students ── */
                 if (studentIds.length) {

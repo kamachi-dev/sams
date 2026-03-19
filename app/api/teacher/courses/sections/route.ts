@@ -24,9 +24,9 @@ export async function GET(req: Request) {
             }, { status: 400 })
         }
 
-        // Verify teacher owns this section
+        // Verify teacher owns this section and get parent course
         const courseCheck = await db.query(
-            `SELECT s.id, c.name FROM section s INNER JOIN course c ON s.course = c.id WHERE s.id = $1 AND s.teacher = $2 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
+            `SELECT s.id, s.course as parent_course_id, c.name FROM section s INNER JOIN course c ON s.course = c.id WHERE s.id = $1 AND s.teacher = $2 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
             [courseId, user.id]
         )
 
@@ -37,32 +37,36 @@ export async function GET(req: Request) {
             }, { status: 404 })
         }
 
-        // Get distinct sections for this course with student counts
+        const parentCourseId = courseCheck.rows[0].parent_course_id
+
+        // Get all sibling sections of the same parent course (taught by this teacher) with student counts
         const result = await db.query(`
             SELECT 
-                COALESCE(sd.section, 'Unassigned') as section,
+                s.id as section_id,
+                s.name as section,
                 COUNT(DISTINCT e.student) as student_count
-            FROM enrollment_data e
-            INNER JOIN account a ON e.student = a.id
-            LEFT JOIN student_data sd ON sd.student = a.id
-            WHERE e.section = $1
-            GROUP BY sd.section
-            ORDER BY sd.section
-        `, [courseId])
+            FROM section s
+            LEFT JOIN enrollment_data e ON e.section = s.id
+            WHERE s.course = $1
+              AND s.teacher = $2
+            GROUP BY s.id, s.name
+            ORDER BY s.name
+        `, [parentCourseId, user.id])
 
         // Get student names per section
         const studentsResult = await db.query(`
             SELECT 
-                COALESCE(sd.section, 'Unassigned') as section,
+                s.name as section,
                 a.username as name
             FROM enrollment_data e
+            INNER JOIN section s ON e.section = s.id
             INNER JOIN account a ON e.student = a.id
-            LEFT JOIN student_data sd ON sd.student = a.id
-            WHERE e.section = $1
-            ORDER BY sd.section, a.username
-        `, [courseId])
+            WHERE s.course = $1
+              AND s.teacher = $2
+            ORDER BY s.name, a.username
+        `, [parentCourseId, user.id])
 
-        // Group students by section
+        // Group students by section name
         const studentsBySection: Record<string, string[]> = {}
         for (const row of studentsResult.rows) {
             if (!studentsBySection[row.section]) {
@@ -77,6 +81,7 @@ export async function GET(req: Request) {
                 course: courseCheck.rows[0],
                 sections: result.rows.map(row => ({
                     section: row.section,
+                    sectionId: row.section_id,
                     studentCount: parseInt(row.student_count),
                     students: (studentsBySection[row.section] || []).sort((a: string, b: string) => a.localeCompare(b))
                 }))

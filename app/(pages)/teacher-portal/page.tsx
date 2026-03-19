@@ -40,7 +40,6 @@ import {
 import { useState, useEffect, useRef } from "react";
 import './styles.css';
 import '../student-portal/styles.css';
-import { attendanceAppeals } from "../teacher-portal/constants";
 
 // Types for low attendance students
 interface LowAttendanceStudent {
@@ -49,6 +48,7 @@ interface LowAttendanceStudent {
     email: string;
     courseId: string;
     courseName: string;
+    sectionId: string;
     section: string;
     totalRecords: number;
     presentCount: number;
@@ -76,25 +76,41 @@ interface SectionComparisonData {
     sectionNames: string[];
 }
 
-//Temporary for student appeal
-function TeacherAppealsSection({ courses }: any) {
+interface Appeal {
+    id: number;
+    studentName: string;
+    section: string;
+    courseId: string;
+    course: string;
+    date: string;
+    recordedStatus: string;
+    requestedStatus: string;
+    reason: string;
+    status: "pending" | "approved" | "rejected";
+    submittedAt: string;
+    reviewedBy: string | null;
+    teacherResponse: string | null;
+}
 
-    const [appeals, setAppeals] = useState(attendanceAppeals);
-    const [selectedAppeal, setSelectedAppeal] = useState<any>(null);
+//Teacher Appeal Section - Database-driven
+function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals }: { courses: any[]; appeals: Appeal[]; setAppeals: (appeals: Appeal[] | ((prev: Appeal[]) => Appeal[])) => void; isLoadingAppeals: boolean }) {
+
+    const [selectedAppeal, setSelectedAppeal] = useState<Appeal | null>(null);
+    const [appealError, setAppealError] = useState<string | null>(null);
+    const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
 
     const [selectedCourseFilter, setSelectedCourseFilter] = useState("all");
     const [selectedSectionFilter, setSelectedSectionFilter] = useState("all");
 
     const [teacherResponse, setTeacherResponse] = useState("");
 
-    // Appeals would normally be fetched from the database, but for this demo we use hardcoded data from constants.ts. The filtering and review logic is implemented here to demonstrate the UI and interactions.
     const pendingAppeals = appeals.filter(a => a.status === "pending");
 
     const appealHistory = appeals.filter(
         a => a.status === "approved" || a.status === "rejected"
     );
-    const filteredAppeals = pendingAppeals.filter(a => {
 
+    const filteredAppeals = pendingAppeals.filter(a => {
         if (selectedCourseFilter !== "all" && a.courseId !== selectedCourseFilter)
             return false;
 
@@ -103,30 +119,58 @@ function TeacherAppealsSection({ courses }: any) {
 
         return true;
     });
-    // End of Temporary for student appeal
 
+    const handleDecision = async (decision: "approved" | "rejected") => {
+        if (!selectedAppeal || !teacherResponse.trim()) {
+            alert('Please enter a response before submitting');
+            return;
+        }
 
-    const handleDecision = (status: "approved" | "rejected") => {
-        if (!selectedAppeal) return;
-        setAppeals(prev =>
-            prev.map(a =>
-                a.id === selectedAppeal.id
-                    ? {
-                        ...a,
-                        status,
-                        teacherResponse,
-                        reviewedBy: "Your"
-                    }
-                    : a
-            )
-        );
-        // CLEAR SELECTION
-        setSelectedAppeal(null);
-        // CLEAR RESPONSE FIELD
-        setTeacherResponse("");
+        try {
+            setIsSubmittingDecision(true);
+            const response = await fetch(`/api/teacher/appeals/${selectedAppeal.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    decision,
+                    teacherResponse
+                })
+            });
 
+            const result = await response.json();
+
+            if (result.success) {
+                // Update appeals state - remove from pending and add to history
+                setAppeals(prev => prev.map(a =>
+                    a.id === selectedAppeal.id
+                        ? {
+                            ...a,
+                            status: decision,
+                            teacherResponse,
+                            reviewedBy: "You"
+                        }
+                        : a
+                ));
+
+                // Clear selection
+                setSelectedAppeal(null);
+                setTeacherResponse("");
+            } else {
+                alert(result.error || 'Failed to review appeal');
+            }
+        } catch (error) {
+            console.error('Error submitting decision:', error);
+            alert('Failed to submit decision. Please try again.');
+        } finally {
+            setIsSubmittingDecision(false);
+        }
     };
 
+    if (isLoadingAppeals) {
+        return <div className="appeal-container"><div style={{ padding: '20px' }}>Loading appeals...</div></div>;
+    }
 
     return (
 
@@ -238,23 +282,23 @@ function TeacherAppealsSection({ courses }: any) {
                                         <textarea
                                             value={teacherResponse}
                                             onChange={(e) => setTeacherResponse(e.target.value)}
-                                            disabled={!selectedAppeal}
+                                            disabled={!selectedAppeal || isSubmittingDecision}
                                         />
                                     </div>
                                     <div className="teacher-appeal-actions">
                                         <button
                                             className="teacher-approve-btn"
                                             onClick={() => handleDecision("approved")}
-                                            disabled={!selectedAppeal}
+                                            disabled={!selectedAppeal || isSubmittingDecision}
                                         >
-                                            Approve
+                                            {isSubmittingDecision ? 'Submitting...' : 'Approve'}
                                         </button>
                                         <button
                                             className="teacher-reject-btn"
                                             onClick={() => handleDecision("rejected")}
-                                            disabled={!selectedAppeal}
+                                            disabled={!selectedAppeal || isSubmittingDecision}
                                         >
-                                            Reject
+                                            {isSubmittingDecision ? 'Submitting...' : 'Reject'}
                                         </button>
                                     </div>
                                 </div>
@@ -307,7 +351,7 @@ function TeacherAppealsSection({ courses }: any) {
         </div>
     );
 }
-// End of temporary component
+// End of Teacher Appeal Section
 
 export default function Teacher() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -426,6 +470,8 @@ export default function Teacher() {
     }>>([]);
     const [isLoadingRecords, setIsLoadingRecords] = useState(true);
     const [courses, setCourses] = useState<Array<{ id: string; name: string; schedule?: string; studentCount?: number; sectionCount?: number; sectionNames?: string[]; sections?: Array<{ name: string; studentCount: number }> }>>([]);
+    const [appeals, setAppeals] = useState<Appeal[]>([]);
+    const [isLoadingAppeals, setIsLoadingAppeals] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState("");
     const [selectedChartCourse, setSelectedChartCourse] = useState("all");
     const [semesterAttendance, setSemesterAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
@@ -433,9 +479,12 @@ export default function Teacher() {
     // Overview drill-down state
     const [overviewStep, setOverviewStep] = useState<'courses' | 'sections' | 'stats'>('courses');
     const [selectedOverviewCourse, setSelectedOverviewCourse] = useState<{ id: string; name: string } | null>(null);
-    const [courseSections, setCourseSections] = useState<Array<{ section: string; studentCount: number; students?: string[] }>>([]);
+    const [courseSections, setCourseSections] = useState<Array<{ section: string; sectionId?: string; studentCount: number; students?: string[] }>>([]);
     const [selectedSection, setSelectedSection] = useState<string>("");
     const [isLoadingSections, setIsLoadingSections] = useState(false);
+
+    // Active tab state (for programmatic tab switching)
+    const [activeTab, setActiveTab] = useState("Overview");
 
     // Low Attendance Students State
     const [lowAttendanceStudents, setLowAttendanceStudents] = useState<LowAttendanceStudent[]>([]);
@@ -459,7 +508,7 @@ export default function Teacher() {
     const [riskStep, setRiskStep] = useState<'courses' | 'sections' | 'list'>('courses');
     const [riskCourse, setRiskCourse] = useState<{ id: string; name: string } | null>(null);
     const [riskSection, setRiskSection] = useState<string>('');
-    const [riskSections, setRiskSections] = useState<Array<{ section: string; studentCount: number; students?: string[] }>>([]);
+    const [riskSections, setRiskSections] = useState<Array<{ section: string; sectionId?: string; studentCount: number; students?: string[] }>>([]);
     const [isLoadingRiskSections, setIsLoadingRiskSections] = useState(false);
 
     // Section Comparison Analytics State
@@ -482,10 +531,10 @@ export default function Teacher() {
 
     // Computed at-risk values from allAtRiskStudents
     const totalAtRiskStudents = new Set(allAtRiskStudents.map(s => s.id)).size;
-    const sectionsWithAtRisk = new Set(allAtRiskStudents.map(s => `${s.courseId}:${s.section}`).filter(Boolean)).size;
-    const atRiskCountByCourse = (courseId: string) => allAtRiskStudents.filter(s => s.courseId === courseId).length;
-    const atRiskStudentsForSection = (courseId: string, section: string) =>
-        allAtRiskStudents.filter(s => s.courseId === courseId && s.section === section);
+    const sectionsWithAtRisk = new Set(allAtRiskStudents.map(s => s.sectionId).filter(Boolean)).size;
+    const atRiskCountByCourse = (courseId: string) => allAtRiskStudents.filter(s => s.sectionId === courseId).length;
+    const atRiskStudentsForSection = (sectionId: string) =>
+        allAtRiskStudents.filter(s => s.sectionId === sectionId);
 
     // Trend Data State
     const [dailyTrendData, setDailyTrendData] = useState<Array<{
@@ -626,6 +675,27 @@ export default function Teacher() {
         };
         
         fetchStudentCount();
+    }, []);
+
+    // Fetch appeals from database
+    useEffect(() => {
+        const fetchAppealsCounts = async () => {
+            try {
+                setIsLoadingAppeals(true);
+                const response = await fetch('/api/teacher/appeals');
+                const result = await response.json();
+
+                if (result.success) {
+                    setAppeals(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching appeals:', error);
+            } finally {
+                setIsLoadingAppeals(false);
+            }
+        };
+
+        fetchAppealsCounts();
     }, []);
 
     // Fetch all at-risk students across all courses (for overview card + annotations)
@@ -1159,7 +1229,7 @@ export default function Teacher() {
                 drawFooter(1, 3);
 
                 // ════════════════════════════════════════════════════
-                // ── PAGE 2: SAMS Analytics + Confidence Summary ──
+                // ── PAGE 2: SAMS Analytics ──
                 // ════════════════════════════════════════════════════
                 doc.addPage();
                 curY = 10;
@@ -1179,10 +1249,7 @@ export default function Teacher() {
                 doc.text('These metrics are generated automatically by the Student Attendance Management System (SAMS). Not part of standard SF2.', mL, curY);
                 curY += 6;
 
-                // ── Left column: Attendance Rate  |  Right column: Confidence table ──
-                const halfW = contentW / 2 - 4;
-
-                // === LEFT: Overall Attendance Rate ===
+                // === Overall Attendance Rate ===
                 let actualGP = 0, actualGL = 0, actualGA = 0, actualGR = 0;
                 for (const s of students) {
                     actualGP += s.totalPresent;
@@ -1196,12 +1263,12 @@ export default function Teacher() {
                 // Section card background
                 const cardY = curY;
                 doc.setFillColor(...lightBg);
-                doc.roundedRect(mL, cardY, halfW, 70, 2, 2, 'F');
+                doc.roundedRect(mL, cardY, contentW, 70, 2, 2, 'F');
 
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(46, 125, 50);
-                doc.text('1. Overall Attendance Rate', mL + 4, curY + 6);
+                doc.text('Overall Attendance Rate', mL + 4, curY + 6);
 
                 let leftY = curY + 13;
                 doc.setFontSize(8);
@@ -1226,16 +1293,16 @@ export default function Teacher() {
                 // Big highlighted rate
                 leftY += 2;
                 doc.setFillColor(255, 255, 255);
-                doc.roundedRect(mL + 6, leftY - 4, halfW - 12, 12, 1.5, 1.5, 'F');
+                doc.roundedRect(mL + 6, leftY - 4, contentW - 12, 12, 1.5, 1.5, 'F');
                 doc.setDrawColor(200, 200, 200);
-                doc.roundedRect(mL + 6, leftY - 4, halfW - 12, 12, 1.5, 1.5, 'S');
+                doc.roundedRect(mL + 6, leftY - 4, contentW - 12, 12, 1.5, 1.5, 'S');
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(...navy);
                 doc.text('Overall Attendance Rate:', mL + 10, leftY + 3);
                 doc.setFontSize(14);
                 doc.setTextColor(...rateColor);
-                doc.text(`${overallR}%`, mL + halfW - 16, leftY + 4, { align: 'right' });
+                doc.text(`${overallR}%`, mL + contentW - 10, leftY + 4, { align: 'right' });
 
                 leftY += 13;
                 doc.setFontSize(6.5);
@@ -1243,80 +1310,12 @@ export default function Teacher() {
                 doc.setTextColor(140, 140, 140);
                 doc.text('Days with no detection are excluded from this calculation.', mL + 6, leftY);
 
-                // === RIGHT: Face Detection Confidence Table ===
-                const rightX = mL + halfW + 8;
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(46, 125, 50);
-                doc.text('2. Face Detection Confidence', rightX, curY + 6);
-
-                const confHead = [['No.', 'Student Name', 'Det.', 'Avg. Conf.', 'Rating']];
-                const allConfs: number[] = [];
-                let totalDets = 0;
-                const confBody = students.map((s: any, i: number) => {
-                    const dets = s.totalDetections || 0;
-                    const avgC = s.avgConfidence;
-                    const avgPct = avgC != null ? (avgC * 100).toFixed(1) + '%' : 'N/A';
-                    let rating = 'No Data';
-                    if (avgC != null) {
-                        if (avgC >= 0.90) rating = 'Excellent';
-                        else if (avgC >= 0.75) rating = 'Good';
-                        else if (avgC >= 0.50) rating = 'Fair';
-                        else rating = 'Low';
-                    }
-                    const rc: [number, number, number] = rating === 'Excellent' ? green : rating === 'Good' ? [66, 133, 244] : rating === 'Fair' ? yellow : rating === 'Low' ? red : gray;
-                    if (avgC != null) allConfs.push(avgC);
-                    totalDets += dets;
-                    return [
-                        { content: String(i + 1), styles: { halign: 'center' as const, textColor: gray } },
-                        s.name,
-                        { content: String(dets), styles: { halign: 'center' as const } },
-                        { content: avgPct, styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
-                        { content: rating, styles: { halign: 'center' as const, fontStyle: 'bold' as const, textColor: rc } },
-                    ];
-                });
-
-                autoTable(doc, {
-                    startY: curY + 9,
-                    head: confHead,
-                    body: confBody as any,
-                    theme: 'grid',
-                    styles: { fontSize: 7.5, cellPadding: 1.8, lineColor: [180, 180, 180], lineWidth: 0.15 },
-                    headStyles: { fillColor: navy, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', cellPadding: 2 },
-                    columnStyles: {
-                        0: { cellWidth: 8, halign: 'center' },
-                        1: { cellWidth: 'auto' },
-                        2: { cellWidth: 12, halign: 'center' },
-                        3: { cellWidth: 20, halign: 'center' },
-                        4: { cellWidth: 18, halign: 'center' },
-                    },
-                    alternateRowStyles: { fillColor: [248, 250, 253] },
-                    margin: { left: rightX, right: mR },
-                    tableWidth: halfW,
-                });
-
-                const confTableEndY = (doc as any).lastAutoTable.finalY;
-                const bottomOfCards = Math.max(cardY + 72, confTableEndY + 2);
-
-                // Confidence summary below table
-                let confSumY = confTableEndY + 4;
-                const overallAvgC = allConfs.length > 0 ? (allConfs.reduce((a, b) => a + b, 0) / allConfs.length * 100).toFixed(1) : 'N/A';
-                doc.setFontSize(7.5);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...darkText);
-                doc.text(`Detections: ${totalDets}   |   Avg. Confidence: ${overallAvgC !== 'N/A' ? overallAvgC + '%' : 'N/A'}   |   Students with Detections: ${allConfs.length}/${students.length}`, rightX, confSumY);
-                confSumY += 4;
-                doc.setFontSize(6.5);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(120, 120, 120);
-                doc.text('Rating: ≥90% Excellent  |  ≥75% Good  |  ≥50% Fair  |  <50% Low', rightX, confSumY);
-
                 // ── Per-student attendance summary table (full width below) ──
-                curY = Math.max(bottomOfCards, confSumY) + 8;
+                curY = cardY + 74;
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(46, 125, 50);
-                doc.text('3. Per-Student Attendance Summary', mL, curY);
+                doc.text('Per-Student Attendance Summary', mL, curY);
                 curY += 4;
 
                 const perStudentHead = [['No.', 'Student Name', 'Present', 'Late', 'Absent', 'No Detection', 'Total Records', 'Attendance Rate']];
@@ -1901,86 +1900,6 @@ export default function Teacher() {
             setCellSpan(R, 2, wideMergeSpan, 'Only actual database records are counted. Days with no detection (—) are not counted toward this rate.', { font: { italic: true, sz: 9, color: { rgb: '888888' } } });
             R += 2;
 
-            // ── 2. Face Detection Confidence Summary ──
-            setCell(R, 0, '2.', { font: { bold: true, sz: 11, color: { rgb: '2E7D32' } } });
-            setCell(R, 1, 'Face Detection Confidence Summary', { font: { bold: true, sz: 11, color: { rgb: '2E7D32' } } });
-            R += 1;
-
-            setCell(R, 1, 'This section shows the average confidence of the facial recognition detections for each', sectionSubtitleStyle);
-            R++;
-            setCell(R, 1, 'student where they were marked Present or Late via the SAMS camera module.', sectionSubtitleStyle);
-            R += 1;
-
-            // Detection table header — uses col 0 for No., col 1 (32ch) for Name, merged pairs for data
-            setCell(R, 0, 'No.', detectionTableHeaderStyle);
-            setCell(R, 1, 'Student Name', detectionTableHeaderStyle);
-            setCellSpan(R, 2, 2, 'Detections', detectionTableHeaderStyle);
-            setCellSpan(R, 4, 2, 'Avg. Confidence', detectionTableHeaderStyle);
-            setCellSpan(R, 6, 2, 'Rating', detectionTableHeaderStyle);
-            R++;
-
-            // Per-student detection rows
-            let allConfidences: number[] = [];
-            let totalDetections = 0;
-            for (let i = 0; i < students.length; i++) {
-                const student = students[i];
-                const isEven = i % 2 === 0;
-                const rowBg = isEven ? 'FFFFFF' : 'F8FAFB';
-                const detections = student.totalDetections || 0;
-                const avgConf = student.avgConfidence;
-                const avgPct = avgConf != null ? (avgConf * 100).toFixed(1) + '%' : 'N/A';
-                let rating = 'No Data';
-                if (avgConf != null) {
-                    if (avgConf >= 0.90) rating = 'Excellent';
-                    else if (avgConf >= 0.75) rating = 'Good';
-                    else if (avgConf >= 0.50) rating = 'Fair';
-                    else rating = 'Low';
-                }
-
-                const ratingColor = rating === 'Excellent' ? '0F9D58' : rating === 'Good' ? '4285F4' : rating === 'Fair' ? 'F4B400' : rating === 'Low' ? 'DB4437' : '999999';
-
-                setCell(R, 0, i + 1, { ...numCellStyle, fill: { fgColor: { rgb: rowBg } }, font: { sz: 10, color: { rgb: '828282' } } });
-                setCell(R, 1, student.name, { ...nameCellStyle, fill: { fgColor: { rgb: rowBg } } });
-                setCellSpan(R, 2, 2, detections, { alignment: { horizontal: 'center' }, border, fill: { fgColor: { rgb: rowBg } }, font: { sz: 10 } });
-                setCellSpan(R, 4, 2, avgPct, { alignment: { horizontal: 'center' }, border, fill: { fgColor: { rgb: rowBg } }, font: { bold: true, sz: 10 } });
-                setCellSpan(R, 6, 2, rating, { alignment: { horizontal: 'center' }, border, fill: { fgColor: { rgb: rowBg } }, font: { bold: true, sz: 10, color: { rgb: ratingColor } } });
-                R++;
-
-                if (avgConf != null) allConfidences.push(avgConf);
-                totalDetections += detections;
-            }
-
-            // Detection summary
-            R++;
-            const overallAvgConf = allConfidences.length > 0
-                ? (allConfidences.reduce((a, b) => a + b, 0) / allConfidences.length * 100).toFixed(1)
-                : 'N/A';
-
-            setCell(R, 1, 'Total Face Detections:', analyticLabelStyle);
-            setCellSpan(R, 2, shortMergeSpan, totalDetections, analyticHighlightStyle);
-            R++;
-            setCell(R, 1, 'Overall Avg. Detection Confidence:', analyticLabelStyle);
-            setCellSpan(R, 2, shortMergeSpan, overallAvgConf !== 'N/A' ? `${overallAvgConf}%` : 'N/A', {
-                font: { bold: true, sz: 12, color: { rgb: overallAvgConf !== 'N/A' && parseFloat(overallAvgConf) >= 75 ? '0F9D58' : 'F4B400' } },
-                border,
-                alignment: { horizontal: 'center' },
-            });
-            R++;
-            setCell(R, 1, 'Students with Detections:', analyticLabelStyle);
-            setCellSpan(R, 2, shortMergeSpan, `${allConfidences.length} out of ${students.length}`, analyticHighlightStyle);
-            R++;
-
-            // Rating scale explanation
-            R++;
-            setCell(R, 1, 'Detection Confidence Rating Scale:', { font: { bold: true, sz: 10, color: { rgb: '333333' } } });
-            R++;
-            setCell(R, 1, '≥ 90%  =  Excellent', { font: { sz: 9, color: { rgb: '0F9D58' } } });
-            setCell(R, 3, '≥ 75%  =  Good', { font: { sz: 9, color: { rgb: '4285F4' } } });
-            R++;
-            setCell(R, 1, '≥ 50%  =  Fair', { font: { sz: 9, color: { rgb: 'F4B400' } } });
-            setCell(R, 3, '< 50%  =  Low', { font: { sz: 9, color: { rgb: 'DB4437' } } });
-            R += 2;
-
             setCell(R, 0, 'This report was generated by SAMS (Student Attendance Management System).', { font: { italic: true, sz: 9, color: { rgb: 'AAAAAA' } } });
             R += 2;
 
@@ -2150,7 +2069,7 @@ export default function Teacher() {
     ];
 
     return (
-        <SamsTemplate links={[
+        <SamsTemplate activeTab={activeTab} onTabChange={setActiveTab} links={[
             {
                 label: "Overview",
                 Icon: DashboardIcon,
@@ -2180,27 +2099,25 @@ export default function Teacher() {
                         </div>
                     </div>,
 
-                    <div key="student-count" className="teacher-panel-card present">
-                        <PersonIcon className="teacher-panel-icon" />
+                    <div key="at-risk-section" className="teacher-panel-card low-attendance-alert" style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                            if (selectedOverviewCourse && selectedSection) {
+                                setRiskCourse({ id: selectedOverviewCourse.id, name: selectedOverviewCourse.name });
+                                setRiskSection(selectedSection);
+                                setRiskStep('list');
+                                setActiveTab('Students at Risk');
+                            }
+                        }}
+                    >                        <ExclamationTriangleIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Total Number of Sections</div>
+                            <div className="teacher-panel-label">Students at Risk</div>
                             <div className="teacher-panel-value">
-                                {courseSections.length}
+                                {(() => {
+                                    const sectionData = courseSections.find(s => s.section === selectedSection);
+                                    return sectionData?.sectionId ? atRiskStudentsForSection(sectionData.sectionId).length : 0;
+                                })()}
                             </div>
-                            <div className="teacher-panel-sub">
-                                In {selectedOverviewCourse?.name || 'this course'}
-                            </div>
-                        </div>
-                    </div>,
-
-                    <div key="at-risk-sections" className="teacher-panel-card low-attendance-alert">
-                        <ExclamationTriangleIcon className="teacher-panel-icon" />
-                        <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Sections with Students at Risk</div>
-                            <div className="teacher-panel-value">
-                                {new Set(allAtRiskStudents.filter(s => s.courseId === selectedOverviewCourse?.id).map(s => s.section)).size}
-                            </div>
-                            <div className="teacher-panel-sub">Below {lowAttendanceThreshold}% attendance</div>
+                            <div className="teacher-panel-sub">Below {lowAttendanceThreshold}% in {selectedSection}</div>
                         </div>
                     </div>,
                 ] : [
@@ -2213,17 +2130,6 @@ export default function Teacher() {
                         </div>
                     </div>,
 
-                    <div key="attendance-rate" className="teacher-panel-card attendance">
-                        <CalendarIcon className="teacher-panel-icon" />
-                        <div className="teacher-panel-content">
-                            <div className="teacher-panel-label">Overall Attendance Rate</div>
-                            <div className="teacher-panel-value">{semesterAttendance.attendanceRate}%</div>
-                            <div className="teacher-panel-sub">
-                                {semesterAttendance.present} present out of {semesterAttendance.total} records
-                            </div>
-                        </div>
-                    </div>,
-
                     <div key="section-count" className="teacher-panel-card present">
                         <PersonIcon className="teacher-panel-icon" />
                         <div className="teacher-panel-content">
@@ -2233,6 +2139,17 @@ export default function Teacher() {
                             </div>
                             <div className="teacher-panel-sub">
                                 Across all your courses
+                            </div>
+                        </div>
+                    </div>,
+
+                    <div key="attendance-rate" className="teacher-panel-card attendance">
+                        <CalendarIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Overall Attendance Rate</div>
+                            <div className="teacher-panel-value">{semesterAttendance.attendanceRate}%</div>
+                            <div className="teacher-panel-sub">
+                                {semesterAttendance.present} present out of {semesterAttendance.total} records
                             </div>
                         </div>
                     </div>,
@@ -2361,6 +2278,7 @@ export default function Teacher() {
                                                 key={sec.section} 
                                                 className={`overview-section-card${isPinned ? ' overview-card-pinned' : ''}`}
                                                 onClick={() => {
+                                                    setSelectedOverviewCourse({ id: sec.sectionId!, name: selectedOverviewCourse!.name });
                                                     setSelectedSection(sec.section);
                                                     setOverviewStep('stats');
                                                 }}
@@ -2935,7 +2853,7 @@ export default function Teacher() {
                                             return aPin - bPin;
                                         }).map(sec => {
                                             const isPinned = sec.section === pinnedRiskSection;
-                                            const sectionAtRisk = riskCourse ? atRiskStudentsForSection(riskCourse.id, sec.section) : [];
+                                            const sectionAtRisk = riskCourse && sec.sectionId ? atRiskStudentsForSection(sec.sectionId) : [];
                                             return (
                                             <div
                                                 key={sec.section}
@@ -3364,7 +3282,7 @@ export default function Teacher() {
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Pending Appeals</div>
                             <div className="teacher-panel-value">
-                                {attendanceAppeals.filter(a => a.status === "pending").length}
+                                {isLoadingAppeals ? '-' : appeals.filter(a => a.status === "pending").length}
                             </div>
                             <div className="teacher-panel-sub">Awaiting your decision</div>
                         </div>
@@ -3375,7 +3293,7 @@ export default function Teacher() {
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Approved Appeals</div>
                             <div className="teacher-panel-value">
-                                {attendanceAppeals.filter(a => a.status === "approved").length}
+                                {isLoadingAppeals ? '-' : appeals.filter(a => a.status === "approved").length}
                             </div>
                             <div className="teacher-panel-sub">Successfully approved</div>
                         </div>
@@ -3386,7 +3304,7 @@ export default function Teacher() {
                         <div className="teacher-panel-content">
                             <div className="teacher-panel-label">Rejected Appeals</div>
                             <div className="teacher-panel-value">
-                                {attendanceAppeals.filter(a => a.status === "rejected").length}
+                                {isLoadingAppeals ? '-' : appeals.filter(a => a.status === "rejected").length}
                             </div>
                             <div className="teacher-panel-sub">Marked as invalid</div>
                         </div>
@@ -3394,7 +3312,7 @@ export default function Teacher() {
                 ],
 
                 content: (
-                    <TeacherAppealsSection courses={courses} />
+                    <TeacherAppealsSection courses={courses} appeals={appeals} setAppeals={setAppeals} isLoadingAppeals={isLoadingAppeals} />
                 )
             }
 

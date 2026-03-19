@@ -53,16 +53,7 @@ async function getEnrolledCount(userId: string, courseFilter: string | null, sec
     let query: string
     let params: any[]
 
-    if (courseFilter && sectionFilter) {
-        query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
-                 FROM enrollment_data e
-                 INNER JOIN section s ON e.section = s.id
-                 INNER JOIN course c ON s.course = c.id
-                 INNER JOIN student_data sd ON e.student = sd.student
-                 WHERE s.teacher = $1 AND s.id = $2 AND sd.section = $3
-                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
-        params = [userId, courseFilter, sectionFilter]
-    } else if (courseFilter) {
+    if (courseFilter) {
         query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
                  FROM enrollment_data e
                  INNER JOIN section s ON e.section = s.id
@@ -89,21 +80,7 @@ async function getSchoolDays(userId: string, courseFilter: string | null, sectio
     let query: string
     let params: any[]
 
-    if (courseFilter && sectionFilter) {
-        query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
-                 FROM record r
-                 INNER JOIN section s ON r.course = s.id
-                 INNER JOIN course c ON s.course = c.id
-                 INNER JOIN student_data sd ON r.student = sd.student
-                 WHERE s.teacher = $1
-                   AND s.id = $2
-                   AND sd.section = $3
-                   AND r.time IS NOT NULL
-                   AND DATE(r.time) >= $4
-                   AND DATE(r.time) <= $5
-                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
-        params = [userId, courseFilter, sectionFilter, startStr, endStr]
-    } else if (courseFilter) {
+    if (courseFilter) {
         query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
                  FROM record r
                  INNER JOIN section s ON r.course = s.id
@@ -143,29 +120,7 @@ async function getAttendanceCounts(userId: string, courseFilter: string | null, 
     // Use a subquery with DISTINCT ON to get the BEST record per student per day
     // CASE maps: present(1)→1, late(2)→2, absent(0)→3, so MIN via ORDER BY picks best
     // Then count those deduplicated records
-    if (courseFilter && sectionFilter) {
-        query = `SELECT 
-                    COUNT(CASE WHEN best_records.attendance = 1 THEN 1 END) as present,
-                    COUNT(CASE WHEN best_records.attendance = 2 THEN 1 END) as late,
-                    COUNT(CASE WHEN best_records.attendance = 0 THEN 1 END) as absent
-                 FROM (
-                    SELECT DISTINCT ON (r.student, DATE(r.time))
-                        r.attendance
-                    FROM record r
-                    INNER JOIN section s ON r.course = s.id
-                    INNER JOIN course c ON s.course = c.id
-                    INNER JOIN student_data sd ON r.student = sd.student
-                    WHERE s.teacher = $1
-                      AND s.id = $2
-                      AND sd.section = $3
-                      AND r.time IS NOT NULL
-                      AND DATE(r.time) >= $4
-                      AND DATE(r.time) <= $5
-                      AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
-                    ORDER BY r.student, DATE(r.time), CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC, r.time ASC
-                 ) AS best_records`
-        params = [userId, courseFilter, sectionFilter, startStr, endStr]
-    } else if (courseFilter) {
+    if (courseFilter) {
         query = `SELECT 
                     COUNT(CASE WHEN best_records.attendance = 1 THEN 1 END) as present,
                     COUNT(CASE WHEN best_records.attendance = 2 THEN 1 END) as late,
