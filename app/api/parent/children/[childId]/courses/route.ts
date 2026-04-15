@@ -9,13 +9,8 @@ import { currentUser } from '@clerk/nextjs/server'
  * Returns: Array of courses with attendance counts and percentage
  */
 export async function GET(
-<<<<<<< HEAD
     request: NextRequest,
     { params }: { params: Promise<{ childId: string }> }
-=======
-    request: Request,
-    { params }: { params: { childId: string } }
->>>>>>> parent of 3fcf3da (test fix)
 ) {
     try {
         const user = await currentUser()
@@ -27,7 +22,7 @@ export async function GET(
             }, { status: 401 })
         }
 
-        const childId = params.childId
+        const { childId } = await params
 
         // Verify parent owns this child
         const childCheck = await db.query(`

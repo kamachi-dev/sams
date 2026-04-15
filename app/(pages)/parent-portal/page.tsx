@@ -69,13 +69,21 @@ const warnings = 4;
 const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
 const attendanceAlerts = (presentDays + lateDays);
 
+type CourseAttendanceItem = {
+  course: string;
+  present: number;
+  late: number;
+  absent: number;
+  percentage: number;
+};
+
 export default function Parent() {
   const dragScroll = useDragScroll<HTMLDivElement>();
 
   // API-fetched data
   const [children, setChildren] = useState<any[]>([]);
   const [dailyAttendance, setDailyAttendance] = useState<any[]>([]);
-  const [courseAttendance, setCourseAttendance] = useState<any[]>([]);
+  const [courseAttendance, setCourseAttendance] = useState<CourseAttendanceItem[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [selectedChildData, setSelectedChildData] = useState<any>(null);
   const [weeklyTrend, setWeeklyTrend] = useState<any[]>([]);
@@ -222,7 +230,15 @@ export default function Parent() {
           const coursesRes = await fetch(`/api/parent/children/${selectedChild.id}/courses`);
           const coursesData = await coursesRes.json();
           if (coursesData.success) {
-            setCourseAttendance(coursesData.data || []);
+            const normalizedCourses: CourseAttendanceItem[] = (coursesData.data || []).map((course: any) => ({
+              course: course.course ?? course.subject ?? 'Unknown',
+              present: Number(course.present ?? 0),
+              late: Number(course.late ?? 0),
+              absent: Number(course.absent ?? 0),
+              percentage: Number(course.percentage ?? 0),
+            }));
+
+            setCourseAttendance(normalizedCourses);
           }
 
           // Set placeholder data for monthly and quarterly
