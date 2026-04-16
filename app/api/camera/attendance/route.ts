@@ -79,7 +79,7 @@ export async function POST(req: Request) {
                 // LATE - notify student
                 await notifyStudentNotification(
                     record.student,
-                    '⏰ Late Attendance Recorded',
+                    'Late Attendance Recorded',
                     `You were marked as late for ${courseName} at ${recordedTime}`,
                     {
                         recordId: record.id,
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
                 // ABSENT - notify student and parents
                 await notifyStudentNotification(
                     record.student,
-                    '❌ Absence Recorded',
+                    'Absence Recorded',
                     `You were marked as absent for ${courseName} on ${recordedDate}`,
                     {
                         recordId: record.id,
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
                 // Also notify parents
                 await notifyParentNotification(
                     record.student,
-                    '⚠️ Student Absence Alert',
+                    'Student Absence Alert',
                     `Your child was marked absent for ${courseName}`,
                     {
                         recordId: record.id,
