@@ -74,16 +74,28 @@ export async function GET(req: Request) {
             `, [sec.id])
             const enrolledCount = parseInt(enrolledResult.rows[0]?.enrolled_count || '0')
 
-            // Get attendance counts from records
+            // Get deduped attendance counts (best record per student per day)
             const attendanceResult = await db.query(`
                 SELECT 
-                    COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
-                    COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                    COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
-                FROM record r
-                WHERE r.course = $1
-                  AND r.time IS NOT NULL
-            `, [sec.id])
+                    COUNT(CASE WHEN best.attendance = 1 THEN 1 END) as present_count,
+                    COUNT(CASE WHEN best.attendance = 2 THEN 1 END) as late_count,
+                    COUNT(CASE WHEN best.attendance = 0 THEN 1 END) as absent_count
+                FROM (
+                    SELECT DISTINCT ON (r.student, DATE(r.time))
+                        r.attendance,
+                        r.time
+                    FROM record r
+                    INNER JOIN section s ON r.course = s.id
+                    INNER JOIN course c ON s.course = c.id
+                    WHERE r.course = $1
+                      AND s.teacher = $2
+                      AND r.time IS NOT NULL
+                      AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
+                    ORDER BY r.student, DATE(r.time),
+                        CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC,
+                        r.time ASC
+                ) AS best
+            `, [sec.id, user.id])
 
             const presentCount = parseInt(attendanceResult.rows[0]?.present_count || '0')
             const lateCount = parseInt(attendanceResult.rows[0]?.late_count || '0')
@@ -110,42 +122,61 @@ export async function GET(req: Request) {
             ? Math.round((totalPresent / totalRecordsAll) * 100 * 10) / 10
             : 0
 
-        // Get monthly breakdown per section for trend chart
+        // Get monthly breakdown per section using deduped daily-best records
         const sectionIds = sections.map(s => s.id)
         const monthlyResult = await db.query(`
             SELECT 
-                r.course as section_id,
-                TO_CHAR(r.time, 'Mon') as month,
-                EXTRACT(MONTH FROM r.time) as month_num,
-                COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
-                COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
-                COUNT(CASE WHEN r.attendance = 0 THEN 1 END) as absent_count
-            FROM record r
-            WHERE r.course = ANY($1::uuid[])
-              AND r.time IS NOT NULL
-            GROUP BY r.course, TO_CHAR(r.time, 'Mon'), EXTRACT(MONTH FROM r.time)
-            ORDER BY month_num
-        `, [sectionIds])
-
-        // Build a map from section ID to section name
-        const sectionNameMap: Record<string, string> = {}
-        for (const sec of sections) {
-            sectionNameMap[sec.id] = sec.name
-        }
+                best.course as section_id,
+                TO_CHAR(DATE_TRUNC('month', best.record_date), 'Mon YYYY') as month,
+                EXTRACT(YEAR FROM best.record_date) as year_num,
+                EXTRACT(MONTH FROM best.record_date) as month_num,
+                COUNT(CASE WHEN best.attendance = 1 THEN 1 END) as present_count,
+                COUNT(CASE WHEN best.attendance = 2 THEN 1 END) as late_count,
+                COUNT(CASE WHEN best.attendance = 0 THEN 1 END) as absent_count
+            FROM (
+                SELECT DISTINCT ON (r.course, r.student, DATE(r.time))
+                    r.course,
+                    DATE(r.time) as record_date,
+                    r.attendance,
+                    r.time
+                FROM record r
+                INNER JOIN section s ON r.course = s.id
+                INNER JOIN course c ON s.course = c.id
+                WHERE r.course = ANY($1::uuid[])
+                  AND s.teacher = $2
+                  AND r.time IS NOT NULL
+                  AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
+                ORDER BY r.course, r.student, DATE(r.time),
+                    CASE r.attendance WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 0 THEN 3 ELSE 4 END ASC,
+                    r.time ASC
+            ) AS best
+            GROUP BY
+                best.course,
+                EXTRACT(YEAR FROM best.record_date),
+                EXTRACT(MONTH FROM best.record_date),
+                TO_CHAR(DATE_TRUNC('month', best.record_date), 'Mon YYYY')
+            ORDER BY year_num, month_num
+        `, [sectionIds, user.id])
 
         // Build monthly comparison data
-        const monthNums = [...new Set(monthlyResult.rows.map(r => parseInt(r.month_num)))].sort((a, b) => a - b)
+        const monthKeys = [...new Set(monthlyResult.rows.map(r => {
+            const yearNum = parseInt(r.year_num)
+            const monthNum = parseInt(r.month_num)
+            return `${yearNum}-${String(monthNum).padStart(2, '0')}`
+        }))]
         const sectionNames = sections.map(s => s.name)
-        const monthlyComparison = monthNums.map(monthNum => {
-            const monthRow = monthlyResult.rows.find(r => parseInt(r.month_num) === monthNum)
+        const monthlyComparison = monthKeys.map(monthKey => {
+            const monthRows = monthlyResult.rows.filter(r => {
+                const yearNum = parseInt(r.year_num)
+                const monthNum = parseInt(r.month_num)
+                return `${yearNum}-${String(monthNum).padStart(2, '0')}` === monthKey
+            })
             const entry: Record<string, any> = {
-                month: monthRow?.month || '',
+                month: monthRows[0]?.month || '',
             }
 
             for (const sec of sections) {
-                const sectionRow = monthlyResult.rows.find(
-                    r => parseInt(r.month_num) === monthNum && r.section_id === sec.id
-                )
+                const sectionRow = monthRows.find(r => r.section_id === sec.id)
                 if (sectionRow) {
                     const present = parseInt(sectionRow.present_count)
                     const late = parseInt(sectionRow.late_count)
