@@ -39,7 +39,11 @@ export async function POST(request: Request) {
 
         // Verify section exists (course_id in course_models now references section.id)
         const courseCheck = await db.query(
-            `SELECT id FROM section WHERE id = $1`,
+            `SELECT s.id
+             FROM section s
+             INNER JOIN course c ON s.course = c.id
+             WHERE s.id = $1
+               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
             [courseId]
         );
 
@@ -59,7 +63,14 @@ export async function POST(request: Request) {
             `UPDATE course_models
              SET model_pickle = $1,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE course_id = $2 AND section IS NOT DISTINCT FROM $3
+             WHERE course_id = $2
+               AND section IS NOT DISTINCT FROM $3
+               AND course_id IN (
+                   SELECT s.id
+                   FROM section s
+                   INNER JOIN course c ON s.course = c.id
+                   WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
+               )
              RETURNING id`,
             [buffer, courseId, section]
         );

@@ -114,8 +114,11 @@ export async function GET(req: Request) {
                 r.attendance,
                 r.confidence
             FROM record r
+                        INNER JOIN section s ON r.course = s.id
+                        INNER JOIN course c ON s.course = c.id
             WHERE r.student = $1
               AND r.course = ANY($2::uuid[])
+                            AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
               AND r.time IS NOT NULL
               AND DATE(r.time) >= $3
               AND DATE(r.time) <= $4
@@ -201,6 +204,7 @@ export async function GET(req: Request) {
                 INNER JOIN course c ON s.course = c.id
                 WHERE r.student = $1
                   AND r.course = ANY($2::uuid[])
+                  AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                   AND r.time IS NOT NULL
                   AND DATE(r.time) >= $3
                   AND DATE(r.time) <= $4

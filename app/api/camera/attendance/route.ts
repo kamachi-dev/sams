@@ -25,10 +25,10 @@ export async function POST(req: Request) {
 
         // Validate all records
         for (const rec of records) {
-            if (rec.student === undefined || rec.student === null || 
-                rec.course === undefined || rec.course === null || 
-                rec.attendance === undefined || rec.attendance === null || 
-                rec.confidence === undefined || rec.confidence === null || 
+            if (rec.student === undefined || rec.student === null ||
+                rec.course === undefined || rec.course === null ||
+                rec.attendance === undefined || rec.attendance === null ||
+                rec.confidence === undefined || rec.confidence === null ||
                 rec.timestamp === undefined || rec.timestamp === null) {
                 return NextResponse.json(
                     {
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
         // 🚀 TRIGGER NOTIFICATIONS FOR EACH RECORD
         for (const record of insertedRecords) {
             const courseData = await db.query(
-                `SELECT c.name as course_name FROM course c INNER JOIN section s ON c.id = s.course WHERE s.id = $1`,
+                `SELECT c.name as course_name FROM course c INNER JOIN section s ON c.id = s.course WHERE s.id = $1 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
                 [record.course]
             );
 

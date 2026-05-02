@@ -76,8 +76,11 @@ export async function GET(req: Request) {
                 a.id,
                 a.username as name
             FROM enrollment_data e
+            INNER JOIN section s ON e.section = s.id
+            INNER JOIN course c ON s.course = c.id
             INNER JOIN account a ON e.student = a.id
             WHERE e.section = $1
+              AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             ORDER BY a.username ASC
         `, [courseId])
 
@@ -92,7 +95,10 @@ export async function GET(req: Request) {
                 r.attendance,
                 r.confidence
             FROM record r
+                        INNER JOIN section s ON r.course = s.id
+                        INNER JOIN course c ON s.course = c.id
             WHERE r.course = $1
+                            AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
               AND r.time IS NOT NULL
               AND DATE(r.time) >= $2
               AND DATE(r.time) <= $3
@@ -198,7 +204,10 @@ export async function GET(req: Request) {
                     r.confidence
                 FROM record r
                 INNER JOIN account a ON r.student = a.id
+                                INNER JOIN section s ON r.course = s.id
+                                INNER JOIN course c ON s.course = c.id
                 WHERE r.course = $1
+                                    AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                   AND r.time IS NOT NULL
                   AND DATE(r.time) >= $2
                   AND DATE(r.time) <= $3

@@ -36,6 +36,7 @@ export async function GET() {
             INNER JOIN course c ON s.course = c.id
             LEFT JOIN enrollment_data ed ON s.id = ed.section
             LEFT JOIN account a ON s.teacher = a.id
+            WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
             GROUP BY cm.id, s.id, c.id, c.name, s.name, cm.model_pickle, cm.section, a.username
             ORDER BY c.name, s.name
         `);

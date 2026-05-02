@@ -40,7 +40,8 @@ export async function PATCH(
             FROM attendance_appeal aa
             LEFT JOIN course c ON aa.course_id = c.id
             LEFT JOIN section s ON c.id = s.course
-            WHERE aa.id = $1
+                        WHERE aa.id = $1
+                            AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [appealId])
 
         if (appealCheck.rows.length === 0) {
@@ -97,22 +98,22 @@ export async function PATCH(
 
         // 🚀 NOTIFY STUDENT ABOUT APPEAL DECISION
         if (studentInfo.rows.length > 0) {
-          const studentId = studentInfo.rows[0].student_id;
-          const message = decision === 'approved'
-            ? 'Your appeal has been approved! The attendance record has been corrected.'
-            : `Your appeal has been rejected. Teacher's response: ${teacherResponse || 'No response provided'}`;
+            const studentId = studentInfo.rows[0].student_id;
+            const message = decision === 'approved'
+                ? 'Your appeal has been approved! The attendance record has been corrected.'
+                : `Your appeal has been rejected. Teacher's response: ${teacherResponse || 'No response provided'}`;
 
-          await notifyStudentNotification(
-            studentId,
-            `Appeal ${decision === 'approved' ? '✅ Approved' : '❌ Rejected'}`,
-            message,
-            {
-              appealId: updatedAppeal.id,
-              decision,
-              type: 'appeal_decision',
-              url: '/student-portal'
-            }
-          );
+            await notifyStudentNotification(
+                studentId,
+                `Appeal ${decision === 'approved' ? '✅ Approved' : '❌ Rejected'}`,
+                message,
+                {
+                    appealId: updatedAppeal.id,
+                    decision,
+                    type: 'appeal_decision',
+                    url: '/student-portal'
+                }
+            );
         }
 
         return NextResponse.json({

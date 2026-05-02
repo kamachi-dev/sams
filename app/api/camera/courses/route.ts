@@ -47,7 +47,8 @@ export async function GET(req: Request) {
                     (s.schedule::jsonb -> $2 ->> 'end') AS course_end_time
                 FROM section s
                 INNER JOIN course c ON s.course = c.id
-                WHERE s.id = $1`,
+                                WHERE s.id = $1
+                                    AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
                 [courseId, day]
             )
 
@@ -65,8 +66,11 @@ export async function GET(req: Request) {
             const studentsQuery = `
                 SELECT a.id, a.username as name, a.email
                 FROM enrollment_data e
+                                INNER JOIN section s ON e.section = s.id
+                                INNER JOIN course c ON s.course = c.id
                 INNER JOIN account a ON e.student = a.id
-                WHERE e.section = $1
+                                WHERE e.section = $1
+                                    AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY a.username ASC
             `
             const studentsResult = await db.query(studentsQuery, [courseId])
@@ -96,6 +100,7 @@ export async function GET(req: Request) {
                 FROM section s
                 INNER JOIN course c ON s.course = c.id
                 WHERE s.classroom = $1
+                                    AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                   AND (s.schedule::jsonb -> $2) IS NOT NULL
                 ORDER BY (s.schedule::jsonb -> $2 ->> 'start') ASC NULLS LAST, c.name ASC, s.name ASC`,
                 [normalizedClassroom, day]
@@ -133,6 +138,7 @@ export async function GET(req: Request) {
                 SELECT s.id, c.name, s.name as section_name, s.schedule, s.teacher, s.classroom
                 FROM section s
                 INNER JOIN course c ON s.course = c.id
+                WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                 ORDER BY c.name, s.name
             `)
 

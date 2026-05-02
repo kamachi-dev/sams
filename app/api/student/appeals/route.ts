@@ -113,7 +113,8 @@ export async function POST(request: Request) {
             FROM record r
             INNER JOIN section s ON r.course = s.id
             INNER JOIN course c ON s.course = c.id
-            WHERE r.id = $1 AND r.student = $2
+                        WHERE r.id = $1 AND r.student = $2
+                            AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [record_id, user.id])
 
         if (recordCheck.rows.length === 0) {
@@ -184,18 +185,18 @@ export async function POST(request: Request) {
 
         // 🚀 TRIGGER NOTIFICATION TO TEACHER
         await notifyTeacherAppeal(
-          record.course_id,
-          'New Student Appeal',
-          `A student submitted an appeal for their ${recordedStatus} attendance.`,
-          {
-            appealId: appeal.id,
-            studentId: user.id,
-            courseId: record.course_id,
-            recordDate: record.time,
-            reason: student_reason,
-            type: 'new_appeal',
-            url: '/teacher-portal'
-          }
+            record.course_id,
+            'New Student Appeal',
+            `A student submitted an appeal for their ${recordedStatus} attendance.`,
+            {
+                appealId: appeal.id,
+                studentId: user.id,
+                courseId: record.course_id,
+                recordDate: record.time,
+                reason: student_reason,
+                type: 'new_appeal',
+                url: '/teacher-portal'
+            }
         );
 
         return NextResponse.json({
