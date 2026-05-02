@@ -121,14 +121,7 @@ export default function Admin() {
             setImportStatus('School year created successfully');
             setSchoolYear('');
             setSchoolYearNotes('');
-            setTimeout(() => setImportStatus(null), 5000);
-
-            // Refresh school year list
-            const schoolYearRes: SchoolYearResponse = await fetch('/api/school_year').then(res => res.json());
-            setSchoolYearList(schoolYearRes);
-            if (schoolYearRes?.data?.length) {
-                setSelectedGroup(0);
-            }
+            window.location.reload();
         } catch (err: unknown) {
             let message = 'Unknown error';
             if (err instanceof Error) {
@@ -542,13 +535,7 @@ export default function Admin() {
 
             setImportStatus('Active school year set successfully');
             setActiveSchoolYearId(schoolYearToActivate);
-            setTimeout(() => setImportStatus(null), 5000);
-
-            // Refresh school year list
-            const schoolYearRes: SchoolYearResponse = await fetch('/api/school_year').then(res => res.json());
-            setSchoolYearList(schoolYearRes);
-
-            setActivateDialogOpen(false);
+            window.location.reload();
         } catch (err: unknown) {
             let message = 'Unknown error';
             if (err instanceof Error) {
