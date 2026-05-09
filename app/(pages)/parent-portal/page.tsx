@@ -685,9 +685,9 @@ export default function Parent() {
                               data={
                                 child.present + child.late + child.absent > 0
                                   ? [
-                                      { value: child.present },
-                                      { value: child.late },
-                                      { value: child.absent },
+                                      ...(child.present > 0 ? [{ value: child.present, type: 'present' }] : []),
+                                      ...(child.late > 0 ? [{ value: child.late, type: 'late' }] : []),
+                                      ...(child.absent > 0 ? [{ value: child.absent, type: 'absent' }] : []),
                                     ]
                                   : [{ value: 1 }]
                               }
@@ -698,9 +698,9 @@ export default function Parent() {
                             >
                               {child.present + child.late + child.absent > 0 ? (
                                 <>
-                                  <Cell fill="var(--present)" />
-                                  <Cell fill="var(--late)" />
-                                  <Cell fill="var(--absent)" />
+                                  {child.present > 0 && <Cell fill="var(--present)" />}
+                                  {child.late > 0 && <Cell fill="var(--late)" />}
+                                  {child.absent > 0 && <Cell fill="var(--absent)" />}
                                 </>
                               ) : (
                                 <Cell fill="#d0d0d0" />
@@ -1194,6 +1194,7 @@ export default function Parent() {
                 ) : (
                     <>
                     <div className="preview-time">
+                        {selectedNotification.date && `${selectedNotification.date} `}
                         {selectedNotification.time}
                     </div>
 

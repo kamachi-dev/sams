@@ -1819,6 +1819,7 @@ export default function Student() {
                 ) : (
                     <>
                     <div className="preview-time">
+                        {selectedNotification.date && `${selectedNotification.date} `}
                         {selectedNotification.time}
                     </div>
 
