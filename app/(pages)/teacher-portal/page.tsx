@@ -478,7 +478,7 @@ export default function Teacher() {
 
     // Overview drill-down state
     const [overviewStep, setOverviewStep] = useState<'courses' | 'sections' | 'stats'>('courses');
-    const [selectedOverviewCourse, setSelectedOverviewCourse] = useState<{ id: string; name: string } | null>(null);
+    const [selectedOverviewCourse, setSelectedOverviewCourse] = useState<{ id: string; courseId: string; name: string } | null>(null);
     const [courseSections, setCourseSections] = useState<Array<{ section: string; sectionId?: string; studentCount: number; students?: string[] }>>([]);
     const [selectedSection, setSelectedSection] = useState<string>("");
     const [isLoadingSections, setIsLoadingSections] = useState(false);
@@ -2102,7 +2102,7 @@ export default function Teacher() {
                     <div key="at-risk-section" className="teacher-panel-card low-attendance-alert" style={{ cursor: 'pointer' }}
                         onClick={() => {
                             if (selectedOverviewCourse && selectedSection) {
-                                setRiskCourse({ id: selectedOverviewCourse.id, courseId: selectedOverviewCourse.id, name: selectedOverviewCourse.name });
+                                setRiskCourse({ id: selectedOverviewCourse.id, courseId: selectedOverviewCourse.courseId, name: selectedOverviewCourse.name });
                                 setRiskSection(selectedSection);
                                 setRiskStep('list');
                                 setActiveTab('Students at Risk');
@@ -2187,7 +2187,7 @@ export default function Teacher() {
                                             key={course.id} 
                                             className={`overview-course-card${isPinned ? ' overview-card-pinned' : ''}`}
                                             onClick={() => {
-                                                setSelectedOverviewCourse({ id: course.id, name: course.name });
+                                                setSelectedOverviewCourse({ id: course.id, courseId: course.courseId || course.id, name: course.name });
                                                 setOverviewStep('sections');
                                             }}
                                         >
@@ -2278,7 +2278,7 @@ export default function Teacher() {
                                                 key={sec.section} 
                                                 className={`overview-section-card${isPinned ? ' overview-card-pinned' : ''}`}
                                                 onClick={() => {
-                                                    setSelectedOverviewCourse({ id: sec.sectionId!, name: selectedOverviewCourse!.name });
+                                                    setSelectedOverviewCourse({ id: sec.sectionId!, courseId: selectedOverviewCourse!.courseId, name: selectedOverviewCourse!.name });
                                                     setSelectedSection(sec.section);
                                                     setOverviewStep('stats');
                                                 }}
