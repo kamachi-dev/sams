@@ -469,7 +469,7 @@ export default function Teacher() {
         confidence: string;
     }>>([]);
     const [isLoadingRecords, setIsLoadingRecords] = useState(true);
-    const [courses, setCourses] = useState<Array<{ id: string; name: string; schedule?: string; studentCount?: number; sectionCount?: number; sectionNames?: string[]; sections?: Array<{ name: string; studentCount: number }> }>>([]);
+    const [courses, setCourses] = useState<Array<{ id: string; courseId?: string; name: string; schedule?: string; studentCount?: number; sectionCount?: number; sectionNames?: string[]; sections?: Array<{ name: string; studentCount: number }> }>>([]);
     const [appeals, setAppeals] = useState<Appeal[]>([]);
     const [isLoadingAppeals, setIsLoadingAppeals] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState("");
@@ -506,7 +506,7 @@ export default function Teacher() {
 
     // Students at Risk drill-down state
     const [riskStep, setRiskStep] = useState<'courses' | 'sections' | 'list'>('courses');
-    const [riskCourse, setRiskCourse] = useState<{ id: string; name: string } | null>(null);
+    const [riskCourse, setRiskCourse] = useState<{ id: string; courseId: string; name: string } | null>(null);
     const [riskSection, setRiskSection] = useState<string>('');
     const [riskSections, setRiskSections] = useState<Array<{ section: string; sectionId?: string; studentCount: number; students?: string[] }>>([]);
     const [isLoadingRiskSections, setIsLoadingRiskSections] = useState(false);
@@ -532,7 +532,7 @@ export default function Teacher() {
     // Computed at-risk values from allAtRiskStudents
     const totalAtRiskStudents = new Set(allAtRiskStudents.map(s => s.id)).size;
     const sectionsWithAtRisk = new Set(allAtRiskStudents.map(s => s.sectionId).filter(Boolean)).size;
-    const atRiskCountByCourse = (courseId: string) => allAtRiskStudents.filter(s => s.sectionId === courseId).length;
+    const atRiskCountByCourse = (courseId: string) => allAtRiskStudents.filter(s => s.courseId === courseId).length;
     const atRiskStudentsForSection = (sectionId: string) =>
         allAtRiskStudents.filter(s => s.sectionId === sectionId);
 
@@ -924,7 +924,7 @@ export default function Teacher() {
             setIsLoadingLowAttendance(true);
             try {
                 const params = new URLSearchParams({ threshold: String(lowAttendanceThreshold) });
-                params.set('course', riskCourse.id);
+                params.set('course', riskCourse.courseId);
                 if (riskSection) params.set('section', riskSection);
                 const response = await fetch(`/api/teacher/students/low-attendance?${params.toString()}`);
                 const result = await response.json();
@@ -2102,7 +2102,7 @@ export default function Teacher() {
                     <div key="at-risk-section" className="teacher-panel-card low-attendance-alert" style={{ cursor: 'pointer' }}
                         onClick={() => {
                             if (selectedOverviewCourse && selectedSection) {
-                                setRiskCourse({ id: selectedOverviewCourse.id, name: selectedOverviewCourse.name });
+                                setRiskCourse({ id: selectedOverviewCourse.id, courseId: selectedOverviewCourse.id, name: selectedOverviewCourse.name });
                                 setRiskSection(selectedSection);
                                 setRiskStep('list');
                                 setActiveTab('Students at Risk');
@@ -2765,13 +2765,13 @@ export default function Teacher() {
                                         return aPin - bPin;
                                     }).map(course => {
                                         const isPinned = course.id === pinnedRiskCourse;
-                                        const courseAtRiskCount = atRiskCountByCourse(course.id);
+                                        const courseAtRiskCount = atRiskCountByCourse(course.courseId || course.id);
                                         return (
                                         <div
                                             key={course.id}
                                             className={`overview-course-card${isPinned ? ' overview-card-pinned' : ''}`}
                                             onClick={() => {
-                                                setRiskCourse({ id: course.id, name: course.name });
+                                                setRiskCourse({ id: course.id, courseId: course.courseId || course.id, name: course.name });
                                                 setRiskStep('sections');
                                             }}
                                         >

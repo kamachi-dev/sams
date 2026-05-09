@@ -25,7 +25,7 @@ export async function GET(req: Request) {
         let paramIdx = 2
 
         if (courseFilter) {
-            conditions.push(`s.id = $${paramIdx++}`)
+            conditions.push(`s.course = $${paramIdx++}`)
             params.push(courseFilter)
         }
         if (sectionFilter) {
