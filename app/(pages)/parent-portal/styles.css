@@ -1132,6 +1132,11 @@
   color: var(--absent);
 }
 
+.today-status.no-class {
+  background: #e8e8e8;
+  color: #666;
+}
+
 .today-status.checking {
   background-color: var(--foreground2);
   color: var(--foreground3);
@@ -1311,6 +1316,17 @@
   color: var(--absent);
 }
 
+.daily-attendance-stats .stat.empty {
+  background: #e8e8e8;
+  color: #999;
+}
+
 .daily-attendance-stats span {
   font-weight: 700;
+}
+
+/* Unavailable/N/A styling */
+.today-info span.unavailable {
+  color: #999;
+  font-style: italic;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import SamsTemplate from "@/app/components/SamsTemplate";
+import { usePushNotifications } from "@/lib/usePushNotifications";
 import {
   ThickArrowRightIcon,
   CalendarIcon,
@@ -122,6 +123,9 @@ export default function Parent() {
   const [selectedNotification, setSelectedNotification] =
   useState<any>(null);
 
+  // Push notifications setup
+  const { requestNotificationPermission, subscribeToPushNotifications, isSubscribed } = usePushNotifications();
+
   // Fetch children list on component mount
   useEffect(() => {
     const fetchChildren = async () => {
@@ -136,16 +140,16 @@ export default function Parent() {
             id: child.id,
             name: child.name,
             isAbsentYesterday: "no",
-            status: "present",
+            status: "no-class",
             present: 0,
             late: 0,
             absent: 0,
             percentage: 0,
             today: {
-              statusLabel: "PRESENT",
-              classTime: "10:15 AM",
-              teacher: "Unknown",
-              course: "Unknown",
+              statusLabel: "NO CLASS",
+              classTime: "N/A",
+              teacher: "N/A",
+              course: "N/A",
               lastChecked: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
             }
           }));
@@ -208,6 +212,159 @@ export default function Parent() {
 
     fetchChildren();
     fetchNotifications();
+  }, []);
+
+  // Auto-refresh children data every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        // Fetch updated summary data for each child
+        const response = await fetch('/api/parent/children');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const changedChildren: any[] = [];
+
+          setChildren(prevChildren =>
+            prevChildren.map(child => {
+              const updatedChild = result.data.find((d: any) => d.id === child.id);
+              if (updatedChild) {
+                // Check if attendance data changed
+                const hasDataChange = 
+                  child.present !== updatedChild.present ||
+                  child.late !== updatedChild.late ||
+                  child.absent !== updatedChild.absent ||
+                  child.percentage !== updatedChild.percentage;
+
+                if (hasDataChange) {
+                  changedChildren.push({
+                    name: child.name,
+                    present: updatedChild.present,
+                    late: updatedChild.late,
+                    absent: updatedChild.absent,
+                    percentage: updatedChild.percentage
+                  });
+                  // Push notification will be sent silently in background
+                }
+
+                return {
+                  ...child,
+                  present: updatedChild.present ?? child.present,
+                  late: updatedChild.late ?? child.late,
+                  absent: updatedChild.absent ?? child.absent,
+                  percentage: updatedChild.percentage ?? child.percentage,
+                  isAbsentYesterday: updatedChild.absentYesterday ? "yes" : "no",
+                  today: {
+                    ...child.today,
+                    lastChecked: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                  }
+                };
+              }
+              return {
+                ...child,
+                today: {
+                  ...child.today,
+                  lastChecked: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                }
+              };
+            })
+          );
+
+          // Send server-side push notifications for changed children
+          for (const child of changedChildren) {
+            try {
+              await fetch('/api/notifications/send-attendance-update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  childName: child.name,
+                  present: child.present,
+                  late: child.late,
+                  absent: child.absent,
+                  percentage: child.percentage
+                })
+              });
+            } catch (error) {
+              console.error('Error sending push notification:', error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing children data:', error);
+      }
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-refresh notifications every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch('/api/parent/notifications');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          // Check for new notifications
+          setNotifications(prevNotifications => {
+            if (result.data.length > prevNotifications.length) {
+              const newNotifications = result.data.slice(prevNotifications.length);
+              // Push notifications will be sent silently in background via service worker
+
+              // Send server-side push notifications for new notifications
+              (async () => {
+                for (const notif of newNotifications) {
+                  try {
+                    await fetch('/api/notifications/send-push', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        title: notif.subject || 'New Notification',
+                        message: notif.message || 'You have received a new notification',
+                        type: notif.type,
+                        notificationId: notif.id
+                      })
+                    });
+                  } catch (error) {
+                    console.error('Error sending push notification:', error);
+                  }
+                }
+              })();
+            }
+            return result.data;
+          });
+
+          // Extract unique school years and semesters from notifications
+          const schoolYears = Array.from(new Set(result.data.map((n: any) => n.schoolYear)));
+          const semesters = Array.from(new Set(result.data.map((n: any) => n.semester))) as ("first" | "second")[];
+
+          setAvailableSchoolYears(schoolYears as string[]);
+          setAvailableSemesters(semesters);
+        }
+      } catch (error) {
+        console.error('Error refreshing notifications:', error);
+      }
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    const requestPermission = async () => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            // Subscribe to push notifications silently
+            await subscribeToPushNotifications();
+          }
+        } catch (error) {
+          console.error('Error requesting notification permission:', error);
+        }
+      }
+    };
+    requestPermission();
   }, []);
 
   // Fetch detailed data when a child is selected in dashboard view
@@ -374,7 +531,7 @@ export default function Parent() {
   ), [notifications, selectedSchoolYear, activeSemester, selectedStudent]);
 
   return (
-  <SamsTemplate
+    <SamsTemplate
     links={[
       {
         label: "Student Record",
@@ -497,9 +654,9 @@ export default function Parent() {
                     <div className="today-attendance-row">
                       {/* LEFT */}
                       <div className="today-info">
-                        <div><strong>Class:</strong> {child.today.classTime}</div>
-                        <div><strong>Teacher:</strong> {child.today.teacher}</div>
-                        <div><strong>Course:</strong> {child.today.course}</div>
+                        <div><strong>Class:</strong> <span className={child.today.classTime === 'N/A' ? 'unavailable' : ''}>{child.today.classTime}</span></div>
+                        <div><strong>Teacher:</strong> <span className={child.today.teacher === 'N/A' ? 'unavailable' : ''}>{child.today.teacher}</span></div>
+                        <div><strong>Course:</strong> <span className={child.today.course === 'N/A' ? 'unavailable' : ''}>{child.today.course}</span></div>
                         <div><strong>Last Checked:</strong> {child.today.lastChecked}</div>
                       </div>
 
@@ -528,19 +685,29 @@ export default function Parent() {
                         <ResponsiveContainer width={120} height={120}>
                           <PieChart>
                             <Pie
-                              data={[
-                                { value: child.present },
-                                { value: child.late },
-                                { value: child.absent },
-                              ]}
+                              data={
+                                child.present + child.late + child.absent > 0
+                                  ? [
+                                      { value: child.present },
+                                      { value: child.late },
+                                      { value: child.absent },
+                                    ]
+                                  : [{ value: 1 }]
+                              }
                               innerRadius={40}
                               outerRadius={55}
                               dataKey="value"
                               stroke="none"
                             >
-                              <Cell fill="var(--present)" />
-                              <Cell fill="var(--late)" />
-                              <Cell fill="var(--absent)" />
+                              {child.present + child.late + child.absent > 0 ? (
+                                <>
+                                  <Cell fill="var(--present)" />
+                                  <Cell fill="var(--late)" />
+                                  <Cell fill="var(--absent)" />
+                                </>
+                              ) : (
+                                <Cell fill="#d0d0d0" />
+                              )}
                             </Pie>
 
                             <text
@@ -548,7 +715,7 @@ export default function Parent() {
                               y="50%"
                               textAnchor="middle"
                               dominantBaseline="middle"
-                              style={{ fontSize: "14px", fontWeight: 700 }}
+                              style={{ fontSize: "14px", fontWeight: 700, fill: child.present + child.late + child.absent > 0 ? "#1F2F57" : "#999" }}
                             >
                               {child.percentage}%
                             </text>
@@ -558,15 +725,15 @@ export default function Parent() {
 
                       {/* RIGHT – Stats */}
                       <div className="daily-attendance-stats">
-                        <div className="stat present">
+                        <div className={`stat present ${child.present === 0 ? 'empty' : ''}`}>
                           <strong>Present</strong>
                           <span>{child.present}</span>
                         </div>
-                        <div className="stat late">
+                        <div className={`stat late ${child.late === 0 ? 'empty' : ''}`}>
                           <strong>Late</strong>
                           <span>{child.late}</span>
                         </div>
-                        <div className="stat absent">
+                        <div className={`stat absent ${child.absent === 0 ? 'empty' : ''}`}>
                           <strong>Absent</strong>
                           <span>{child.absent}</span>
                         </div>
