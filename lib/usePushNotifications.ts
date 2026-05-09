@@ -6,7 +6,6 @@ interface NotificationPreferences {
   new_notification: boolean;
   attendance_alert: boolean;
   appeal_status: boolean;
-  daily_summary: boolean;
 }
 
 export function usePushNotifications() {

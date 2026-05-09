@@ -24,8 +24,7 @@ export async function GET() {
       email_enabled: true,
       new_notification: true,
       attendance_alert: true,
-      appeal_status: true,
-      daily_summary: false
+      appeal_status: true
     };
 
     return NextResponse.json({
@@ -58,15 +57,14 @@ export async function POST(req: Request) {
 
     const result = await db.query(
       `INSERT INTO notification_preferences 
-        (user_id, push_enabled, email_enabled, new_notification, attendance_alert, appeal_status, daily_summary)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (user_id, push_enabled, email_enabled, new_notification, attendance_alert, appeal_status)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (user_id) DO UPDATE SET
         push_enabled = $2,
         email_enabled = $3,
         new_notification = $4,
         attendance_alert = $5,
-        appeal_status = $6,
-        daily_summary = $7
+        appeal_status = $6
        RETURNING *`,
       [
         user.id,
@@ -74,8 +72,7 @@ export async function POST(req: Request) {
         preferences.email_enabled ?? true,
         preferences.new_notification ?? true,
         preferences.attendance_alert ?? true,
-        preferences.appeal_status ?? true,
-        preferences.daily_summary ?? false
+        preferences.appeal_status ?? true
       ]
     );
 

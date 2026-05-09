@@ -62,14 +62,6 @@ const calculateWeeklyTrend = (daily: any[]) => {
   }));
 };
 
-const totalDays = 40;
-const presentDays = 37;
-const lateDays = 2;
-const absentDays = 1;
-const warnings = 4;
-const attendanceRate = (((presentDays + lateDays) / totalDays) * 100).toFixed(1);
-const attendanceAlerts = (presentDays + lateDays);
-
 type CourseAttendanceItem = {
   course: string;
   present: number;
@@ -494,6 +486,11 @@ export default function Parent() {
 
   const approachingWarningCount = approachingWarningStudents.length;
 
+  // Dynamic calculations for selected child
+  const selectedChildPercentage = selectedChildData?.percentage ?? 0;
+  
+  // Count warnings/alert notifications
+  const warningsCount = notifications.filter(n => n.type === 'warning' || n.type === 'alert').length;
 
   const handleExport = () => {
     setIsExporting(true);
@@ -841,7 +838,7 @@ export default function Parent() {
                                 fill: "#1F2F57",
                               }}
                             >
-                              {attendanceRate}%
+                              {selectedChildPercentage}%
                             </text>
                           </PieChart>
                         </ResponsiveContainer>
@@ -1082,7 +1079,7 @@ export default function Parent() {
                 <ExclamationTriangleIcon className="student-panel-icon" />
                 <div className="student-panel-content">
                     <div className="student-panel-label">Warnings Messages Recieved</div>
-                    <div className="student-panel-value">{warnings}</div>
+                    <div className="student-panel-value">{warningsCount}</div>
                     <div className="student-panel-sub">Messages regarding attendance issues</div>
                 </div>
                 </div>,

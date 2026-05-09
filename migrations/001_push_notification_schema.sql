@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
     new_notification BOOLEAN DEFAULT true,
     attendance_alert BOOLEAN DEFAULT true,
     appeal_status BOOLEAN DEFAULT true,
-    daily_summary BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

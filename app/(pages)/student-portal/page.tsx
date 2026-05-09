@@ -1,6 +1,7 @@
 "use client";
 
 import SamsTemplate from "@/app/components/SamsTemplate";
+import { usePushNotifications } from "@/lib/usePushNotifications";
 import XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -100,7 +101,8 @@ export default function Student() {
   const [records, setRecords] = useState<any[]>([]);
   const [appealReason, setAppealReason] = useState("");
 
-  // Student Appeal - filter records where status is LATE or ABSENT
+  // Push notifications setup
+  const { subscribeToPushNotifications } = usePushNotifications();
   const appealableRecords = useMemo(() => dailyRecords.filter(
     (record) => record.status === "Late" || record.status === "Absent"
   ), [dailyRecords]);
@@ -254,6 +256,164 @@ export default function Student() {
     };
 
     fetchDynamicData();
+  }, []);
+
+  // Auto-refresh student data every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const [infoRes, summaryRes, coursesRes] = await Promise.all([
+          fetch('/api/student/info'),
+          fetch('/api/student/attendance/summary'),
+          fetch('/api/student/attendance/courses')
+        ]);
+
+        const [infoData, summaryData, coursesData] = await Promise.all([
+          infoRes.json(),
+          summaryRes.json(),
+          coursesRes.json()
+        ]);
+
+        if (infoData.success && infoData.data) {
+          setStudentData(infoData.data);
+        }
+
+        if (summaryData.success && summaryData.data) {
+          setAttendanceSummary(summaryData.data);
+        }
+
+        if (coursesData.success && coursesData.data) {
+          setCourseAttendance(coursesData.data);
+        }
+      } catch (error) {
+        console.error('Error refreshing student data:', error);
+      }
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-refresh notifications and appeals every 10 seconds with push notifications
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const [dailyRes, notifRes, appealsRes] = await Promise.all([
+          fetch('/api/student/attendance/daily'),
+          fetch('/api/student/notifications'),
+          fetch('/api/student/appeals')
+        ]);
+
+        const [dailyData, notifData, appealsData] = await Promise.all([
+          dailyRes.json(),
+          notifRes.json(),
+          appealsRes.json()
+        ]);
+
+        // Update daily records
+        if (dailyData.success && dailyData.data) {
+          setDailyRecords(dailyData.data);
+        }
+
+        // Check for new notifications and send push
+        if (notifData.success && notifData.data) {
+          setAllNotifications(prevNotifications => {
+            if (notifData.data.length > prevNotifications.length) {
+              const newNotifications = notifData.data.slice(prevNotifications.length);
+              
+              // Send server-side push notifications for new notifications
+              (async () => {
+                for (const notif of newNotifications) {
+                  try {
+                    await fetch('/api/notifications/send-push', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        title: notif.subject || 'New Notification',
+                        message: notif.message || 'You have received a new notification',
+                        type: notif.type,
+                        notificationId: notif.id
+                      })
+                    });
+                  } catch (error) {
+                    console.error('Error sending push notification:', error);
+                  }
+                }
+              })();
+            }
+            return notifData.data;
+          });
+        }
+
+        // Check for appeal status changes and send push
+        if (appealsData.success && appealsData.data) {
+          setDbAppeals(prevAppeals => {
+            const changedAppeals = [];
+            
+            // Check for status changes or new appeals
+            for (const newAppeal of appealsData.data) {
+              const oldAppeal = prevAppeals.find(a => a.id === newAppeal.id);
+              if (!oldAppeal) {
+                // New appeal submitted
+                changedAppeals.push(newAppeal);
+              } else if (oldAppeal.status !== newAppeal.status) {
+                // Appeal status changed
+                changedAppeals.push(newAppeal);
+              }
+            }
+            
+            // Send push notifications for changed appeals
+            if (changedAppeals.length > 0) {
+              (async () => {
+                for (const appeal of changedAppeals) {
+                  try {
+                    const statusMessage = appeal.status === 'approved' ? 'Your appeal has been approved! ✓' : 
+                                        appeal.status === 'rejected' ? 'Your appeal was rejected' : 
+                                        `Your appeal status: ${appeal.status}`;
+                    
+                    await fetch('/api/notifications/send-push', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        title: 'Appeal Status Update',
+                        message: statusMessage,
+                        type: 'appeal_status',
+                        notificationId: appeal.id
+                      })
+                    });
+                  } catch (error) {
+                    console.error('Error sending appeal notification:', error);
+                  }
+                }
+              })();
+            }
+            
+            return appealsData.data;
+          });
+        }
+      } catch (error) {
+        console.error('Error refreshing dynamic data:', error);
+      }
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    const requestPermission = async () => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            // Subscribe to push notifications silently
+            await subscribeToPushNotifications();
+          }
+        } catch (error) {
+          console.error('Error requesting notification permission:', error);
+        }
+      }
+    };
+    requestPermission();
   }, []);
 
   // Sync records state with appealable records (filtered by daily records and excluding already appealed ones)

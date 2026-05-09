@@ -167,24 +167,7 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
                     </div>
                   </div>
 
-                  <div className="setting-item">
-                    <div className="setting-label">
-                      <label htmlFor="daily-summary">Daily Summary</label>
-                      <p className="setting-description">
-                        Receive a summary of your day's events
-                      </p>
-                    </div>
-                    <div className="setting-toggle">
-                      {preferences?.daily_summary ? <CheckIcon /> : <CrossCircledIcon />}
-                      <input
-                        id="daily-summary"
-                        type="checkbox"
-                        checked={preferences?.daily_summary || false}
-                        onChange={(e) => handleTogglePreference('daily_summary', e.target.checked)}
-                        disabled={isSaving}
-                      />
-                    </div>
-                  </div>
+
                 </div>
               )}
 
