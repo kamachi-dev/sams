@@ -849,6 +849,24 @@
     gap: 6px;
 }
 
+.overview-section-card-schedule {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #4F4F4F;
+    background: #F8F9FA;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+.overview-section-schedule-icon {
+    width: 14px;
+    height: 14px;
+    color: #828282;
+    flex-shrink: 0;
+}
+
 /* Course Card Schedule */
 .overview-course-card-schedule {
     display: flex;
@@ -900,6 +918,8 @@
     border-top: 1px solid #F2F2F2;
     max-height: 150px;
     overflow-y: auto;
+    scrollbar-width: auto;
+    scrollbar-color: #B8C4D1 #F1F4F7;
 }
 
 .overview-section-students-label {
@@ -926,6 +946,25 @@
     background: #F8F9FA;
     border-radius: 4px;
     line-height: 1.3;
+}
+
+.overview-section-students-list::-webkit-scrollbar {
+    width: 10px;
+}
+
+.overview-section-students-list::-webkit-scrollbar-track {
+    background: #F1F4F7;
+    border-radius: 10px;
+}
+
+.overview-section-students-list::-webkit-scrollbar-thumb {
+    background: #B8C4D1;
+    border-radius: 10px;
+    border: 2px solid #F1F4F7;
+}
+
+.overview-section-students-list::-webkit-scrollbar-thumb:hover {
+    background: #8FA1B3;
 }
 
 /* Section Comparison Cards */
@@ -1759,6 +1798,14 @@
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid #E0E0E0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #B8C4D1 #F1F4F7;
 }
 
 .at-risk-students-header {
@@ -1775,6 +1822,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-height: 0;
 }
 
 .at-risk-student-item {
@@ -1804,6 +1852,25 @@
     font-weight: 700;
     color: #D84315;
     font-size: 11px;
+}
+
+.at-risk-students-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.at-risk-students-list::-webkit-scrollbar-track {
+    background: #F1F4F7;
+    border-radius: 10px;
+}
+
+.at-risk-students-list::-webkit-scrollbar-thumb {
+    background: #B8C4D1;
+    border-radius: 10px;
+    border: 2px solid #F1F4F7;
+}
+
+.at-risk-students-list::-webkit-scrollbar-thumb:hover {
+    background: #8FA1B3;
 }
 
 /* Email Reveal Icon in Students at Risk Table */

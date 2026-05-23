@@ -44,6 +44,7 @@ export async function GET(req: Request) {
             SELECT 
                 s.id as section_id,
                 s.name as section,
+                s.schedule as schedule,
                 COUNT(DISTINCT e.student) as student_count
             FROM section s
             LEFT JOIN enrollment_data e ON e.section = s.id
@@ -82,6 +83,7 @@ export async function GET(req: Request) {
                 sections: result.rows.map(row => ({
                     section: row.section,
                     sectionId: row.section_id,
+                    schedule: row.schedule || '',
                     studentCount: parseInt(row.student_count),
                     students: (studentsBySection[row.section] || []).sort((a: string, b: string) => a.localeCompare(b))
                 }))

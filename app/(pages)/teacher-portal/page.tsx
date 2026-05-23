@@ -479,7 +479,7 @@ export default function Teacher() {
     // Overview drill-down state
     const [overviewStep, setOverviewStep] = useState<'courses' | 'sections' | 'stats'>('courses');
     const [selectedOverviewCourse, setSelectedOverviewCourse] = useState<{ id: string; courseId: string; name: string } | null>(null);
-    const [courseSections, setCourseSections] = useState<Array<{ section: string; sectionId?: string; studentCount: number; students?: string[] }>>([]);
+    const [courseSections, setCourseSections] = useState<Array<{ section: string; sectionId?: string; schedule?: string; studentCount: number; students?: string[] }>>([]);
     const [selectedSection, setSelectedSection] = useState<string>("");
     const [isLoadingSections, setIsLoadingSections] = useState(false);
 
@@ -508,7 +508,7 @@ export default function Teacher() {
     const [riskStep, setRiskStep] = useState<'courses' | 'sections' | 'list'>('courses');
     const [riskCourse, setRiskCourse] = useState<{ id: string; courseId: string; name: string } | null>(null);
     const [riskSection, setRiskSection] = useState<string>('');
-    const [riskSections, setRiskSections] = useState<Array<{ section: string; sectionId?: string; studentCount: number; students?: string[] }>>([]);
+    const [riskSections, setRiskSections] = useState<Array<{ section: string; sectionId?: string; schedule?: string; studentCount: number; students?: string[] }>>([]);
     const [isLoadingRiskSections, setIsLoadingRiskSections] = useState(false);
 
     // Section Comparison Analytics State
@@ -2205,12 +2205,6 @@ export default function Teacher() {
                                             </div>
                                             <div className="overview-course-card-body">
                                                 <h4 className="overview-course-card-name">{course.name}</h4>
-                                                {course.schedule && (
-                                                    <div className="overview-course-card-schedule">
-                                                        <CalendarIcon className="overview-course-schedule-icon" />
-                                                        <span>{formatSchedule(course.schedule)}</span>
-                                                    </div>
-                                                )}
                                                 <div className="overview-course-card-stats">
                                                     <div className="overview-course-stat">
                                                         <span className="overview-course-stat-value">{course.sectionCount || 0}</span>
@@ -2297,6 +2291,12 @@ export default function Teacher() {
                                                 </div>
                                                 <div className="overview-section-card-body">
                                                     <h4 className="overview-section-card-name">{sec.section}</h4>
+                                                    {sec.schedule && (
+                                                        <div className="overview-section-card-schedule">
+                                                            <CalendarIcon className="overview-section-schedule-icon" />
+                                                            <span>{formatSchedule(sec.schedule)}</span>
+                                                        </div>
+                                                    )}
                                                     <div className="overview-section-card-count">
                                                         <span className="overview-course-stat-value">{sec.studentCount}</span>
                                                         <span className="overview-course-stat-label">
@@ -2789,12 +2789,6 @@ export default function Teacher() {
                                             </div>
                                             <div className="overview-course-card-body">
                                                 <h4 className="overview-course-card-name">{course.name}</h4>
-                                                {course.schedule && (
-                                                    <div className="overview-course-card-schedule">
-                                                        <CalendarIcon className="overview-course-schedule-icon" />
-                                                        <span>{formatSchedule(course.schedule)}</span>
-                                                    </div>
-                                                )}
                                                 <div className="overview-course-card-stats">
                                                     <div className="overview-course-stat">
                                                         <span className="overview-course-stat-value">{course.sectionCount || 0}</span>
@@ -2878,6 +2872,12 @@ export default function Teacher() {
                                                 </div>
                                                 <div className="overview-section-card-body">
                                                     <h4 className="overview-section-card-name">{sec.section}</h4>
+                                                    {sec.schedule && (
+                                                        <div className="overview-section-card-schedule">
+                                                            <CalendarIcon className="overview-section-schedule-icon" />
+                                                            <span>{formatSchedule(sec.schedule)}</span>
+                                                        </div>
+                                                    )}
                                                     <div className="overview-section-card-count">
                                                         <span className="overview-course-stat-value">{sec.studentCount}</span>
                                                         <span className="overview-course-stat-label">
