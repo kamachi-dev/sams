@@ -198,9 +198,11 @@ export async function notifyCourseAnnouncement(
   title: string,
   message: string
 ): Promise<{ notified: number; failed: number }> {
+  let students: any;
+  
   try {
     // Get all enrolled students
-    const students = await pool.query(
+    students = await pool.query(
       `SELECT DISTINCT e.student FROM enrollment_data e 
        WHERE e.section IN (SELECT id FROM section WHERE course = $1)`,
       [courseId]
