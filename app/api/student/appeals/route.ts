@@ -2,7 +2,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
-import { notifyTeacherAppeal } from '@/lib/notification-triggers'
+import { createNotificationWithPush } from '@/lib/createAndNotify'
 
 /**
  * GET: Fetch all appeals filed by the current student
@@ -184,20 +184,25 @@ export async function POST(request: Request) {
         const recordedStatus = record.attendance === 2 ? 'Late' : 'Absent'
 
         // 🚀 TRIGGER NOTIFICATION TO TEACHER
-        await notifyTeacherAppeal(
-            record.course_id,
-            'New Student Appeal',
-            `A student submitted an appeal for their ${recordedStatus} attendance.`,
-            {
-                appealId: appeal.id,
-                studentId: user.id,
-                courseId: record.course_id,
-                recordDate: record.time,
-                reason: student_reason,
-                type: 'new_appeal',
-                url: '/teacher-portal'
-            }
+        // Get teacher ID from the section
+        const teacherResult = await db.query(
+            `SELECT teacher FROM section WHERE id = $1`,
+            [record.section_id]
         );
+
+        if (teacherResult.rows.length > 0) {
+            const teacherId = teacherResult.rows[0].teacher;
+            
+            await createNotificationWithPush({
+                studentId: teacherId,
+                courseId: record.course_id,
+                recordId: record_id,
+                type: 1, // appeal
+                title: 'New Student Appeal',
+                message: `A student submitted an appeal for their ${recordedStatus} attendance.`,
+                sendPush: true
+            });
+        }
 
         return NextResponse.json({
             success: true,

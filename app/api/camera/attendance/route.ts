@@ -1,7 +1,7 @@
 export const runtime = 'nodejs'
 import { NextResponse } from "next/server"
 import db from "@/app/services/database"
-import { notifyStudentNotification, notifyParentNotification } from '@/lib/notification-triggers'
+import { createNotificationWithPush } from '@/lib/createAndNotify'
 
 export async function POST(req: Request) {
     try {
@@ -67,59 +67,91 @@ export async function POST(req: Request) {
         // 🚀 TRIGGER NOTIFICATIONS FOR EACH RECORD
         for (const record of insertedRecords) {
             const courseData = await db.query(
-                `SELECT c.name as course_name FROM course c INNER JOIN section s ON c.id = s.course WHERE s.id = $1 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
+                `SELECT c.name as course_name, s.teacher 
+                 FROM course c 
+                 INNER JOIN section s ON c.id = s.course 
+                 WHERE s.id = $1 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
                 [record.course]
             );
 
             const courseName = courseData.rows.length > 0 ? courseData.rows[0].course_name : 'Unknown Course';
+            const teacherId = courseData.rows.length > 0 ? courseData.rows[0].teacher : null;
             const recordedTime = new Date(record.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
             const recordedDate = new Date(record.time).toLocaleDateString();
 
-            if (record.attendance === 2) {
-                // LATE - notify student
-                await notifyStudentNotification(
-                    record.student,
-                    'Late Attendance Recorded',
-                    `You were marked as late for ${courseName} at ${recordedTime}`,
-                    {
-                        recordId: record.id,
-                        status: 'Late',
-                        course: courseName,
-                        date: recordedDate,
-                        type: 'late_attendance',
-                        url: '/student-portal'
-                    }
-                );
-            } else if (record.attendance === 0) {
-                // ABSENT - notify student and parents
-                await notifyStudentNotification(
-                    record.student,
-                    'Absence Recorded',
-                    `You were marked as absent for ${courseName} on ${recordedDate}`,
-                    {
-                        recordId: record.id,
-                        status: 'Absent',
-                        course: courseName,
-                        date: recordedDate,
-                        type: 'absent',
-                        url: '/student-portal'
-                    }
-                );
+            // Determine attendance status and messages
+            let studentTitle = '';
+            let studentMessage = '';
+            let parentTitle = '';
+            let parentMessage = '';
+            let teacherTitle = '';
+            let teacherMessage = '';
 
-                // Also notify parents
-                await notifyParentNotification(
-                    record.student,
-                    'Student Absence Alert',
-                    `Your child was marked absent for ${courseName}`,
-                    {
-                        recordId: record.id,
-                        status: 'Absent',
-                        course: courseName,
-                        date: recordedDate,
-                        type: 'child_absent',
-                        url: '/parent-portal'
-                    }
-                );
+            if (record.attendance === 1) {
+                // PRESENT
+                studentTitle = 'Present Attendance Recorded';
+                studentMessage = `You were marked as present for ${courseName} at ${recordedTime}`;
+                parentTitle = 'Child Present';
+                parentMessage = `Your child was marked as present for ${courseName} at ${recordedTime}`;
+                teacherTitle = 'Attendance: Present';
+                teacherMessage = `Student marked present for ${courseName} at ${recordedTime}`;
+            } else if (record.attendance === 2) {
+                // LATE
+                studentTitle = 'Late Attendance Recorded';
+                studentMessage = `You were marked as late for ${courseName} at ${recordedTime}`;
+                parentTitle = 'Child Late';
+                parentMessage = `Your child was marked as late for ${courseName} at ${recordedTime}`;
+                teacherTitle = 'Attendance: Late';
+                teacherMessage = `Student marked late for ${courseName} at ${recordedTime}`;
+            } else if (record.attendance === 0) {
+                // ABSENT
+                studentTitle = 'Absence Recorded';
+                studentMessage = `You were marked as absent for ${courseName} on ${recordedDate}`;
+                parentTitle = 'Child Absent';
+                parentMessage = `Your child was marked as absent for ${courseName} on ${recordedDate}`;
+                teacherTitle = 'Attendance: Absent';
+                teacherMessage = `Student marked absent for ${courseName} on ${recordedDate}`;
+            }
+
+            // 1️⃣ NOTIFY STUDENT
+            await createNotificationWithPush({
+                studentId: record.student,
+                courseId: record.course,
+                recordId: record.id,
+                type: 0, // attendance
+                title: studentTitle,
+                message: studentMessage,
+                sendPush: true
+            });
+
+            // 2️⃣ NOTIFY PARENTS
+            const parentResult = await db.query(
+                `SELECT parent FROM student_data WHERE student = $1 AND parent IS NOT NULL`,
+                [record.student]
+            );
+            for (const pRow of parentResult.rows) {
+                await createNotificationWithPush({
+                    studentId: pRow.parent,
+                    courseId: record.course,
+                    recordId: record.id,
+                    type: 0, // attendance
+                    title: parentTitle,
+                    message: parentMessage,
+                    sendPush: true
+                });
+            }
+
+            // 3️⃣ NOTIFY TEACHER
+            if (teacherId) {
+                await createNotificationWithPush({
+                    studentId: teacherId,
+                    courseId: record.course,
+                    recordId: record.id,
+                    type: 0, // attendance
+                    title: teacherTitle,
+                    message: teacherMessage,
+                    sendPush: true
+                });
             }
         }
 

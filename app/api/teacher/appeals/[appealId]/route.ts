@@ -2,7 +2,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
-import { notifyStudentNotification } from '@/lib/notification-triggers'
+import { createNotificationWithPush } from '@/lib/createAndNotify'
 
 /**
  * PATCH: Review an appeal (approve/reject with teacher response)
@@ -103,17 +103,15 @@ export async function PATCH(
                 ? 'Your appeal has been approved! The attendance record has been corrected.'
                 : `Your appeal has been rejected. Teacher's response: ${teacherResponse || 'No response provided'}`;
 
-            await notifyStudentNotification(
+            await createNotificationWithPush({
                 studentId,
-                `Appeal ${decision === 'approved' ? '✅ Approved' : '❌ Rejected'}`,
+                courseId: appeal.course_id,
+                recordId: updatedAppeal.record_id,
+                type: 1, // appeal
+                title: `Appeal ${decision === 'approved' ? '✅ Approved' : '❌ Rejected'}`,
                 message,
-                {
-                    appealId: updatedAppeal.id,
-                    decision,
-                    type: 'appeal_decision',
-                    url: '/student-portal'
-                }
-            );
+                sendPush: true
+            });
         }
 
         return NextResponse.json({
