@@ -67,21 +67,3 @@ CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id
 
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_active 
     ON push_subscriptions(active);
-
--- Table for storing notification history (optional, for analytics)
-CREATE TABLE IF NOT EXISTS notification_history (
-    id SERIAL PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    notification_type VARCHAR(50),
-    title TEXT,
-    message TEXT,
-    sent_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    read_at TIMESTAMP WITHOUT TIME ZONE,
-    FOREIGN KEY (user_id) REFERENCES account(id) ON UPDATE CASCADE ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_notification_history_user_id 
-    ON notification_history(user_id);
-
-CREATE INDEX IF NOT EXISTS idx_notification_history_sent_at 
-    ON notification_history(sent_at);

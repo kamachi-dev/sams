@@ -1,11 +1,14 @@
 import webpush from 'web-push';
 
-// This should be in your environment variables
-// webpush.setVapidDetails(
-//   process.env.NEXT_PUBLIC_VAPID_SUBJECT || '',
-//   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
-//   process.env.VAPID_PRIVATE_KEY || ''
-// );
+const vapidSubject = process.env.NEXT_PUBLIC_VAPID_SUBJECT;
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (vapidSubject && vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+} else {
+  console.warn('VAPID details are not fully configured. Browser push notifications will not be sent.');
+}
 
 export async function sendPushNotification(
   subscription: any,
