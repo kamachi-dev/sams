@@ -57,6 +57,7 @@ export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
     const { isLoaded, isSignedIn } = useAuth();
     const defaultTab = links && links.length > 0 ? links[0].label : undefined;
     const pathname = usePathname() ?? '';
+    const showEmailNotifications = pathname.includes('/parent-portal') || pathname.includes('/student-portal');
     const title = React.useMemo(() => formatPathname(pathname), [pathname]);
     const [user, setUser] = React.useState<Account | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -198,6 +199,7 @@ export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
             <NotificationSettings 
                 isOpen={showNotificationSettings} 
                 onClose={() => setShowNotificationSettings(false)} 
+                showEmailNotifications={showEmailNotifications}
             />
         </Tabs.Root>
     );

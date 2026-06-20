@@ -51,6 +51,7 @@ export async function GET() {
 
             return {
                 id: row.id,
+                recordId: row.record_id,
                 date: row.record_time
                     ? new Date(row.record_time).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
                     : '-',
@@ -171,7 +172,7 @@ export async function POST(request: Request) {
                 status
             ) VALUES ($1, $2, $3, $4, 0)
             RETURNING id, record_id, student_reason as reason, status, created_at as submitted_at
-        `, [record_id, user.id, record.course_id, student_reason])
+        `, [record_id, user.id, record.section_id, student_reason])
 
         if (result.rows.length === 0) {
             return NextResponse.json({
@@ -195,7 +196,7 @@ export async function POST(request: Request) {
             
             await createNotificationWithPush({
                 studentId: teacherId,
-                courseId: record.course_id,
+                courseId: record.section_id,
                 recordId: record_id,
                 type: 1, // appeal
                 title: 'New Student Appeal',
@@ -208,6 +209,7 @@ export async function POST(request: Request) {
             success: true,
             data: {
                 id: appeal.id,
+                recordId: record_id,
                 date: new Date(record.time).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
                 course: record.course_name,
                 recordedStatus,

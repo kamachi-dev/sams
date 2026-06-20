@@ -118,6 +118,8 @@ export default function Student() {
     appeal => appeal.status === "approved" || appeal.status === "rejected"
   ).length;
 
+  const getAppealRecordId = (appeal: any) => appeal.recordId ?? appeal.record_id ?? null;
+
   const handleSubmitAppeal = async () => {
     if (!selectedRecord || !appealReason.trim()) return;
 
@@ -419,7 +421,7 @@ export default function Student() {
   // Sync records state with appealable records (filtered by daily records and excluding already appealed ones)
   useEffect(() => {
     const newRecords = appealableRecords.filter(record =>
-      !appeals.some(appeal => appeal.recordId === record.id)
+      !appeals.some(appeal => String(getAppealRecordId(appeal)) === String(record.id))
     );
     setRecords(newRecords);
   }, [appealableRecords, appeals]);

@@ -2,6 +2,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from "next/server"
 import db from "@/app/services/database"
 import { createNotificationWithPush } from '@/lib/createAndNotify'
+import { sendAttendanceUpdateEmail } from '@/lib/email-notifications'
 
 export async function POST(req: Request) {
     try {
@@ -153,6 +154,16 @@ export async function POST(req: Request) {
                     sendPush: true
                 });
             }
+
+            await sendAttendanceUpdateEmail({
+                studentId: record.student,
+                parentIds: parentResult.rows.map((row: any) => row.parent),
+                teacherId,
+                courseName,
+                status: record.attendance === 1 ? 'present' : record.attendance === 2 ? 'late' : 'absent',
+                recordedTime,
+                recordedDate,
+            });
         }
 
         return NextResponse.json({

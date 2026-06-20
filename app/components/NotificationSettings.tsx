@@ -8,9 +8,10 @@ import './NotificationSettings.css';
 interface NotificationSettingsProps {
   isOpen: boolean;
   onClose: () => void;
+  showEmailNotifications?: boolean;
 }
 
-export default function NotificationSettings({ isOpen, onClose }: NotificationSettingsProps) {
+export default function NotificationSettings({ isOpen, onClose, showEmailNotifications = false }: NotificationSettingsProps) {
   const {
     preferences,
     isSupported,
@@ -171,28 +172,29 @@ export default function NotificationSettings({ isOpen, onClose }: NotificationSe
                 </div>
               )}
 
-              {/* Email Preferences */}
-              <div className="settings-section">
-                <h3>Email Notifications</h3>
-                <div className="setting-item">
-                  <div className="setting-label">
-                    <label htmlFor="email-enabled">Enable Email Notifications</label>
-                    <p className="setting-description">
-                      Receive important updates via email
-                    </p>
-                  </div>
-                  <div className="setting-toggle">
-                    {preferences?.email_enabled ? <CheckIcon /> : <CrossCircledIcon />}
-                    <input
-                      id="email-enabled"
-                      type="checkbox"
-                      checked={preferences?.email_enabled || false}
-                      onChange={(e) => handleTogglePreference('email_enabled', e.target.checked)}
-                      disabled={isSaving}
-                    />
+              {showEmailNotifications && (
+                <div className="settings-section">
+                  <h3>Email Notifications</h3>
+                  <div className="setting-item">
+                    <div className="setting-label">
+                      <label htmlFor="email-enabled">Enable Email Notifications</label>
+                      <p className="setting-description">
+                        Receive important updates via email
+                      </p>
+                    </div>
+                    <div className="setting-toggle">
+                      {preferences?.email_enabled ? <CheckIcon /> : <CrossCircledIcon />}
+                      <input
+                        id="email-enabled"
+                        type="checkbox"
+                        checked={preferences?.email_enabled || false}
+                        onChange={(e) => handleTogglePreference('email_enabled', e.target.checked)}
+                        disabled={isSaving}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Subscription Status */}
               <div className="subscription-status">

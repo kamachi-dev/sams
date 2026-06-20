@@ -42,8 +42,8 @@ export async function GET() {
                 rev.username as reviewer_name
             FROM attendance_appeal aa
             LEFT JOIN record r ON aa.record_id = r.id
-            LEFT JOIN course c ON aa.course_id = c.id
-            LEFT JOIN section s ON c.id = s.course
+                        LEFT JOIN section s ON aa.course_id = s.id
+                        LEFT JOIN course c ON s.course = c.id
             LEFT JOIN student_data sd ON aa.student_id = sd.id
             LEFT JOIN account rev ON aa.reviewed_by = rev.id
             WHERE s.teacher = $1

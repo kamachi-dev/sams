@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 import { createNotificationWithPush } from '@/lib/createAndNotify'
+import { sendAppealDecisionEmail } from '@/lib/email-notifications'
 
 /**
  * PATCH: Review an appeal (approve/reject with teacher response)
@@ -36,10 +37,10 @@ export async function PATCH(
 
         // Verify appeal exists and teacher owns the course
         const appealCheck = await db.query(`
-            SELECT aa.id, aa.status, aa.course_id, s.teacher
+            SELECT aa.id, aa.status, aa.course_id, s.teacher, c.name as course_name
             FROM attendance_appeal aa
-            LEFT JOIN course c ON aa.course_id = c.id
-            LEFT JOIN section s ON c.id = s.course
+            LEFT JOIN section s ON aa.course_id = s.id
+            LEFT JOIN course c ON s.course = c.id
                         WHERE aa.id = $1
                             AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
         `, [appealId])
@@ -111,6 +112,13 @@ export async function PATCH(
                 title: `Appeal ${decision === 'approved' ? '✅ Approved' : '❌ Rejected'}`,
                 message,
                 sendPush: true
+            });
+
+            await sendAppealDecisionEmail({
+                studentId,
+                courseName: appeal.course_name || 'your course',
+                decision,
+                teacherResponse,
             });
         }
 
