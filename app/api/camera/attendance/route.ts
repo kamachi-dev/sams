@@ -164,6 +164,8 @@ export async function POST(req: Request) {
                 recordedTime,
                 recordedDate,
             });
+
+            console.log(`📧 Email notifications queued for attendance record ${record.id} at ${new Date().toISOString()}`);
         }
 
         return NextResponse.json({

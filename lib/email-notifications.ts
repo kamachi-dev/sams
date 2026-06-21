@@ -80,15 +80,20 @@ async function sendEmail(to: string, subject: string, text: string, html: string
 		return false;
 	}
 
-	await transporter.sendMail({
-		from: process.env.SMTP_FROM || process.env.SMTP_USER,
-		to,
-		subject,
-		text,
-		html,
-	});
-
-	return true;
+	try {
+		const info = await transporter.sendMail({
+			from: process.env.SMTP_FROM || process.env.SMTP_USER,
+			to,
+			subject,
+			text,
+			html,
+		});
+		console.log(`✅ Email sent successfully to ${to}: ${info.messageId}`);
+		return true;
+	} catch (error) {
+		console.error(`❌ Failed to send email to ${to}:`, error);
+		return false;
+	}
 }
 
 async function sendToRecipients(userIds: string[], subject: string, text: string, html: string) {
