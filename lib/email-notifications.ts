@@ -49,6 +49,8 @@ async function resolveRecipients(userIds: string[]) {
 		return [] as Recipient[];
 	}
 
+	console.log(`🔍 Resolving ${userIds.length} recipient(s): ${userIds.join(', ')}`);
+
 	const result = await db.query(
 		`SELECT a.id AS user_id, a.email, a.username
 		 FROM account a
@@ -57,15 +59,20 @@ async function resolveRecipients(userIds: string[]) {
 		[userIds]
 	);
 
+	console.log(`✓ Found ${result.rows.length} account(s) with email addresses`);
+
 	const recipients: Recipient[] = [];
 
 	for (const row of result.rows) {
 		if (await hasEmailEnabled(row.user_id)) {
+			console.log(`  → ${row.username || 'Unknown'} (${row.user_id}): ${row.email}`);
 			recipients.push({
 				userId: row.user_id,
 				email: row.email,
 				username: row.username,
 			});
+		} else {
+			console.log(`  ✗ ${row.username || 'Unknown'} (${row.user_id}): Email disabled`);
 		}
 	}
 
@@ -100,8 +107,11 @@ async function sendToRecipients(userIds: string[], subject: string, text: string
 	const recipients = await resolveRecipients(userIds);
 
 	if (recipients.length === 0) {
+		console.warn(`⚠️  No recipients found for ${userIds.length} user ID(s)`);
 		return { sent: 0, skipped: userIds.length };
 	}
+
+	console.log(`📧 Sending "${subject}" email to ${recipients.length} recipient(s): ${recipients.map(r => r.email).join(', ')}`);
 
 	const results = await Promise.allSettled(
 		recipients.map((recipient) => sendEmail(recipient.email, subject, text, html))
@@ -160,6 +170,14 @@ export async function sendAttendanceUpdateEmail(options: {
 			? [{ userIds: [teacherId], subject: `Attendance: ${status === 'present' ? 'Present' : status === 'late' ? 'Late' : 'Absent'}`, text: teacherText, html: teacherHtml }]
 			: []),
 	];
+
+	console.log(`\n📬 ========== ATTENDANCE EMAIL NOTIFICATION ==========`);
+	console.log(`Course: ${courseName} | Status: ${status} | Time: ${recordedTime}`);
+	console.log(`Sending to:`);
+	console.log(`  • Student: ${studentId}`);
+	if (parentIds.length > 0) console.log(`  • Parents: ${parentIds.join(', ')}`);
+	if (teacherId) console.log(`  • Teacher: ${teacherId}`);
+	console.log(`====================================================\n`);
 
 	const results = await Promise.allSettled(
 		targetGroups.map((group) => sendToRecipients(group.userIds, group.subject, group.text, group.html))

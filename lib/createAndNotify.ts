@@ -31,6 +31,9 @@ export async function createNotificationWithPush(
 
   try {
     // 1️⃣ Create notification in database
+    console.log(`\n🔔 Creating notification: "${title}"`);
+    console.log(`   For: ${studentId} | Course: ${courseId} | Type: ${type}`);
+    
     const insertResult = await pool.query(
       `INSERT INTO notification 
         (student_id, course_id, record_id, type, title, message)
@@ -45,6 +48,8 @@ export async function createNotificationWithPush(
       throw new Error("Failed to create notification record");
     }
 
+    console.log(`✅ Notification saved to DB: ${notificationId}`);
+
     // 2️⃣ Send browser push notification (if enabled and user has subscriptions)
     if (sendPush) {
       try {
@@ -54,6 +59,8 @@ export async function createNotificationWithPush(
            WHERE user_id = $1 AND active = true`,
           [studentId]
         );
+
+        console.log(`🔍 Found ${subscriptions.rows.length} active push subscription(s) for ${studentId}`);
 
         if (subscriptions.rows.length > 0) {
           // Format subscription objects for web-push library
@@ -66,7 +73,8 @@ export async function createNotificationWithPush(
           }));
 
           // Send push notifications
-          await sendBulkPushNotifications(
+          console.log(`📤 Sending push notification: "${title}"`);
+          const pushResult = await sendBulkPushNotifications(
             formattedSubscriptions,
             title,
             {
@@ -82,12 +90,17 @@ export async function createNotificationWithPush(
               },
             }
           );
+          console.log(`✅ Push sent: ${pushResult.sent} success, ${pushResult.failed} failed`);
+        } else {
+          console.log(`⚠️  No push subscriptions found for ${studentId} - user may not have browser notifications enabled`);
         }
       } catch (pushError) {
-        console.warn("Push notification sending failed (non-critical):", pushError);
+        console.warn(`❌ Push notification sending failed (non-critical):`, pushError);
         // Don't fail the whole operation if push fails
         // DB notification was successfully created
       }
+    } else {
+      console.log(`⏭️  Push notification skipped (sendPush=false)`);
     }
 
     return {

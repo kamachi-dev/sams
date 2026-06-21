@@ -88,6 +88,10 @@ export async function POST(req: Request) {
             let teacherTitle = '';
             let teacherMessage = '';
 
+            console.log(`\n📍 Processing attendance record ${record.id}`);
+            console.log(`   Student: ${record.student} | Course: ${courseName} (${record.course})`);
+            console.log(`   Status: ${record.attendance === 1 ? '✅ PRESENT' : record.attendance === 2 ? '⏰ LATE' : '❌ ABSENT'} | Time: ${recordedTime}`);
+
             if (record.attendance === 1) {
                 // PRESENT
                 studentTitle = 'Present Attendance Recorded';
@@ -165,8 +169,13 @@ export async function POST(req: Request) {
                 recordedDate,
             });
 
-            console.log(`📧 Email notifications queued for attendance record ${record.id} at ${new Date().toISOString()}`);
+            console.log(`✅ All notifications sent for record ${record.id}\n`);
         }
+
+        console.log(`\n🎉 ===== ATTENDANCE PROCESSING COMPLETE =====`);
+        console.log(`📊 Total records processed: ${records.length}`);
+        console.log(`⏱️  Timestamp: ${new Date().toISOString()}`);
+        console.log(`============================================\n`);
 
         return NextResponse.json({
             success: true,
