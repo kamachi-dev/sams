@@ -6,6 +6,7 @@ import { currentUser } from '@clerk/nextjs/server'
 export async function GET(req: Request) {
     try {
         const user = await currentUser()
+        const displayTimeZone = 'Asia/Manila'
 
         if (!user) {
             return NextResponse.json({
@@ -119,11 +120,14 @@ export async function GET(req: Request) {
                 email: row.email,
                 course: row.course_name,
                 status: status,
-                date: row.created_at ? new Date(row.created_at).toLocaleDateString('en-US') : '-',
+                date: row.created_at ? new Date(row.created_at).toLocaleDateString('en-US', {
+                    timeZone: displayTimeZone
+                }) : '-',
                 time: isAbsentOrNoRecord ? '-' : (row.created_at ? new Date(row.created_at).toLocaleTimeString('en-US', {
                     hour: 'numeric',
                     minute: '2-digit',
-                    hour12: true
+                    hour12: true,
+                    timeZone: displayTimeZone
                 }) : '-'),
                 confidence: isAbsentOrNoRecord ? 'No Detection' : (row.confidence ? `${Math.round(row.confidence * 100)}%` : 'No Detection')
             }
