@@ -2484,7 +2484,7 @@ export default function Teacher() {
 
                                         <div className="teacher-chart-container">
                                             <div className="teacher-chart-card">
-                                                <ResponsiveContainer width="100%" height="80%">
+                                                <ResponsiveContainer width="100%" height={280}>
                                                     {selectedView === "daily" && (
                                                         <BarChart data={dailyTrendData}>
                                                             <CartesianGrid strokeDasharray="3 3" />

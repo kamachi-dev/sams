@@ -1486,7 +1486,7 @@ export default function Student() {
                           <p>Loading chart data...</p>
                         </div>
                       ) : (
-                      <ResponsiveContainer width="100%" height="80%">
+                      <ResponsiveContainer width="100%" height={280}>
                         {selectedView === "daily" && (
                           <BarChart data={trendsData}>
                             <CartesianGrid strokeDasharray="3 3" />
