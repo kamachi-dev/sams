@@ -64,10 +64,9 @@
 
 /* Main Container */
 .teacher-main-container {
-    padding: 0px 10px 0px;
+    padding: 0 10px;
     width: 100%;
     max-width: 100%;
-
     height: calc(100vh - 280px);
     max-height: calc(100vh - 280px);
     box-sizing: border-box;
@@ -89,7 +88,7 @@
     overflow: hidden;
 }
 
-@media (max-width: 1024px) {
+@media (width <= 1024px) {
     .teacher-split-layout {
         grid-template-columns: 100%;
     }
@@ -111,7 +110,7 @@
     padding: 12px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -126,7 +125,7 @@
     padding: 8px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
 }
 
 .teacher-info-header {
@@ -172,7 +171,7 @@
     padding: 8px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
     min-width: 0;
     max-width: 100%;
 }
@@ -262,7 +261,7 @@
 }
 
 .teacher-select:hover {
-    box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
+    box-shadow: 0 0 0 3px rgb(29 161 242 / 10%);
 }
 
 .teacher-export-btn {
@@ -291,10 +290,10 @@
     right: 0;
     z-index: 100;
     background: var(--background1);
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid rgb(0 0 0 / 12%);
     border-radius: 10px;
     padding: 14px 16px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -392,7 +391,7 @@
     padding: 12px 16px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
 }
 
 .teacher-chart-date-display {
@@ -420,7 +419,7 @@
     display: flex;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
     min-width: 0;
     max-width: 100%;
     height: 100%;
@@ -454,8 +453,7 @@
 
 .teacher-records-scroll {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: auto;
+    overflow: auto;
     min-height: 0;
 }
 
@@ -516,22 +514,22 @@
 }
 
 .teacher-status-badge.present {
-    background: rgba(15, 157, 88, 0.15);
+    background: rgb(15 157 88 / 15%);
     color: #0F9D58;
 }
 
 .teacher-status-badge.late {
-    background: rgba(244, 180, 0, 0.15);
+    background: rgb(244 180 0 / 15%);
     color: #F4B400;
 }
 
 .teacher-status-badge.absent {
-    background: rgba(219, 68, 55, 0.15);
+    background: rgb(219 68 55 / 15%);
     color: #DB4437;
 }
 
 .teacher-status-badge.no.record {
-    background: rgba(158, 158, 158, 0.15);
+    background: rgb(158 158 158 / 15%);
     color: #9E9E9E;
 }
 
@@ -578,7 +576,7 @@
 .teacher-search-input:focus {
     outline: none;
     border-color: #1DA1F2;
-    box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
+    box-shadow: 0 0 0 3px rgb(29 161 242 / 10%);
 }
 
 /* ============================================
@@ -675,7 +673,7 @@
 
 .overview-course-card:hover {
     border-color: #1DA1F2;
-    box-shadow: 0 4px 16px rgba(29, 161, 242, 0.12);
+    box-shadow: 0 4px 16px rgb(29 161 242 / 12%);
     transform: translateY(-2px);
 }
 
@@ -689,7 +687,7 @@
     width: 28px;
     height: 28px;
     color: #1DA1F2;
-    background: rgba(29, 161, 242, 0.08);
+    background: rgb(29 161 242 / 8%);
     padding: 6px;
     border-radius: 8px;
 }
@@ -759,7 +757,7 @@
 
 .overview-section-card:hover {
     border-color: #0F9D58;
-    box-shadow: 0 4px 16px rgba(15, 157, 88, 0.12);
+    box-shadow: 0 4px 16px rgb(15 157 88 / 12%);
     transform: translateY(-2px);
 }
 
@@ -773,7 +771,7 @@
     width: 28px;
     height: 28px;
     color: #0F9D58;
-    background: rgba(15, 157, 88, 0.08);
+    background: rgb(15 157 88 / 8%);
     padding: 6px;
     border-radius: 8px;
 }
@@ -786,8 +784,8 @@
 /* Pinned / Selected card states */
 .overview-course-card.overview-card-pinned {
     border-color: #1DA1F2;
-    box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.15), 0 4px 16px rgba(29, 161, 242, 0.12);
-    background: rgba(29, 161, 242, 0.03);
+    box-shadow: 0 0 0 3px rgb(29 161 242 / 15%), 0 4px 16px rgb(29 161 242 / 12%);
+    background: rgb(29 161 242 / 3%);
     order: -1;
 }
 
@@ -797,15 +795,15 @@
 
 .overview-course-card.overview-card-pinned .overview-course-card-icon {
     color: #1DA1F2;
-    background: rgba(29, 161, 242, 0.2);
+    background: rgb(29 161 242 / 20%);
     font-weight: 900 !important;
     filter: brightness(1.1) saturate(1.2);
 }
 
 .overview-section-card.overview-card-pinned {
     border-color: #0F9D58;
-    box-shadow: 0 0 0 3px rgba(15, 157, 88, 0.15), 0 4px 16px rgba(15, 157, 88, 0.12);
-    background: rgba(15, 157, 88, 0.03);
+    box-shadow: 0 0 0 3px rgb(15 157 88 / 15%), 0 4px 16px rgb(15 157 88 / 12%);
+    background: rgb(15 157 88 / 3%);
     order: -1;
 }
 
@@ -815,7 +813,7 @@
 
 .overview-section-card.overview-card-pinned .overview-section-card-icon {
     color: #0F9D58;
-    background: rgba(15, 157, 88, 0.2);
+    background: rgb(15 157 88 / 20%);
     font-weight: 900 !important;
     filter: brightness(1.1) saturate(1.2);
 }
@@ -827,7 +825,7 @@
     font-size: 10px;
     font-weight: 600;
     color: #1DA1F2;
-    background: rgba(29, 161, 242, 0.1);
+    background: rgb(29 161 242 / 10%);
     border-radius: 4px;
     padding: 2px 6px;
     text-transform: uppercase;
@@ -836,7 +834,7 @@
 
 .overview-card-pinned-badge.green {
     color: #0F9D58;
-    background: rgba(15, 157, 88, 0.1);
+    background: rgb(15 157 88 / 10%);
 }
 
 .overview-section-card-body {
@@ -988,7 +986,7 @@
     border-radius: 12px;
     border: 1px solid #E0E0E0;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
 }
 
 .section-comparison-card-header {
@@ -1042,12 +1040,12 @@
 
 .section-rate-badge.above {
     color: #0F9D58;
-    background: rgba(15, 157, 88, 0.1);
+    background: rgb(15 157 88 / 10%);
 }
 
 .section-rate-badge.below {
     color: #DB4437;
-    background: rgba(219, 68, 55, 0.1);
+    background: rgb(219 68 55 / 10%);
 }
 
 .section-breakdown-row {
@@ -1169,7 +1167,7 @@
     background: var(--background1);
     border-radius: 8px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 4px rgb(0 0 0 / 8%);
     overflow: auto;
     flex: 1;
 }
@@ -1310,12 +1308,12 @@
 }
 
 .attendance-rate-badge.critical {
-    background: rgba(219, 68, 55, 0.15);
+    background: rgb(219 68 55 / 15%);
     color: #DB4437;
 }
 
 .attendance-rate-badge.warning {
-    background: rgba(244, 180, 0, 0.15);
+    background: rgb(244 180 0 / 15%);
     color: #B8860B;
 }
 
@@ -1368,7 +1366,7 @@
     color: #1F2F57;
     font-size: 18px;
     font-weight: 600;
-    margin: 0 0 8px 0;
+    margin: 0 0 8px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1459,7 +1457,7 @@
     gap: 12px;
 }
 
-@media (max-width: 1024px) {
+@media (width <= 1024px) {
     .comparison-summary-grid {
         grid-template-columns: 1fr;
     }
@@ -1470,7 +1468,7 @@
     border-radius: 12px;
     border: 1px solid #E0E0E0;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
 }
 
 .comparison-card-header {
@@ -1562,15 +1560,15 @@
 }
 
 .breakdown-item.present {
-    background: rgba(15, 157, 88, 0.1);
+    background: rgb(15 157 88 / 10%);
 }
 
 .breakdown-item.late {
-    background: rgba(244, 180, 0, 0.1);
+    background: rgb(244 180 0 / 10%);
 }
 
 .breakdown-item.absent {
-    background: rgba(219, 68, 55, 0.1);
+    background: rgb(219 68 55 / 10%);
 }
 
 .breakdown-item .breakdown-value {
@@ -1647,11 +1645,11 @@
     border-radius: 12px;
     border: 1px solid #E0E0E0;
     padding: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
 }
 
 .chart-section-title {
-    margin: 0 0 8px 0;
+    margin: 0 0 8px;
     font-size: 13px;
     font-weight: 600;
     color: #1F2F57;
@@ -1663,6 +1661,7 @@
 }
 
 /* Appeal */
+
 /* Approve Button */
 .teacher-approve-btn {
     padding: 6px;
@@ -1674,7 +1673,6 @@
     font-weight: 600;
     width: 100%;
     cursor: pointer;
-    display: flex;
     align-items: center;
     gap: 8px;
     transition: all 0.2s ease;
@@ -1685,7 +1683,7 @@
 
 .teacher-approve-btn:hover {
     transform: scale(1.03);
-    box-shadow: 0 4px 10px rgba(23, 161, 250, 0.35);
+    box-shadow: 0 4px 10px rgb(23 161 250 / 35%);
 }
 
 .teacher-approve-btn:active {
@@ -1709,7 +1707,6 @@
     font-weight: 600;
     width: 100%;
     cursor: pointer;
-    display: flex;
     align-items: center;
     gap: 8px;
     transition: all 0.2s ease;
@@ -1720,7 +1717,7 @@
 
 .teacher-reject-btn:hover {
     transform: scale(1.03);
-    box-shadow: 0 4px 10px rgba(249, 38, 0, 0.35);
+    box-shadow: 0 4px 10px rgb(249 38 0 / 35%);
 }
 
 .teacher-reject-btn:active {

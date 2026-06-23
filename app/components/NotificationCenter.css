@@ -20,7 +20,7 @@
 }
 
 .notification-bell:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgb(0 0 0 / 5%);
 }
 
 .notification-badge {
@@ -48,7 +48,7 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 40px rgb(0 0 0 / 10%);
   margin-top: 8px;
   z-index: 1000;
   max-height: 500px;
@@ -82,7 +82,7 @@
 }
 
 .mark-all-read-btn:hover {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgb(59 130 246 / 10%);
 }
 
 .notification-list {
@@ -123,22 +123,22 @@
 }
 
 .notification-title {
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
   font-size: 14px;
   font-weight: 600;
   color: #1f2937;
 }
 
 .notification-message {
-  margin: 0 0 6px 0;
+  margin: 0 0 6px;
   font-size: 13px;
   color: #4b5563;
   line-height: 1.4;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .notification-course {
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
   font-size: 12px;
   color: #6b7280;
   font-style: italic;
@@ -185,19 +185,19 @@
 }
 
 .notification-footer button:hover {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgb(59 130 246 / 10%);
 }
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .notification-bell:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgb(255 255 255 / 10%);
   }
 
   .notification-dropdown {
     background: #1f2937;
     border-color: #374151;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 40px rgb(0 0 0 / 30%);
   }
 
   .notification-header {
