@@ -240,7 +240,7 @@ export async function GET(req: Request) {
             // If Feb 1 is Sunday (0), we need to add 1 day to get to Monday
             // If Feb 1 is Monday (1), we add 0 days
             // If Feb 1 is Saturday (6), we need to add 2 days
-            let daysUntilMonday = (dayOfWeek === 0) ? 1 : (dayOfWeek === 1) ? 0 : (8 - dayOfWeek)
+            const daysUntilMonday = (dayOfWeek === 0) ? 1 : (dayOfWeek === 1) ? 0 : (8 - dayOfWeek)
 
             const firstMonday = new Date(currentYear, currentMonth, 1 + daysUntilMonday)
 

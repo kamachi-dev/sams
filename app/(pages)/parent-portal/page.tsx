@@ -71,7 +71,13 @@ type CourseAttendanceItem = {
 };
 
 export default function Parent() {
-  const dragScroll = useDragScroll<HTMLDivElement>();
+  const {
+    ref: dragScrollRef,
+    onMouseDown: handleMouseDown,
+    onMouseUp: handleMouseUp,
+    onMouseLeave: handleMouseLeave,
+    onMouseMove: handleMouseMove,
+  } = useDragScroll<HTMLDivElement>();
 
   // API-fetched data
   const [children, setChildren] = useState<any[]>([]);
@@ -501,7 +507,7 @@ export default function Parent() {
   };
 
   // Filters for student records
-  const getFilteredChildren = () => {
+  const filteredChildren = useMemo(() => {
     let filtered = children;
 
     if (childRecordFilters.yesterday) {
@@ -516,9 +522,7 @@ export default function Parent() {
     }
 
     return filtered;
-  };
-
-  const filteredChildren = useMemo(() => getFilteredChildren(), [children, childRecordFilters]);
+  }, [children, childRecordFilters]);
 
   // Filters for notifications
   const filteredNotifications = useMemo(() => notifications.filter(n =>
@@ -633,11 +637,11 @@ export default function Parent() {
                 <div style={{ padding: '20px', textAlign: 'center' }}>Loading children...</div>
               ) : (
               <div className="parent-records-grid"
-                  ref={dragScroll.ref}
-                  onMouseDown={dragScroll.onMouseDown}
-                  onMouseUp={dragScroll.onMouseUp}
-                  onMouseLeave={dragScroll.onMouseLeave}
-                  onMouseMove={dragScroll.onMouseMove}
+                  ref={dragScrollRef}
+                  onMouseDown={handleMouseDown}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseLeave}
+                  onMouseMove={handleMouseMove}
                 >
                 {filteredChildren.map((child) => (
                   <div key={child.id} className="parent-student-card">

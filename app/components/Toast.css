@@ -15,7 +15,7 @@
   gap: 12px;
   padding: 12px 16px;
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
   animation: slideIn 0.3s ease-out;
   min-width: 300px;
 }
@@ -25,6 +25,7 @@
     transform: translateX(400px);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -36,6 +37,7 @@
     transform: translateX(0);
     opacity: 1;
   }
+
   to {
     transform: translateX(400px);
     opacity: 0;
@@ -81,7 +83,7 @@
   flex-shrink: 0;
   background: none;
   border: none;
-  color: currentColor;
+  color: currentcolor;
   cursor: pointer;
   font-size: 18px;
   opacity: 0.6;
