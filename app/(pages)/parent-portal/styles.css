@@ -21,8 +21,7 @@
     border: none;
     box-sizing: border-box;
 }
-
-/* Dashboard */
+/*Dashboard*/
 .student-panel-card.attendance {
     background: var(--present);
 }
@@ -34,8 +33,7 @@
 .student-panel-card.enroll {
     background: var(--background1);
 }
-
-/* Notifications */
+/*Notifications*/
 .student-panel-card.notifications {
     background: var(--background1);
 }
@@ -55,13 +53,11 @@
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease;
 }
-
 .student-panel-card.overall {
     background: var(--present);
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease;
 }
-
 .student-panel-card.children {
     background: var(--background1);
     height: 100%;
@@ -95,7 +91,7 @@
 
 /* Main Container */
 .student-main-container {
-    padding: 0 10px;
+    padding: 0px 10px 0px;
     width: 100%;
     max-width: 100%;
     height: 100%;
@@ -107,7 +103,6 @@
     display: flex;
     gap: 4px;
     margin-bottom: 8px;
-
     /* border-bottom: 2px solid #F2F2F2; */
 }
 
@@ -140,7 +135,7 @@
     padding: 8px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .student-info-header {
@@ -186,7 +181,7 @@
     padding: 8px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     min-width: 0;
     max-width: 100%;
 }
@@ -262,15 +257,12 @@
 /* Filters Section */
 .student-filters {
     /* background: white; */
-
     /* padding: 6px 8px; */
     border-radius: 6px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-
     /* gap: 12px; */
-
     /* border: 1px solid #F2F2F2;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); */
 }
@@ -285,7 +277,6 @@
 .student-select {
     padding: 6px 12px;
     border-radius: 6px;
-
     /* border: 1px solid #BDBDBD; */
     background: var(--accent1);
     color: var(--background1);
@@ -295,7 +286,7 @@
 }
 
 .student-select:hover {
-    box-shadow: 0 0 0 3px rgb(29 161 242 / 10%);
+    box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
 }
 
 .student-export-btn {
@@ -346,7 +337,7 @@
     display: flex;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     min-width: 0;
     max-width: 100%;
 }
@@ -379,7 +370,7 @@
     width: 100%;
     max-width: 100%;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .student-subject-table-title {
@@ -392,8 +383,9 @@
 .student-subject-table-scroll {
     width: 100%;
     max-width: 100%;
-    overflow: auto;
+    overflow-x: auto;
     max-height: 280px;
+    overflow-y: auto;
 }
 
 .student-subject-table {
@@ -447,17 +439,17 @@
 }
 
 .course-badge.present {
-    background: rgb(15 157 88 / 15%);
+    background: rgba(15, 157, 88, 0.15);
     color: var(--present);
 }
 
 .course-badge.late {
-    background: rgb(244 180 0 / 15%);
+    background: rgba(244, 180, 0, 0.15);
     color: var(--late);
 }
 
 .course-badge.absent {
-    background: rgb(219 68 55 / 15%);
+    background: rgba(219, 68, 55, 0.15);
     color: var(--absent);
 }
 
@@ -523,9 +515,7 @@
     color: #BDBDBD;
     font-size: 14px;
 }
-
-/* Right Side */
-
+/*Right Side*/
 /* Course Breakdown Table */
 .student-courses-card-right {
     background: var(--background1);
@@ -538,7 +528,7 @@
     display: flex;
     flex-direction: column;
     overflow: auto;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .student-courses-title {
@@ -552,7 +542,8 @@
     width: 100%;
     flex: 1;
     max-width: 100%;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: auto;
 }
 
 .student-courses-table {
@@ -616,12 +607,12 @@
 }
 
 .student-status-badge.late {
-    background: rgb(244 180 0 / 15%);
+    background: rgba(244, 180, 0, 0.15);
     color: var(--late);
 }
 
 .student-status-badge.absent {
-    background: rgb(219 68 55 / 15%);
+    background: rgba(219, 68, 55, 0.15);
     color: var(--absent);
 }
 
@@ -672,7 +663,7 @@
   height: 100%;
 }
 
-@media (width <= 1024px) {
+@media (max-width: 1024px) {
   .student-split-layout {
     grid-template-columns: 100%;
   }
@@ -692,8 +683,7 @@
 
 
 
-/* Notifications */
-
+/*Notifications*/
 /* Notifications Layout */
 .notifications-container {
   display: grid;
@@ -882,7 +872,8 @@
   flex-direction: column;
     align-items: center;     /* vertical center */
   justify-content: center; /* horizontal center */
-  box-shadow: inset 0 1px 5px rgb(0 0 0 / 51.4%);
+
+  box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.514);
 }
 
 .notification-preview.is-empty {
@@ -935,16 +926,16 @@
 }
 
 .stat.late {
-  background: rgb(244 180 0 / 15%);
+  background: rgba(244, 180, 0, 0.15);
   color: var(--late);
 }
 
 .stat.absent {
-  background: rgb(219 68 55 / 15%);
+  background: rgba(219, 68, 55, 0.15);
   color: var(--absent);
 }
 
-/* Contents */
+/*Contents*/
 .preview-empty {
   display: flex;
   flex-direction: column;
@@ -965,12 +956,15 @@
   font-size: 0.9rem;
 }
 
-/* Parent Portal Styles */
+/*Parent Portal Styles*/
 .parent-records-grid {
   display: flex;
   gap: 16px;
   width: 100%;
-  overflow: auto hidden;      /* 👈 enable horizontal scroll */
+
+  overflow-x: auto;      /* 👈 enable horizontal scroll */
+  overflow-y: hidden;
+
   padding: 8px;
   justify-content: flex-start; /* 👈 IMPORTANT */
   scroll-behavior: smooth;
@@ -993,7 +987,7 @@
   padding: 16px;
       height: fit-content;
   text-align: center;
-  box-shadow: 0 1px 5px rgb(0 0 0 / 10%);
+  box-shadow: 0 1px 5px rgba(0,0,0,0.1);
 
 }
 
@@ -1020,12 +1014,12 @@
 }
 
 .status-badge.late {
-  background: rgb(244 180 0 / 15%);
+  background: rgba(244, 180, 0, 0.15);
   color: var(--late);
 }
 
 .status-badge.absent {
-  background: rgb(219 68 55 / 15%);
+  background: rgba(219, 68, 55, 0.15);
   color: var(--absent);
 }
 
@@ -1056,6 +1050,7 @@
 .student-panel-card.children .check-info-btn{
   width: 100%;
   height: 100%;
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1063,11 +1058,12 @@
   outline: none;
   border-radius: inherit;
   cursor: pointer;
+  
   font-weight: 700;
   font-size: 1.5rem;
 }
 
-/* Donut */
+/*Donut*/
 
 .attendance-donut {
   margin: 10px auto;
@@ -1078,7 +1074,7 @@
   background: var(--background1);
   padding: 16px;
   border-radius: 8px;
-  box-shadow: 0 1px 5px rgb(0 0 0 / 10%);
+  box-shadow: 0 1px 5px rgba(0,0,0,0.1);
 }
 
 .today-info {
@@ -1127,12 +1123,12 @@
 }
 
 .today-status.late {
-  background: rgb(244 180 0 / 15%);
+  background: rgba(244, 180, 0, 0.15);
   color: var(--late);
 }
 
 .today-status.absent {
-  background: rgb(219 68 55 / 15%);
+  background: rgba(219, 68, 55, 0.15);
   color: var(--absent);
 }
 
@@ -1147,7 +1143,7 @@
   cursor: pointer;
 }
 
-/* checking hover */
+/*checking hover*/
 .status-tooltip-wrapper {
   position: relative;
   display: inline-flex;
@@ -1169,7 +1165,7 @@
   opacity: 0;
   pointer-events: none;
   transition: all 0.2s ease;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 20%);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
   z-index: 2147483647;
 }
 
@@ -1263,12 +1259,12 @@
 }
 
 .today-status.late {
-  background: rgb(244 180 0 / 15%);
+  background: rgba(244, 180, 0, 0.15);
   color: var(--late);
 }
 
 .today-status.absent {
-  background: rgb(219 68 55 / 15%);
+  background: rgba(219, 68, 55, 0, 0.15);
   color: var(--absent);
 }
 
@@ -1311,12 +1307,12 @@
 }
 
 .daily-attendance-stats .stat.late {
-  background: rgb(244 180 0 / 15%);
+  background: rgba(244, 180, 0, 0.15);
   color: var(--late);
 }
 
 .daily-attendance-stats .stat.absent {
-  background: rgb(219 68 55 / 15%);
+  background: rgba(219, 68, 55, 0.15);
   color: var(--absent);
 }
 

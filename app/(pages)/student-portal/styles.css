@@ -22,8 +22,7 @@
     gap: 20px;
     border: none;
 }
-
-/* Dashboard */
+/*Dashboard*/
 .student-panel-card.attendance {
     background: var(--present);
 }
@@ -35,8 +34,7 @@
 .student-panel-card.enroll {
     background: var(--background1);
 }
-
-/* Notifications */
+/*Notifications*/
 .student-panel-card.notifications {
     background: var(--background1);
 }
@@ -78,7 +76,7 @@
 
 /* Main Container */
 .student-main-container {
-    padding: 0 10px;
+    padding: 0px 10px 0px;
     width: 100%;
     max-width: 100%;
   height: calc(100vh - 280px);
@@ -95,7 +93,6 @@
     display: flex;
     gap: 4px;
     margin-bottom: 8px;
-
     /* border-bottom: 2px solid #F2F2F2; */
 }
 
@@ -128,7 +125,7 @@
     padding: 8px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .student-info-header {
@@ -174,7 +171,7 @@
     padding: 8px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     min-width: 0;
     max-width: 100%;
 }
@@ -250,15 +247,12 @@
 /* Filters Section */
 .student-filters {
     /* background: white; */
-
     /* padding: 6px 8px; */
     border-radius: 6px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-
     /* gap: 12px; */
-
     /* border: 1px solid #F2F2F2;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); */
 }
@@ -273,7 +267,6 @@
 .student-select {
     padding: 6px 12px;
     border-radius: 6px;
-
     /* border: 1px solid #BDBDBD; */
     background: var(--accent1);
     color: var(--background1);
@@ -283,7 +276,7 @@
 }
 
 .student-select:hover {
-    box-shadow: 0 0 0 3px rgb(29 161 242 / 10%);
+    box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.1);
 }
 
 .student-export-btn {
@@ -295,6 +288,7 @@
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    display: flex;
     align-items: center;
     gap: 8px;
     transition: all 0.2s ease;
@@ -335,7 +329,7 @@
     display: flex;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     min-width: 0;
     max-width: 100%;
   min-height: 0;
@@ -370,7 +364,7 @@
     width: 100%;
     max-width: 100%;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .student-course-table-title {
@@ -383,8 +377,9 @@
 .student-course-table-scroll {
     width: 100%;
     max-width: 100%;
-    overflow: auto;
+    overflow-x: auto;
     max-height: 280px;
+    overflow-y: auto;
 }
 
 .student-course-table {
@@ -438,17 +433,17 @@
 }
 
 .course-badge.present {
-    background: rgb(15 157 88 / 15%);
+    background: rgba(15, 157, 88, 0.15);
     color: #0F9D58;
 }
 
 .course-badge.late {
-    background: rgb(244 180 0 / 15%);
+    background: rgba(244, 180, 0, 0.15);
     color: #F4B400;
 }
 
 .course-badge.absent {
-    background: rgb(219 68 55 / 15%);
+    background: rgba(219, 68, 55, 0.15);
     color: #DB4437;
 }
 
@@ -514,9 +509,7 @@
     color: #BDBDBD;
     font-size: 14px;
 }
-
-/* Right Side */
-
+/*Right Side*/
 /* Course Breakdown Table */
 .student-courses-card-right {
     background: var(--background1);
@@ -530,7 +523,7 @@
     flex-direction: column;
   min-height: 0;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .student-courses-title {
@@ -544,7 +537,8 @@
     width: 100%;
     flex: 1;
     max-width: 100%;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: auto;
   min-height: 0;
 }
 
@@ -609,12 +603,12 @@
 }
 
 .student-status-badge.late {
-    background: rgb(244 180 0 / 15%);
+    background: rgba(244, 180, 0, 0.15);
     color: var(--late);
 }
 
 .student-status-badge.absent {
-    background: rgb(219 68 55 / 15%);
+    background: rgba(219, 68, 55, 0.15);
     color: var(--absent);
 }
 
@@ -667,7 +661,7 @@
   overflow: hidden;
 }
 
-@media (width <= 1024px) {
+@media (max-width: 1024px) {
   .student-split-layout {
     grid-template-columns: 100%;
   }
@@ -677,8 +671,7 @@
     height: fit-content;
 }
 
-/* Notifications */
-
+/*Notifications*/
 /* Notifications Layout */
 .notifications-container {
   display: grid;
@@ -840,7 +833,8 @@
   flex-direction: column;
     align-items: center;     /* vertical center */
   justify-content: center; /* horizontal center */
-  box-shadow: inset 0 1px 5px rgb(0 0 0 / 51.4%);
+
+  box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.514);
 }
 
 .notification-preview.is-empty {
@@ -893,16 +887,16 @@
 }
 
 .stat.late {
-  background: rgb(244 180 0 / 15%);
+  background: rgba(244, 180, 0, 0.15);
   color: var(--late);
 }
 
 .stat.absent {
-  background: rgb(219 68 55 / 15%);
+  background: rgba(219, 68, 55, 0.15);
   color: var(--absent);
 }
 
-/* Contents */
+/*Contents*/
 .preview-empty {
     height: 100%;
     width: 100%;
@@ -933,10 +927,9 @@
 .student-panel-card.appeal-status {
     background: var(--background1);
 }
-
 /* Attendance Appeal Layout */
 .appeal-container {
-    padding: 0 10px;
+    padding: 0px 10px 0px;
     width: 100%;
     height: 100%;
     box-sizing: border-box;
@@ -947,7 +940,7 @@
     padding: 16px;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     max-width: 350px;
     flex: 0 0 350px;
     min-width: 0;
@@ -993,7 +986,6 @@
     resize: vertical;
     min-height: 80px;
 }
-
 .student-panel-card.appeal {
     background: var(--late);
     color: var(--accent1);
@@ -1156,6 +1148,7 @@
     min-width: 0;
     min-height: 0;
     flex:1;
+
     display: flex;         
   flex-direction: column; 
   overflow: hidden; 
@@ -1262,6 +1255,6 @@
   margin-top: 6px;
   padding: 6px;
   border-radius: 4px;
-  background: rgb(0 0 0 / 5%);
+  background: rgba(0,0,0,0.05);
   font-size: 12px;
 }

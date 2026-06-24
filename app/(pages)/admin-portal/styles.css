@@ -7,7 +7,7 @@
     padding: 1rem 1.5rem;
     border-radius: 0.5rem;
     border: 1px solid #e5e7eb;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 4%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     width: 100%;
     max-width: 32rem;
 }
@@ -17,7 +17,7 @@
     object-fit: cover;
     width: 56px;
     height: 56px;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
     border: 2px solid #e5e7eb;
 }
 
@@ -51,7 +51,7 @@
     object-fit: cover;
     width: 44px;
     height: 44px;
-    box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
     border: 1.5px solid #e5e7eb;
 }
 
@@ -60,7 +60,7 @@
     padding: 0.5rem;
     background-color: var(--accent1);
     color: var(--background1);
-    box-shadow: 0 2px 2px var(--foreground3);
+    box-shadow: 0px 2px 2px var(--foreground3);
     border-radius: 0.375rem;
     cursor: pointer;
     border: none;
@@ -89,7 +89,7 @@
 .school-year-group-item[data-state="on"] {
     background-color: var(--accent1);
     color: var(--background1);
-    box-shadow: 0 2px 2px var(--foreground3);
+    box-shadow: 0px 2px 2px var(--foreground3);
 }
 
 .school-year {
@@ -202,7 +202,7 @@
     gap: 1.5rem;
 }
 
-@media (width >= 768px) {
+@media (min-width: 768px) {
     .admin-content {
         flex-direction: row;
     }
@@ -210,7 +210,10 @@
 
 /* Form inputs */
 .school-year-input {
-    padding: 0.5rem 0.75rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
     border: 1px solid #d1d5db;
     border-radius: 0.375rem;
     outline: none;
@@ -222,7 +225,10 @@
 }
 
 .school-year-notes-textarea {
-    padding: 0.5rem 0.75rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
     border: 1px solid #d1d5db;
     border-radius: 0.375rem;
     outline: none;
@@ -237,7 +243,10 @@
 /* Delete button */
 .school-year-delete-button {
     height: 1.5rem;
-    padding: 0.25rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
     background-color: #ef4444;
     color: white;
     border-radius: 0.375rem;
@@ -277,7 +286,7 @@
 
 /* Dialog styles */
 .dialog-overlay {
-    background-color: rgb(0 0 0 / 50%);
+    background-color: rgba(0, 0, 0, 0.5);
     position: fixed;
     inset: 0;
     animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -297,7 +306,7 @@
 .dialog-content {
     background-color: white;
     border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -2px rgb(0 0 0 / 5%);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     position: fixed;
     top: 50%;
     left: 50%;
@@ -386,7 +395,7 @@
 }
 
 .school-year-activate-button:hover {
-    background-color: rgb(0 0 0 / 3%);
+    background-color: rgba(0, 0, 0, 0.03);
 }
 
 .school-year-active-indicator {
@@ -438,7 +447,7 @@
 .tab-trigger[aria-selected="true"] {
     background: var(--accent1);
     color: var(--background1);
-    box-shadow: 0 2px 2px var(--foreground3);
+    box-shadow: 0px 2px 2px var(--foreground3);
 }
 
 .tab-content {
@@ -449,7 +458,8 @@
 
 .user-list {
     display: flex;
-    flex-flow: row wrap;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 0.5rem;
 }
 
@@ -663,12 +673,12 @@
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
     background: #fff;
-    box-shadow: 0 1px 4px rgb(0 0 0 / 4%);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
     transition: box-shadow 0.15s, border-color 0.15s;
 }
 
 .enrolled-student-item:hover {
-    box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border-color: #cbd5e1;
 }
 
@@ -731,7 +741,7 @@
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 0.375rem;
-    box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     z-index: 50;
     min-width: 8rem;
     overflow: hidden;
@@ -905,7 +915,7 @@
     font-size: 0.65rem;
     overflow: hidden;
     border-left: 3px solid #3b82f6;
-    box-shadow: 0 1px 2px rgb(0 0 0 / 10%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -937,7 +947,7 @@
     font-size: 0.7rem;
 }
 
-@media (width <= 768px) {
+@media (max-width: 768px) {
     .schedule-grid-container {
         grid-template-columns: 50px repeat(7, minmax(60px, 1fr));
     }

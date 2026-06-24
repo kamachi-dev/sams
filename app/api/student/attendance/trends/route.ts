@@ -130,7 +130,7 @@ export async function GET(req: Request) {
             // Find the first Monday of the month
             const firstOfMonth = new Date(currentYear, currentMonth, 1)
             const dayOfWeek = firstOfMonth.getDay()
-            const daysUntilMonday = (dayOfWeek === 0) ? 1 : (dayOfWeek === 1) ? 0 : (8 - dayOfWeek)
+            let daysUntilMonday = (dayOfWeek === 0) ? 1 : (dayOfWeek === 1) ? 0 : (8 - dayOfWeek)
             const firstMonday = new Date(currentYear, currentMonth, 1 + daysUntilMonday)
 
             const weeks: Array<{

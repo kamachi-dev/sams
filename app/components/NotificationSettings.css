@@ -1,7 +1,10 @@
 .notification-modal-overlay {
   position: fixed;
-  inset: 0;
-  background-color: rgb(0 0 0 / 50%);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,7 +16,6 @@
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -22,7 +24,7 @@
 .notification-modal {
   background: var(--background1);
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgb(0 0 0 / 30%);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 500px;
   width: 90%;
   max-height: 85vh;
@@ -36,7 +38,6 @@
     transform: translateY(20px);
     opacity: 0;
   }
-
   to {
     transform: translateY(0);
     opacity: 1;
@@ -123,7 +124,7 @@
   font-weight: 600;
   text-transform: uppercase;
   color: var(--foreground2);
-  margin: 0 0 16px;
+  margin: 0 0 16px 0;
   letter-spacing: 0.5px;
 }
 
@@ -251,7 +252,7 @@
 
 .btn-close:hover {
   opacity: 0.9;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .btn-close:active {
@@ -261,7 +262,7 @@
 /* Dark mode is handled automatically via CSS variables from globals.css */
 
 /* Responsive design */
-@media (width <= 640px) {
+@media (max-width: 640px) {
   .notification-modal {
     width: 95%;
     max-height: 90vh;
