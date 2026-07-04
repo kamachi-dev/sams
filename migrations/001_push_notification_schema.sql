@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS notification (
     message TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    FOREIGN KEY (student_id) REFERENCES account(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES account(id) ON UPDATE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES section(id) ON DELETE CASCADE,
     FOREIGN KEY (record_id) REFERENCES record(id) ON DELETE CASCADE
 );
