@@ -22,6 +22,16 @@
     box-sizing: border-box;
 }
 
+  /* Keep the first two dashboard cards filling the parent panel height */
+  .sams-content-panels > .sams-content-panel:nth-child(-n+2) {
+    display: flex;
+  }
+
+  .sams-content-panels > .sams-content-panel:nth-child(-n+2) > .student-panel-card {
+    width: 100%;
+    height: 100%;
+  }
+
 /* Dashboard */
 .student-panel-card.attendance {
     background: var(--present);
