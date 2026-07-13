@@ -453,7 +453,6 @@ export default function Teacher() {
         }
         return '';
     };
-    void useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
     const [attendanceRecords, setAttendanceRecords] = useState<Array<{
         id: string;
         name: string;
@@ -709,27 +708,6 @@ export default function Teacher() {
         };
         fetchAllAtRisk();
     }, [lowAttendanceThreshold]);
-
-    // Fetch today's attendance data
-    useEffect(() => {
-        const fetchTodayAttendance = async () => {
-            try {
-                const params = new URLSearchParams();
-                if (selectedCourse) params.set('course', selectedCourse);
-                if (overviewStep === 'stats' && selectedSection) params.set('section', selectedSection);
-                const queryStr = params.toString() ? `?${params.toString()}` : '';
-                const response = await fetch(`/api/teacher/attendance/today${queryStr}`);
-                const result = await response.json();
-                if (result.success) {
-                    setTodayAttendance(result.data);
-                }
-            } catch (error) {
-                console.error('Error fetching today\'s attendance:', error);
-            }
-        };
-        
-        fetchTodayAttendance();
-    }, [selectedCourse, selectedSection, overviewStep]);
 
     // Fetch semester-wide attendance summary (for average attendance rate)
     useEffect(() => {
