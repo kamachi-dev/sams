@@ -685,8 +685,9 @@
 }
 
 .sams-content-body{
-  height: fit-content;
+  flex: 1;
   min-height: 0;
+  overflow-y: auto;
   padding-top: 20px;
 }
 

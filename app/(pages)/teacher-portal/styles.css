@@ -11,13 +11,24 @@
     border: none;
     min-width: 0;          
     width: 100%;           
-    box-sizing: border-box; 
+    box-sizing: border-box;
+    container-type: inline-size;
+}
+
+/* Keep the first two dashboard cards filling the parent panel height */
+.sams-content-panels > .sams-content-panel:nth-child(-n+2) {
+    display: flex;
+}
+
+.sams-content-panels > .sams-content-panel:nth-child(-n+2) > .teacher-panel-card {
+    width: 100%;
+    height: 100%;
 }
 
 .teacher-panel-card.attendance {
     background: var(--present);
 }
-
+    
 .teacher-panel-card.present {
     background: var(--present);
 }
@@ -32,8 +43,8 @@
 }
 
 .teacher-panel-icon {
-    width: 20%;
-    height: 10%;
+    width: clamp(40px, 4vw, 56px);
+    height: clamp(40px, 4vw, 56px);
     opacity: 0.9;
     flex-shrink: 0; 
 }
@@ -46,20 +57,27 @@
 .teacher-panel-label {
     opacity: .9;
     font-weight: bold;
-    font-size: 15px;
-    white-space: nowrap; 
+    font-size: clamp(11px, 2.2cqw, 15px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-panel-value {
-    font-size: 36px;
+    font-size: clamp(24px, 5.5cqw, 36px);
     font-weight: bold;
-    white-space: nowrap; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1;
 }
 
 .teacher-panel-sub {
-    font-size: 12px;
+    font-size: clamp(10px, 1.8cqw, 12px);
     opacity: 0.8;
-    white-space: nowrap; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Main Container */
@@ -126,6 +144,8 @@
     border-radius: 6px;
     border: 1px solid #F2F2F2;
     box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    min-width: 0;
+    container-type: inline-size;
 }
 
 .teacher-info-header {
@@ -137,9 +157,12 @@
 
 .teacher-info-title {
     color: #1F2F57;
-    font-size: 14px;
+    font-size: clamp(12px, 2cqw, 14px);
     font-weight: 600;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-info-meta {
@@ -154,15 +177,21 @@
 }
 
 .teacher-info-field-label {
-    font-size: 11px;
+    font-size: clamp(10px, 1.7cqw, 11px);
     color: #BDBDBD;
     margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-info-field-value {
-    font-size: 12px;
+    font-size: clamp(10px, 2cqw, 12px);
     color: #4F4F4F;
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Summary Card */
@@ -174,13 +203,17 @@
     box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
     min-width: 0;
     max-width: 100%;
+    container-type: inline-size;
 }
 
 .teacher-summary-title {
     color: #1F2F57;
-    font-size: 14px;
+    font-size: clamp(12px, 2cqw, 14px);
     font-weight: 600;
     margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-summary-row {
@@ -224,14 +257,18 @@
 }
 
 .teacher-legend-label {
-    font-size: 12px;
+    font-size: clamp(10px, 1.8cqw, 12px);
     color: #4F4F4F;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-legend-value {
-    font-size: 14px;
+    font-size: clamp(11px, 2cqw, 14px);
     font-weight: 600;
     color: #1F2F57;
+    white-space: nowrap;
 }
 
 /* Filters Section */
@@ -307,16 +344,22 @@
 }
 
 .teacher-export-popover-title {
-    font-size: 13px;
+    font-size: clamp(11px, 1.8cqw, 13px);
     font-weight: 700;
     color: var(--text1);
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-export-popover-label {
-    font-size: 11px;
+    font-size: clamp(10px, 1.6cqw, 11px);
     font-weight: 600;
     color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-export-popover .teacher-month-select {
@@ -439,9 +482,12 @@
 
 .teacher-records-title {
     color: #1F2F57;
-    font-size: 14px;
+    font-size: clamp(12px, 2cqw, 14px);
     font-weight: 600;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-records-controls {
@@ -502,6 +548,9 @@
 
 .teacher-records-table .student-name {
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Status Badges */
@@ -711,11 +760,14 @@
 }
 
 .overview-course-card-name {
-    font-size: 16px;
+    font-size: clamp(12px, 2cqw, 16px);
     font-weight: 600;
     color: #1F2F57;
     margin: 0;
     line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .overview-course-card-stats {
@@ -844,10 +896,13 @@
 }
 
 .overview-section-card-name {
-    font-size: 18px;
+    font-size: clamp(13px, 2.2cqw, 18px);
     font-weight: 600;
     color: #1F2F57;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .overview-section-card-count {
@@ -860,7 +915,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
+    font-size: clamp(10px, 1.8cqw, 13px);
     color: #4F4F4F;
     background: #F8F9FA;
     padding: 6px 10px;
@@ -879,7 +934,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
+    font-size: clamp(10px, 1.8cqw, 13px);
     color: #4F4F4F;
     background: #F8F9FA;
     padding: 6px 10px;
@@ -1092,14 +1147,19 @@
 }
 
 .teacher-section-title {
-    font-size: 20px;
+    font-size: clamp(14px, 2.2cqw, 20px);
     font-weight: 600;
     margin-bottom: 16px;
     color: #1F2F57;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-section-text {
     color: #4F4F4F;
+    font-size: clamp(12px, 1.8cqw, 14px);
+    line-height: 1.35;
 }
 
 /* ============================================
@@ -1128,12 +1188,16 @@
 
 .low-attendance-title {
     color: #1F2F57;
-    font-size: 18px;
+    font-size: clamp(14px, 2.2cqw, 18px);
     font-weight: 600;
     margin: 0;
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .low-attendance-title-icon {
