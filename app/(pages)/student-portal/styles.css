@@ -685,7 +685,9 @@
 }
 
 .sams-content-body{
-    height: fit-content;
+  height: fit-content;
+  min-height: 0;
+  padding-top: 20px;
 }
 
 /* Notifications */

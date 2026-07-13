@@ -690,15 +690,19 @@
 }
 
 .sams-content-body{
-    height: 100vh;
+    height: fit-content;
+    min-height: 0;
+    display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    padding-top: 20px;
 }
 
 .parent-records-wrapper {
   min-height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  width: 100%;
 }
 
 

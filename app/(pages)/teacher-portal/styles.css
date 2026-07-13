@@ -14,16 +14,6 @@
     box-sizing: border-box; 
 }
 
-/* Keep the first two dashboard cards filling the parent panel height */
-.sams-content-panels > .sams-content-panel:nth-child(-n+2) {
-    display: flex;
-}
-
-.sams-content-panels > .sams-content-panel:nth-child(-n+2) > .teacher-panel-card {
-    width: 100%;
-    height: 100%;
-}
-
 .teacher-panel-card.attendance {
     background: var(--present);
 }
@@ -42,8 +32,8 @@
 }
 
 .teacher-panel-icon {
-    width: clamp(40px, 4vw, 56px);
-    height: clamp(40px, 4vw, 56px);
+    width: 20%;
+    height: 10%;
     opacity: 0.9;
     flex-shrink: 0; 
 }
