@@ -1039,15 +1039,9 @@ export default function Admin() {
                                                     }
                                                     return groups.size ? (
                                                         Array.from(groups.entries()).map(([courseId, sections]) => {
-                                                            // If teacher is an ID, try to find the teacher's info from teachers list
-                                                            let teacherName = 'N/A';
-                                                            let teacherPfp = '/icons/placeholder-pfp.png';
                                                             const teacherId = sections[0].teacher;
-                                                            if (teacherId) {
-                                                                const teacherObj = teachers.find(t => t.id === teacherId);
-                                                                teacherName = teacherObj?.username || teacherObj?.email || teacherId;
-                                                                teacherPfp = teacherObj?.pfp || teacherPfp;
-                                                            }
+                                                            const teacherObj = teacherId ? teachers.find(t => t.id === teacherId) : null;
+                                                            const teacherName = teacherObj?.username || teacherObj?.email || teacherId || 'N/A';
                                                             return (
                                                                 <button
                                                                     key={courseId}
@@ -1095,7 +1089,7 @@ export default function Admin() {
                                                     )}
                                                     <div className="course-teacher-info">
                                                         {teacherPfp.startsWith('http') ? (
-                                                            <img src={teacherPfp} alt="Teacher profile" width={48} height={48} className="teacher-avatar" />
+                                                            <Image src={teacherPfp} alt="Teacher profile" width={48} height={48} className="teacher-avatar" unoptimized />
                                                         ) : (
                                                             <Image src={teacherPfp} alt="Teacher profile" width={48} height={48} className="teacher-avatar" />
                                                         )}
@@ -1156,7 +1150,7 @@ export default function Admin() {
                                                                             <div key={`${s.sectionId}-${s.id}`} className="enrolled-student-item">
                                                                                 <div className="enrolled-student-avatar">
                                                                                     {studentPfp.startsWith('http') ? (
-                                                                                        <img src={studentPfp} alt="Student profile" width={40} height={40} className="student-avatar" />
+                                                                                        <Image src={studentPfp} alt="Student profile" width={40} height={40} className="student-avatar" unoptimized />
                                                                                     ) : (
                                                                                         <Image src={studentPfp} alt="Student profile" width={40} height={40} className="student-avatar" />
                                                                                     )}

@@ -416,6 +416,7 @@ export default function Student() {
       }
     };
     requestPermission();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync records state with appealable records (filtered by daily records and excluding already appealed ones)

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePushNotifications } from '@/lib/usePushNotifications';
 import { BellIcon, CheckIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import './NotificationSettings.css';

@@ -51,7 +51,7 @@ vi.mock('@clerk/nextjs', () => {
     }),
     ClerkProvider: ({ children }: any) => children,
     SignedIn: ({ children }: any) => children,
-    SignedOut: ({ children }: any) => null,
+    SignedOut: () => null,
     SignOutButton: ({ children }: any) => children,
   };
 });
@@ -120,10 +120,11 @@ vi.mock('radix-ui', () => {
     },
     Toast: {
       Provider: ({ children }: any) => children,
-      Root: ({ children, open, onOpenChange, ...props }: any) => open ? React.createElement('div', { 'data-testid': 'toast-root', ...props }, children) : null,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      Root: ({ children, open, onOpenChange: _onOpenChange, ...props }: any) => open ? React.createElement('div', { 'data-testid': 'toast-root', ...props }, children) : null,
       Title: ({ children, ...props }: any) => React.createElement('div', props, children),
       Description: ({ children, ...props }: any) => React.createElement('div', props, children),
-      Action: ({ children, asChild, ...props }: any) => children,
+      Action: ({ children }: any) => children,
       Close: ({ children, ...props }: any) => React.createElement('button', props, children),
       Viewport: () => React.createElement('div', { 'data-testid': 'toast-viewport' }),
     },

@@ -3,24 +3,6 @@ import { NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 
-// Helper to get the Monday of a given week
-function getMonday(date: Date): Date {
-    const d = new Date(date)
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    d.setDate(diff)
-    d.setHours(0, 0, 0, 0)
-    return d
-}
-
-// Helper to get Friday of a given week
-function getFriday(date: Date): Date {
-    const monday = getMonday(date)
-    const friday = new Date(monday)
-    friday.setDate(monday.getDate() + 4)
-    return friday
-}
-
 // Helper to format date as "Mon DD"
 function formatDate(date: Date): string {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -46,67 +28,6 @@ function toLocalDateStr(date: Date): string {
     const m = String(date.getMonth() + 1).padStart(2, '0')
     const d = String(date.getDate()).padStart(2, '0')
     return `${y}-${m}-${d}`
-}
-
-// Query helper: Get enrolled student count for a teacher's course/section
-async function getEnrolledCount(userId: string, courseFilter: string | null, sectionFilter: string | null): Promise<number> {
-    let query: string
-    let params: any[]
-
-    if (courseFilter) {
-        query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
-                 FROM enrollment_data e
-                 INNER JOIN section s ON e.section = s.id
-                 INNER JOIN course c ON s.course = c.id
-                 WHERE s.teacher = $1 AND s.id = $2
-                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
-        params = [userId, courseFilter]
-    } else {
-        query = `SELECT COUNT(DISTINCT e.student) as enrolled_count
-                 FROM enrollment_data e
-                 INNER JOIN section s ON e.section = s.id
-                 INNER JOIN course c ON s.course = c.id
-                 WHERE s.teacher = $1
-                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
-        params = [userId]
-    }
-
-    const result = await db.query(query, params)
-    return parseInt(result.rows[0]?.enrolled_count || '0')
-}
-
-// Query helper: Get number of distinct school days with records in a date range
-async function getSchoolDays(userId: string, courseFilter: string | null, sectionFilter: string | null, startStr: string, endStr: string): Promise<number> {
-    let query: string
-    let params: any[]
-
-    if (courseFilter) {
-        query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
-                 FROM record r
-                 INNER JOIN section s ON r.course = s.id
-                 INNER JOIN course c ON s.course = c.id
-                 WHERE s.teacher = $1
-                   AND s.id = $2
-                   AND r.time IS NOT NULL
-                   AND DATE(r.time) >= $3
-                   AND DATE(r.time) <= $4
-                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
-        params = [userId, courseFilter, startStr, endStr]
-    } else {
-        query = `SELECT COUNT(DISTINCT DATE(r.time)) as school_days
-                 FROM record r
-                 INNER JOIN section s ON r.course = s.id
-                 INNER JOIN course c ON s.course = c.id
-                 WHERE s.teacher = $1
-                   AND r.time IS NOT NULL
-                   AND DATE(r.time) >= $2
-                   AND DATE(r.time) <= $3
-                   AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`
-        params = [userId, startStr, endStr]
-    }
-
-    const result = await db.query(query, params)
-    return parseInt(result.rows[0]?.school_days || '0')
 }
 
 // Query helper: Get present, late, and explicit absent counts in a date range

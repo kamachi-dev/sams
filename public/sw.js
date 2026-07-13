@@ -124,7 +124,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // Log install
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
   console.log('Service Worker installed');
   self.skipWaiting();
 });

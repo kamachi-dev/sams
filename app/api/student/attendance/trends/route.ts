@@ -58,8 +58,6 @@ export async function GET(req: Request) {
             }, { status: 404 })
         }
 
-        const studentDataId = studentResult.rows[0].id
-
         if (view === 'daily') {
             // Get last 7 days of attendance
             const now = new Date()
