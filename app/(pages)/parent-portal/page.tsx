@@ -452,13 +452,13 @@ export default function Parent() {
   } : null;
 
   const pieData = selectedChildStats ? [
-    { name: "Present", value: selectedChildStats.present, color: "var(--present)" },
-    { name: "Late", value: selectedChildStats.late, color: "var(--late)" },
-    { name: "Absent", value: selectedChildStats.absent, color: "var(--absent)" },
+    { name: "Present", value: selectedChildStats.present, color: chartColors.present },
+    { name: "Late", value: selectedChildStats.late, color: chartColors.late },
+    { name: "Absent", value: selectedChildStats.absent, color: chartColors.absent },
   ] : [
-    { name: "Present", value: 0, color: "var(--present)" },
-    { name: "Late", value: 0, color: "var(--late)" },
-    { name: "Absent", value: 0, color: "var(--absent)" },
+    { name: "Present", value: 0, color: chartColors.present },
+    { name: "Late", value: 0, color: chartColors.late },
+    { name: "Absent", value: 0, color: chartColors.absent },
   ];
 
   const totalCourses = courseAttendance.length;
@@ -699,9 +699,9 @@ export default function Parent() {
                             >
                               {child.present + child.late + child.absent > 0 ? (
                                 <>
-                                  {child.present > 0 && <Cell fill="var(--present)" />}
-                                  {child.late > 0 && <Cell fill="var(--late)" />}
-                                  {child.absent > 0 && <Cell fill="var(--absent)" />}
+                                  {child.present > 0 && <Cell fill={chartColors.present} />}
+                                  {child.late > 0 && <Cell fill={chartColors.late} />}
+                                  {child.absent > 0 && <Cell fill={chartColors.absent} />}
                                 </>
                               ) : (
                                 <Cell fill="#d0d0d0" />
