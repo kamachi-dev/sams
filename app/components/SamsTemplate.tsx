@@ -61,8 +61,8 @@ export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
     const title = React.useMemo(() => formatPathname(pathname), [pathname]);
     const [user, setUser] = React.useState<Account | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
     const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -84,35 +84,32 @@ export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
     }, [isLoaded, isSignedIn, router]);
 
     useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768);
-        };
-
-        handleResize();
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        setIsDarkMode(document.documentElement.classList.contains('dark'));
     }, []);
 
     const closeMobileMenu = () => {
         setIsMobileMenuOpen(false);
     };
 
+    const handleThemeChange = (checked: boolean) => {
+        toggleTheme(checked);
+        setIsDarkMode(checked);
+    };
+
     return (
         <Tabs.Root
             {...(activeTab ? { value: activeTab, onValueChange: onTabChange } : { defaultValue: defaultTab })}
-            className={`sams ${isMobile ? 'sams-mobile' : ''}`}
+            className="sams"
         >
             <nav className={`sams-nav ${isMobileMenuOpen ? 'sams-nav-mobile-open' : ''}`}>
                 <div className="sams-nav-header">
-                    {isMobile && (
-                        <button
-                            className="sams-mobile-menu-toggle"
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            aria-label="Toggle menu"
-                        >
-                            {isMobileMenuOpen ? <Cross2Icon /> : <HamburgerMenuIcon />}
-                        </button>
-                    )}
+                    <button
+                        className="sams-mobile-menu-toggle"
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        aria-label="Toggle menu"
+                    >
+                        {isMobileMenuOpen ? <Cross2Icon /> : <HamburgerMenuIcon />}
+                    </button>
                     <div className="sams-nav-header-logo">
                         <Image
                             src="/images/mmcl-logo-extended.png"
@@ -121,62 +118,111 @@ export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
                             height={40}
                         />
                     </div>
-                    {!isMobile && <h1 className="sams-nav-header-title">{title}</h1>}
+                    <h1 className="sams-nav-header-title">{title}</h1>
                 </div>
-                <div className="sams-nav-pfp flex items-center justify-center">
-                    <SignedIn>
-                        <Image src={user?.pfp ?? "/icons/placeholder-pfp.png"} alt="Profile Picture" width={100} height={100} />
-                    </SignedIn>
-                    <SignedOut>
-                        <Image src="/icons/placeholder-pfp.png" alt="Profile Picture" width={100} height={100} />
-                    </SignedOut>
-                </div>
-                <h2 className="sams-nav-username">{user?.username ?? "Guest"}</h2>
-                <p className="sams-nav-email">{user?.email ?? "guest@example.com"}</p>
-                <Separator.Root className="sams-separator" decorative style={{ margin: "0 15px" }} />
-                <Tabs.List className="sams-nav-links">
-                    {links.map(({ label, Icon }) => (
-                        <Tabs.Trigger
-                            key={label}
-                            value={label}
-                            className="sams-nav-link"
-                            onClick={closeMobileMenu}
-                        >
-                            <Icon className="sams-nav-icon" />
-                            <span>{label}</span>
-                        </Tabs.Trigger>
-                    ))}
-                </Tabs.List>
-                <Popover.Root>
-                    <Popover.Trigger className="sams-nav-settings">
-                        <GearIcon /> {!isMobile && 'Settings'}
-                    </Popover.Trigger>
-                    <Popover.Portal>
-                        <Popover.Content className="sams-nav-settings-content">
-                            <div 
-                                className="flex items-center justify-between cursor-pointer hover:opacity-80"
-                                onClick={() => setShowNotificationSettings(true)}
-                                role="button"
-                                tabIndex={0}
-                                style={{ padding: '8px 0', marginBottom: '8px', borderBottom: '1px solid #eee' }}
+
+                <div className="sams-nav-body">
+                    <div className="sams-nav-profile">
+                        <div className="sams-nav-pfp flex items-center justify-center">
+                            <SignedIn>
+                                <Image src={user?.pfp ?? "/icons/placeholder-pfp.png"} alt="Profile Picture" width={100} height={100} />
+                            </SignedIn>
+                            <SignedOut>
+                                <Image src="/icons/placeholder-pfp.png" alt="Profile Picture" width={100} height={100} />
+                            </SignedOut>
+                        </div>
+                        <div className="sams-nav-profile-info">
+                            <h2 className="sams-nav-username">{user?.username ?? "Guest"}</h2>
+                            <p className="sams-nav-email">{user?.email ?? "guest@example.com"}</p>
+                        </div>
+                    </div>
+                    
+                    <Separator.Root className="sams-separator" decorative style={{ margin: "0 15px" }} />
+                    
+                    <Tabs.List className="sams-nav-links">
+                        {links.map(({ label, Icon }) => (
+                            <Tabs.Trigger
+                                key={label}
+                                value={label}
+                                className="sams-nav-link"
+                                onClick={closeMobileMenu}
                             >
-                                <BellIcon className="mr-2" />
-                                Notifications
-                            </div>
-                            <div className="flex items-center justify-between">
+                                <Icon className="sams-nav-icon" />
+                                <span>{label}</span>
+                            </Tabs.Trigger>
+                        ))}
+                    </Tabs.List>
+                    
+                    <Separator.Root className="sams-separator sams-nav-bottom-separator" decorative style={{ margin: "0 15px" }} />
+
+                    {/* Desktop Settings (Popover) */}
+                    <Popover.Root>
+                        <Popover.Trigger className="sams-nav-settings sams-desktop-only">
+                            <GearIcon /> <span>Settings</span>
+                        </Popover.Trigger>
+                        <Popover.Portal>
+                            <Popover.Content className="sams-nav-settings-content">
+                                <div 
+                                    className="flex items-center justify-between cursor-pointer hover:opacity-80 w-full"
+                                    onClick={() => setShowNotificationSettings(true)}
+                                    role="button"
+                                    tabIndex={0}
+                                    style={{ padding: '8px 0', marginBottom: '8px', borderBottom: '1px solid var(--foreground3)' }}
+                                >
+                                    <span className="flex items-center"><BellIcon className="mr-2" /> Notifications</span>
+                                </div>
+                                <div className="flex items-center justify-between w-full" style={{ padding: '8px 0', marginBottom: '8px' }}>
+                                    <span className="flex items-center"><Half2Icon className="mr-2" /> Dark Mode</span>
+                                    <Switch.Root 
+                                        className="sams-nav-settings-switch" 
+                                        checked={isDarkMode}
+                                        onCheckedChange={handleThemeChange}
+                                    >
+                                        <Switch.Thumb className="sams-nav-settings-switch-thumb" />
+                                    </Switch.Root>
+                                </div>
+                                <Popover.Arrow className="sams-nav-settings-arrow" />
+                                <SignOutButton redirectUrl="/">
+                                    <span className="flex items-center cursor-pointer w-full text-red-500 hover:opacity-80" style={{ padding: '8px 0' }}>
+                                        <ExitIcon className="mr-2" /> Sign out
+                                    </span>
+                                </SignOutButton>
+                            </Popover.Content>
+                        </Popover.Portal>
+                    </Popover.Root>
+
+                    {/* Mobile Settings (Inline) */}
+                    <div className="sams-mobile-settings sams-mobile-only">
+                        <div 
+                            className="sams-mobile-settings-item"
+                            onClick={() => { setShowNotificationSettings(true); closeMobileMenu(); }}
+                            role="button"
+                            tabIndex={0}
+                        >
+                            <BellIcon className="mr-2" />
+                            <span>Notifications</span>
+                        </div>
+                        <div className="sams-mobile-settings-item">
+                            <div className="flex items-center">
                                 <Half2Icon className="mr-2" />
-                                Dark Mode
-                                <Switch.Root className="sams-nav-settings-switch" onCheckedChange={(checked) => toggleTheme(checked)}>
-                                    <Switch.Thumb className="sams-nav-settings-switch-thumb" />
-                                </Switch.Root>
+                                <span>Dark Mode</span>
                             </div>
-                            <Popover.Arrow className="sams-nav-settings-arrow" />
-                            <SignOutButton redirectUrl="/">
-                                <span className="flex items-center cursor-pointer"><ExitIcon className="mr-2" />Sign out</span>
-                            </SignOutButton>
-                        </Popover.Content>
-                    </Popover.Portal>
-                </Popover.Root>
+                            <Switch.Root 
+                                className="sams-nav-settings-switch" 
+                                checked={isDarkMode}
+                                onCheckedChange={handleThemeChange}
+                            >
+                                <Switch.Thumb className="sams-nav-settings-switch-thumb" />
+                            </Switch.Root>
+                        </div>
+                        <SignOutButton redirectUrl="/">
+                            <div className="sams-mobile-settings-item text-red-500">
+                                <ExitIcon className="mr-2" />
+                                <span>Sign out</span>
+                            </div>
+                        </SignOutButton>
+                    </div>
+                </div>
             </nav>
             {links.map(({ label, content, panels }) => (
                 <Tabs.Content key={label} value={label} className="sams-content">

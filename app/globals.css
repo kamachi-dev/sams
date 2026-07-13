@@ -182,8 +182,6 @@ a {
     display: flex;
     flex-direction: column;
     background-color: var(--background1);
-
-    /* border-right: 2px solid var(--foreground3); */
     padding: 10px;
     height: 100%;
     align-items: center;
@@ -197,6 +195,7 @@ a {
     align-items: center;
     width: 100%;
     justify-content: space-around;
+    flex-shrink: 0;
 }
 
 .sams-nav-header-logo {
@@ -215,6 +214,30 @@ a {
     color: #ED1E28;
 }
 
+.sams-nav-body {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    gap: 10px;
+}
+
+.sams-nav-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.sams-nav-profile-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
 .sams-nav-pfp {
     width: 100px;
     height: 100px;
@@ -231,11 +254,13 @@ a {
     font-size: 1.3rem;
     font-weight: bold;
     color: var(--foreground1);
+    text-align: center;
 }
 
 .sams-nav-email {
     font-size: 0.8rem;
     color: var(--accent1);
+    text-align: center;
 }
 
 .sams-nav-settings {
@@ -294,6 +319,7 @@ a {
     flex-direction: column;
     margin: 5px 0;
     font-size: 20px;
+    width: 100%;
 }
 
 .sams-nav-icon {
@@ -303,22 +329,20 @@ a {
     flex-shrink: 0;
 }
 
-
 .sams-nav-link {
     display: flex;
-    justify-content: flex-start; /* better alignment */
+    justify-content: flex-start;
     align-items: center;
-    width: 100%;                /* force same width */
-    box-sizing: border-box;    /* include padding in width */
+    width: 100%;
+    box-sizing: border-box;
     border-radius: 15px;
     margin: 5px 0;
-    padding: 10px 20px;        /* consistent padding */
+    padding: 10px 20px;
     gap: 15px;
 }
 
-
 .sams-nav-link:hover {
-    background-color: black;
+    background-color: var(--foreground3);
     cursor: pointer;
 }
 
@@ -329,6 +353,15 @@ a {
 
 .sams-nav-link[data-state="inactive"] {
     background-color: var(--foreground3);
+}
+
+/* Visibility toggles for desktop/mobile responsive logic */
+.sams-desktop-only {
+    display: flex !important;
+}
+
+.sams-mobile-only {
+    display: none !important;
 }
 
 .sams-error-toast-viewport {
@@ -438,19 +471,22 @@ a {
 @media (width <= 767px) {
     .sams {
         flex-direction: column;
-        width: calc(100dvw - 12.5px);
-        height: calc(100dvh - 12.5px);
-        margin: 6px;
+        width: 100%;
+        height: 100dvh;
+        margin: 0;
+        border: none;
     }
 
     .sams-nav {
         width: 100%;
-        height: auto;
+        height: 60px;
         flex-direction: row;
-        padding: 10px;
+        padding: 10px 16px;
         box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
-        z-index: 100;
+        z-index: 9999 !important;
         position: relative;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .sams-nav-header {
@@ -459,7 +495,6 @@ a {
         width: auto;
         justify-content: flex-start;
         gap: 10px;
-        flex: 1;
     }
 
     .sams-nav-header-logo {
@@ -483,38 +518,76 @@ a {
         font-size: 1.5rem;
     }
 
-    .sams-nav-pfp {
+    .sams-nav-body {
         display: none;
     }
 
-    .sams-nav-username,
-    .sams-nav-email {
-        display: none;
-    }
-
-    .sams-separator {
-        display: none;
-    }
-
-    .sams-nav-links {
-        display: none;
+    .sams-nav-mobile-open .sams-nav-body {
+        display: flex;
         flex-direction: column;
         position: absolute;
         top: 100%;
         left: 0;
         right: 0;
-        background-color: var(--background1);
-        padding: 10px;
-        gap: 5px;
-        box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+        background-color: var(--background1) !important;
+        padding: 20px;
+        gap: 15px;
+        box-shadow: 0 8px 16px rgb(0 0 0 / 15%);
         width: 100%;
         margin: 0;
-        max-height: calc(100dvh - 70px);
+        height: auto !important;
+        max-height: calc(100dvh - 60px);
         overflow-y: auto;
+        z-index: 10000 !important;
+        align-items: stretch;
+        border-top: 1px solid var(--foreground3);
     }
 
-    .sams-nav-mobile-open .sams-nav-links {
+    .sams-nav-profile {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 15px;
+        width: 100%;
+        margin-top: 0;
+        padding: 10px 5px;
+    }
+
+    .sams-nav-pfp {
+        width: 45px;
+        height: 45px;
+        flex-shrink: 0;
+    }
+
+    .sams-nav-profile-info {
+        align-items: flex-start;
+        text-align: left;
+        width: auto;
+    }
+
+    .sams-nav-username {
+        margin-top: 0;
+        font-size: 1.1rem;
+        text-align: left;
+    }
+
+    .sams-nav-email {
+        font-size: 0.85rem;
+        text-align: left;
+    }
+
+    .sams-separator {
+        display: block;
+        margin: 5px 0 !important;
+        width: 100% !important;
+    }
+
+    .sams-nav-links {
         display: flex;
+        flex-direction: column;
+        width: 100%;
+        margin: 5px 0;
+        gap: 5px;
     }
 
     .sams-nav-link {
@@ -530,16 +603,41 @@ a {
         display: inline;
     }
 
-    .sams-nav-settings {
-        margin-left: auto;
-        margin-top: 0;
-        padding: 8px;
-        align-self: center;
+    .sams-desktop-only {
+        display: none !important;
+    }
+
+    .sams-mobile-only {
+        display: flex !important;
+    }
+
+    .sams-mobile-settings {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        margin-top: 5px;
+    }
+
+    .sams-mobile-settings-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 15px;
+        border-radius: 8px;
+        cursor: pointer;
+        color: var(--foreground2);
+        font-size: 0.95rem;
+        background-color: var(--background2);
+    }
+
+    .sams-mobile-settings-item:hover {
+        background-color: var(--foreground3);
     }
 
     .sams-content {
         width: 100%;
-        height: calc(100dvh - 70px);
+        height: calc(100dvh - 60px);
         overflow-y: auto;
         flex-direction: column;
     }
@@ -565,45 +663,42 @@ a {
 
     .sams-content-panels {
         flex-wrap: wrap;
-        gap: 15px;
+        gap: 12px;
         padding: 0;
-        margin: 0;
+        margin: 10px 0 0 0;
         justify-content: flex-start;
+        flex-direction: row;
     }
 
     .sams-content-panel {
         flex: 1;
-        min-width: calc(50% - 7.5px);
+        min-width: calc(50% - 6px);
         max-width: unset;
-        height: 100px;
-        min-height: 100px;
-        padding: 15px;
+        height: auto;
+        min-height: unset;
+        padding: 0;
         box-sizing: border-box;
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
     .sams-content-body {
         padding: 15px;
-        overflow-y: auto;
+        overflow-y: visible;
     }
 
     .sams-error-toast-viewport {
         --viewport-padding: 15px;
-
         width: calc(100vw - 30px);
     }
 }
 
 /* Small phones (480px and below) */
 @media (width <= 480px) {
-    .sams {
-        margin: 4px;
-        width: calc(100dvw - 8px);
-        height: calc(100dvh - 8px);
-    }
-
     .sams-nav {
-        padding: 8px;
-        height: 60px;
+        padding: 8px 12px;
+        height: 56px;
     }
 
     .sams-nav-header-logo {
@@ -612,7 +707,7 @@ a {
     }
 
     .sams-content {
-        height: calc(100dvh - 68px);
+        height: calc(100dvh - 56px);
     }
 
     .sams-content-header {
@@ -624,20 +719,11 @@ a {
     }
 
     .sams-content-subtitle {
-        font-size: 0.75rem;
         display: none;
-    }
-
-    .sams-content-panels {
-        flex-direction: column;
-        gap: 12px;
     }
 
     .sams-content-panel {
         min-width: 100%;
-        height: 90px;
-        min-height: 90px;
-        padding: 12px;
     }
 
     .sams-content-body {
@@ -655,7 +741,6 @@ a {
 
     .sams-error-toast-viewport {
         --viewport-padding: 10px;
-
         width: calc(100vw - 20px);
     }
 }
