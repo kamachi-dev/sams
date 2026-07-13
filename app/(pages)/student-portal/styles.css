@@ -61,9 +61,10 @@
 }
 
 .student-panel-icon {
-    width: 20%;
-    height: 10%;
+  width: clamp(40px, 4vw, 56px);
+  height: clamp(40px, 4vw, 56px);
     opacity: 0.9;
+  flex-shrink: 0;
 }
 
 .student-panel-content {
