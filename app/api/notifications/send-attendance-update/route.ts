@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import db from '@/app/services/database';
-import { sendBulkPushNotifications } from '@/lib/push-notifications';
+import { sendPushNotification, sendBulkPushNotifications } from '@/lib/push-notifications';
 
 export async function POST(req: Request) {
   try {

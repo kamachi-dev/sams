@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRealTimeNotifications, Notification } from "@/lib/useRealTimeNotifications";
 import { useUser } from "@clerk/nextjs";
 import "./NotificationCenter.css";
 
 export function NotificationCenter() {
   const { user } = useUser();
+  const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
   const { 
@@ -14,7 +15,8 @@ export function NotificationCenter() {
     unreadCount, 
     loading, 
     markAsRead, 
-    markAllAsRead 
+    markAllAsRead, 
+    refetch 
   } = useRealTimeNotifications({
     userId: user?.id || "",
     pollInterval: 5000, // Poll every 5 seconds

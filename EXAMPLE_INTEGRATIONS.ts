@@ -197,8 +197,7 @@ export async function GET(req: Request) {
 
 import { notifyStudentNotification } from '@/lib/notification-triggers';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function POST(_req: Request) {
+export async function POST(req: Request) {
   // ... existing code ...
 
   // After saving attendance record:

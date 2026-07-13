@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         // Get the current logged-in teacher's ID
         const user = await currentUser()

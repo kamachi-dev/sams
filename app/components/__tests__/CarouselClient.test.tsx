@@ -1,11 +1,10 @@
 import React from 'react';
-import { render, act } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import CarouselClient from '../CarouselClient';
 import { expect, test, vi } from 'vitest';
 
 vi.mock('next/image', () => {
   return {
-    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
     default: (props: any) => <img {...props} />
   };
 });

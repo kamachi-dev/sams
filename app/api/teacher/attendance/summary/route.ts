@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url)
         const courseFilter = searchParams.get('course')
-        searchParams.get('section')
+        const sectionFilter = searchParams.get('section')
 
         // Get overall attendance summary for students in this teacher's courses
         // This is for the semester-wide "Average Attendance Rate"

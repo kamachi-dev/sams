@@ -23,7 +23,7 @@ export async function GET(req: Request) {
         const startDate = searchParams.get('startDate')
         const endDate = searchParams.get('endDate')
         const courseFilter = searchParams.get('course') // Required course filter
-        searchParams.get('section') // Optional section filter
+        const sectionFilter = searchParams.get('section') // Optional section filter
 
         if (!courseFilter) {
             return NextResponse.json({

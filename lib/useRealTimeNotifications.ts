@@ -153,7 +153,7 @@ function playNotificationSound() {
     );
     audio.volume = 0.3;
     audio.play().catch(() => {}); // Silently fail if audio fails
-  } catch {
+  } catch (err) {
     // Silent fail
   }
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import SamsError, { Error as triggerError } from '../SamsError';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 
 // Mock Radix UI Toast specifically for custom rendering check if needed, 
 // but since we mocked it globally in vitest.setup.ts, it will use that.
