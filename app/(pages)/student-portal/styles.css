@@ -21,6 +21,8 @@
     align-items: center;
     gap: 20px;
     border: none;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
   /* Keep the first two dashboard cards filling the parent panel height */
@@ -69,22 +71,33 @@
 
 .student-panel-content {
     flex: 1;
+  min-width: 0;
 }
 
 .student-panel-label {
     opacity: .9;
     font-weight: bold;
-    font-size: 15px;
+  font-size: clamp(11px, 2.2cqw, 15px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .student-panel-value {
-    font-size: 36px;
+  font-size: clamp(24px, 5.5cqw, 36px);
     font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
 }
 
 .student-panel-sub {
-    font-size: 12px;
+  font-size: clamp(10px, 1.8cqw, 12px);
     opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Main Container */
