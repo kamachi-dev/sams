@@ -1,10 +1,11 @@
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import Admin from '../page';
 import { expect, test, vi } from 'vitest';
 
 vi.mock('next/image', () => {
   return {
+    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
     default: (props: any) => <img {...props} />
   };
 });

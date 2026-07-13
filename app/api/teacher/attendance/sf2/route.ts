@@ -27,7 +27,7 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url)
         const courseId = searchParams.get('course')
-        const section = searchParams.get('section')
+        searchParams.get('section')
         const monthStr = searchParams.get('month')
         const yearStr = searchParams.get('year')
 

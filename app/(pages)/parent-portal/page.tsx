@@ -3,12 +3,10 @@
 import SamsTemplate from "@/app/components/SamsTemplate";
 import { usePushNotifications } from "@/lib/usePushNotifications";
 import {
-  ThickArrowRightIcon,
   CalendarIcon,
   DownloadIcon,
   PersonIcon,
   BookmarkIcon,
-  DashboardIcon,
   BellIcon,
   EnvelopeClosedIcon,
   ExclamationTriangleIcon
@@ -105,7 +103,7 @@ export default function Parent() {
 
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
-  const [activeTab, setActiveTab] = useState<
+  void useState<
     "overview" | "analytics" | "courses"
   >("overview");
 
@@ -122,7 +120,7 @@ export default function Parent() {
   useState<any>(null);
 
   // Push notifications setup
-  const { requestNotificationPermission, subscribeToPushNotifications, isSubscribed } = usePushNotifications();
+  const { subscribeToPushNotifications } = usePushNotifications();
 
   // Fetch children list on component mount
   useEffect(() => {
@@ -363,6 +361,7 @@ export default function Parent() {
       }
     };
     requestPermission();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch detailed data when a child is selected in dashboard view
@@ -429,10 +428,9 @@ export default function Parent() {
       child.today.statusLabel === "LATE"
   ).length;
 
-  const todayAttendanceRate =
-    totalStudents > 0
-      ? ((todayPresentCount / totalStudents) * 100).toFixed(1)
-      : "0.0";
+  void (totalStudents > 0
+    ? ((todayPresentCount / totalStudents) * 100).toFixed(1)
+    : "0.0");
 
   const absentYesterdayCount = children.filter(
     child => child.isAbsentYesterday === "yes"
@@ -474,14 +472,13 @@ export default function Parent() {
     if (rate >= 50) return "late";
     return "absent";
   };
-  const todayStatus =
-  absentYesterdayCount === 0
+  void (absentYesterdayCount === 0
     ? "present"
     : absentYesterdayCount <= 1
     ? "late"
-    : "absent";
+    : "absent");
 
-  const overallStatus = getAttendanceStatus(Number(overallAttendanceRate));
+  void getAttendanceStatus(Number(overallAttendanceRate));
 
   const WARNING_THRESHOLD = 50;
   const WARNING_APPROACH = 75; // approaching warning

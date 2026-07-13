@@ -30,12 +30,7 @@ import {
     Line,
     PieChart,
     Pie,
-    Cell,
-    RadarChart,
-    Radar,
-    PolarGrid,
-    PolarAngleAxis,
-    PolarRadiusAxis
+    Cell
 } from "recharts";
 import { useState, useEffect, useRef } from "react";
 import './styles.css';
@@ -96,7 +91,7 @@ interface Appeal {
 function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals }: { courses: any[]; appeals: Appeal[]; setAppeals: (appeals: Appeal[] | ((prev: Appeal[]) => Appeal[])) => void; isLoadingAppeals: boolean }) {
 
     const [selectedAppeal, setSelectedAppeal] = useState<Appeal | null>(null);
-    const [appealError, setAppealError] = useState<string | null>(null);
+    void useState<string | null>(null);
     const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
 
     const [selectedCourseFilter, setSelectedCourseFilter] = useState("all");
@@ -458,7 +453,7 @@ export default function Teacher() {
         }
         return '';
     };
-    const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
+    void useState({ present: 0, late: 0, absent: 0, total: 0, attendanceRate: 0 });
     const [attendanceRecords, setAttendanceRecords] = useState<Array<{
         id: string;
         name: string;
@@ -856,7 +851,7 @@ export default function Teacher() {
         };
         
         fetchCourses();
-    }, []);
+    }, [selectedCourse]);
 
     // Fetch sections when a course is selected in the overview drill-down
     useEffect(() => {
@@ -992,7 +987,6 @@ export default function Teacher() {
             }
 
             const sf2 = result.data;
-            const schoolDays: number[] = sf2.schoolDays;
             const students = sf2.students;
 
             // All days of the month (1..28/29/30/31) excluding Sundays for fixed column layout
@@ -1095,8 +1089,6 @@ export default function Teacher() {
                     }),
                 ];
 
-                // Total columns: No + Name + days + P + L + A + ND + %
-                const totalCols = 2 + allDays.length + 5;
                 // Compute column widths to fill page
                 const fixedNameW = Math.min(50, Math.max(35, contentW * 0.18));
                 const fixedSumW = 9; // each summary col
@@ -1837,13 +1829,6 @@ export default function Teacher() {
                 border,
                 alignment: { horizontal: 'center' } as any,
             };
-            const detectionTableHeaderStyle = {
-                font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
-                fill: { fgColor: { rgb: '2E7D32' } },
-                alignment: { horizontal: 'center', vertical: 'center' },
-                border,
-            };
-
             // Section title row
             setCell(R, 0, 'SAMS Analytics — Additional Insights (Not part of standard SF2)', sectionTitleStyle);
             const analyticsStartRow = R;
@@ -1997,7 +1982,6 @@ export default function Teacher() {
             R2++;
 
             // Data rows
-            const logDataStart = R2;
             if (detectionLog.length === 0) {
                 setCell2(R2, 0, 'No detections found for this period.', { font: { italic: true, sz: 10, color: { rgb: '999999' } } });
                 R2++;
