@@ -94,28 +94,37 @@
 
 .school-year {
     margin-top: 1rem;
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.75rem;
 }
 
 .school-year-item {
     background-color: var(--background1);
-    width: 23dvw;
-    height: 10dvw;
-    font-size: 0.6rem;
+    width: 100%;
+    height: auto;
+    font-size: 0.875rem;
+    transition: border-color 150ms, background-color 150ms;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid #e5e7eb;
 }
+
 
 .school-year-item-header {
     display: flex;
     background-color: var(--accent1);
     color: var(--background1);
     font-weight: bold;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.375rem;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem;
+    padding: 0.35rem 0.5rem;
 }
+
 
 .school-year-item-content {
     padding: 0.5rem;
@@ -202,9 +211,27 @@
     gap: 1.5rem;
 }
 
-@media (width >= 768px) {
+@media (min-width: 768px) {
+    .admin-content {
+        padding: 1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
     .admin-content {
         flex-direction: row;
+    }
+}
+
+.school-year-list-container {
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .school-year-list-container {
+        flex: 1;
+        min-width: 0;
+        width: auto;
     }
 }
 
@@ -236,12 +263,13 @@
 
 /* Delete button */
 .school-year-delete-button {
-    height: 1.5rem;
-    padding: 0.25rem;
+    height: 1.25rem;
+    width: 1.25rem;
+    padding: 0.15rem;
     background-color: #ef4444;
     color: white;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: background-color 0.2s;
     display: flex;
@@ -250,16 +278,18 @@
     border: none;
 }
 
+
 .school-year-delete-button:hover {
     background-color: #dc2626;
 }
 
-/* School Year metadata */
 .school-year-year-info {
     font-weight: bold;
+    font-size: 0.8rem;
 }
 
 .school-year-created-info {
+    font-size: 0.65rem;
     opacity: 0.7;
 }
 
@@ -267,8 +297,9 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.25rem;
+    gap: 0.1rem;
 }
+
 
 /* Hidden utility */
 .hidden {
@@ -374,39 +405,38 @@
 }
 
 .school-year-activate-button {
-    height: 1.5rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    height: 1.25rem;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
     background-color: #ef4444;
     color: var(--background1);
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: background-color 0.15s, color 0.15s;
 }
+
 
 .school-year-activate-button:hover {
     background-color: rgb(0 0 0 / 3%);
 }
 
 .school-year-active-indicator {
-    height: 1.5rem;
-    padding: 0 0.5rem;
+    height: 1.25rem;
+    padding: 0 0.4rem;
     background-color: #059669;
     color: white;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border: none;
 }
 
-.school-year-item {
-    transition: border-color 150ms, background-color 150ms;
-    border-radius: 0.375rem;
-    padding: 0.25rem;
-}
+
+/* school-year-item styling is merged in grid definition above */
+
 
 /* User import tabs and lists */
 .import-actions {
@@ -448,9 +478,10 @@
 }
 
 .user-list {
-    display: flex;
-    flex-flow: row wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 0.5rem;
+    width: 100%;
 }
 
 .user-item {
@@ -460,8 +491,9 @@
     padding: 0.5rem;
     border: 1px solid #e5e7eb;
     border-radius: 0.375rem;
-    width: 32%;
+    width: 100%;
 }
+
 
 .user-meta {
     display: flex;
@@ -573,24 +605,41 @@
     gap: 0.5rem;
 }
 
-/* Course viewer styles */
 .course-viewer {
     display: flex;
+    flex-direction: column;
     gap: 1.5rem;
     min-height: 24rem;
 }
 
 .course-viewer-left {
-    flex: 0 0 16rem;
+    width: 100%;
     display: flex;
     flex-direction: column;
 }
 
 .course-viewer-right {
-    flex: 1;
+    width: 100%;
     display: flex;
     flex-direction: column;
 }
+
+@media (min-width: 768px) {
+    .course-viewer {
+        flex-direction: row;
+    }
+
+    .course-viewer-left {
+        flex: 0 0 16rem;
+        width: auto;
+    }
+
+    .course-viewer-right {
+        flex: 1;
+        width: auto;
+    }
+}
+
 
 .course-select-list {
     display: flex;
@@ -956,3 +1005,50 @@
         padding: 0.125rem 0.25rem;
     }
 }
+
+@media (max-width: 640px) {
+    .user-tabs {
+        padding: 0.5rem 0;
+    }
+
+    .school-year-form {
+        padding: 1rem;
+    }
+
+    .course-teacher-info {
+        padding: 0.75rem 1rem;
+        gap: 0.75rem;
+    }
+
+    .teacher-avatar {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    .school-year-item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .school-year-item-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .enrolled-student-item {
+        padding: 0.5rem 0.75rem;
+        gap: 0.75rem;
+    }
+
+    .student-avatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .enrolled-student-name {
+        font-size: 0.9rem;
+    }
+}

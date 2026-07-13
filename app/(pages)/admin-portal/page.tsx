@@ -892,7 +892,7 @@ export default function Admin() {
                                     </button>
                                 </div>
                             </div>
-                            <div>
+                            <div className="school-year-list-container">
                                 <section>
                                     <ToggleGroup.Root
                                         type="single"
