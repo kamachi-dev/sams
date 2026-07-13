@@ -60,6 +60,23 @@ const calculateWeeklyTrend = (daily: any[]) => {
   }));
 };
 
+const buildChildAttendancePieData = (child: any) => {
+  const present = Number(child?.present ?? 0);
+  const late = Number(child?.late ?? 0);
+  const absent = Number(child?.absent ?? 0);
+  const total = present + late + absent;
+
+  if (total <= 0) {
+    return [{ name: "No Data", value: 1, color: "#d0d0d0" }];
+  }
+
+  return [
+    ...(present > 0 ? [{ name: "Present", value: present, color: chartColors.present }] : []),
+    ...(late > 0 ? [{ name: "Late", value: late, color: chartColors.late }] : []),
+    ...(absent > 0 ? [{ name: "Absent", value: absent, color: chartColors.absent }] : []),
+  ];
+};
+
 type CourseAttendanceItem = {
   course: string;
   present: number;
@@ -137,10 +154,10 @@ export default function Parent() {
             name: child.name,
             isAbsentYesterday: "no",
             status: "no-class",
-            present: 0,
-            late: 0,
-            absent: 0,
-            percentage: 0,
+            present: Number(child.present ?? 0),
+            late: Number(child.late ?? 0),
+            absent: Number(child.absent ?? 0),
+            percentage: Number(child.percentage ?? 0),
             today: {
               statusLabel: "NO CLASS",
               classTime: "N/A",
@@ -158,10 +175,10 @@ export default function Parent() {
               const summaryData = await summaryRes.json();
 
               if (summaryData.success && summaryData.data) {
-                child.present = summaryData.data.present;
-                child.late = summaryData.data.late;
-                child.absent = summaryData.data.absent;
-                child.percentage = summaryData.data.percentage;
+                child.present = Number(summaryData.data.present ?? 0);
+                child.late = Number(summaryData.data.late ?? 0);
+                child.absent = Number(summaryData.data.absent ?? 0);
+                child.percentage = Number(summaryData.data.percentage ?? 0);
                 child.isAbsentYesterday = summaryData.data.absentYesterday ? "yes" : "no";
               }
             } catch (err) {
@@ -245,10 +262,10 @@ export default function Parent() {
 
                 return {
                   ...child,
-                  present: updatedChild.present ?? child.present,
-                  late: updatedChild.late ?? child.late,
-                  absent: updatedChild.absent ?? child.absent,
-                  percentage: updatedChild.percentage ?? child.percentage,
+                  present: Number(updatedChild.present ?? child.present ?? 0),
+                  late: Number(updatedChild.late ?? child.late ?? 0),
+                  absent: Number(updatedChild.absent ?? child.absent ?? 0),
+                  percentage: Number(updatedChild.percentage ?? child.percentage ?? 0),
                   isAbsentYesterday: updatedChild.absentYesterday ? "yes" : "no",
                   today: {
                     ...child.today,
@@ -683,29 +700,16 @@ export default function Parent() {
                         <ResponsiveContainer width={120} height={120}>
                           <PieChart>
                             <Pie
-                              data={
-                                child.present + child.late + child.absent > 0
-                                  ? [
-                                      ...(child.present > 0 ? [{ value: child.present, type: 'present' }] : []),
-                                      ...(child.late > 0 ? [{ value: child.late, type: 'late' }] : []),
-                                      ...(child.absent > 0 ? [{ value: child.absent, type: 'absent' }] : []),
-                                    ]
-                                  : [{ value: 1 }]
-                              }
+                              data={buildChildAttendancePieData(child)}
                               innerRadius={40}
                               outerRadius={55}
                               dataKey="value"
                               stroke="none"
+                              isAnimationActive={false}
                             >
-                              {child.present + child.late + child.absent > 0 ? (
-                                <>
-                                  {child.present > 0 && <Cell fill={chartColors.present} />}
-                                  {child.late > 0 && <Cell fill={chartColors.late} />}
-                                  {child.absent > 0 && <Cell fill={chartColors.absent} />}
-                                </>
-                              ) : (
-                                <Cell fill="#d0d0d0" />
-                              )}
+                              {buildChildAttendancePieData(child).map((entry, index) => (
+                                <Cell key={index} fill={entry.color} />
+                              ))}
                             </Pie>
 
                             <text
