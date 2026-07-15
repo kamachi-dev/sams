@@ -12,6 +12,7 @@ CAMERA_AGENT_TOKEN=the-same-long-random-value-configured-on-the-deployed-app
 CAMERA_CONFIG_PATH=C:\SAMS-MMCL\Camera-Attendance-App\config.ini
 ```
 
-Set `CAMERA_SETTINGS_POLL_SECONDS` to change the 30-second interval. Keep the
-command window open, or configure the batch file in Windows Task Scheduler to
-start at sign-in.
+Set `CAMERA_SETTINGS_POLL_SECONDS` to change the 30-second interval. To run the
+agent in the background, configure `run_camera_settings_agent.vbs` in Windows
+Task Scheduler to start at sign-in. The `.vbs` launcher hides the command window;
+errors are recorded in `camera-settings-agent.log` in this folder.

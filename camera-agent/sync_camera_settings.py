@@ -1,5 +1,6 @@
 """Pull deployed SAMS camera settings and apply them to the local camera config.ini."""
 import configparser
+from datetime import datetime
 import os
 import time
 import urllib.error
@@ -8,7 +9,18 @@ import urllib.request
 API_URL = os.environ.get('SAMS_API_URL', '').rstrip('/')
 TOKEN = os.environ.get('CAMERA_AGENT_TOKEN', '')
 CONFIG_PATH = os.environ.get('CAMERA_CONFIG_PATH', r'C:\SAMS-MMCL\Camera-Attendance-App\config.ini')
-POLL_SECONDS = max(5, int(os.environ.get('CAMERA_SETTINGS_POLL_SECONDS', '30')))
+POLL_SECONDS = max(5, int(os.environ.get('CAMERA_SETTINGS_POLL_SECONDS', '10')))
+LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'camera-settings-agent.log')
+
+
+def log(message):
+    line = f'{datetime.now().isoformat(timespec="seconds")} {message}'
+    print(line)
+    try:
+        with open(LOG_PATH, 'a', encoding='utf-8') as log_file:
+            log_file.write(f'{line}\n')
+    except OSError:
+        pass
 
 
 def load_settings():
@@ -42,12 +54,12 @@ def apply_settings(settings):
 def main():
     if not API_URL or not TOKEN:
         raise SystemExit('Set SAMS_API_URL and CAMERA_AGENT_TOKEN before starting the camera settings agent.')
-    print(f'Camera settings agent running; syncing every {POLL_SECONDS} seconds.')
+    log(f'Camera settings agent running; syncing every {POLL_SECONDS} seconds.')
     while True:
         try:
             apply_settings(load_settings())
         except (OSError, ValueError, urllib.error.URLError, urllib.error.HTTPError, RuntimeError) as error:
-            print(f'Camera settings sync failed: {error}')
+            log(f'Camera settings sync failed: {error}')
         time.sleep(POLL_SECONDS)
 
 
