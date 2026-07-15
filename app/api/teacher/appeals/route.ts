@@ -38,13 +38,13 @@ export async function GET() {
                 c.id as course_id_db,
                 s.id as section_id,
                 s.name as section_name,
-                sd.name as student_name,
+                COALESCE(student_account.username, 'Unknown student') as student_name,
                 rev.username as reviewer_name
             FROM attendance_appeal aa
             LEFT JOIN record r ON aa.record_id = r.id
                         LEFT JOIN section s ON aa.course_id = s.id
                         LEFT JOIN course c ON s.course = c.id
-            LEFT JOIN student_data sd ON aa.student_id = sd.id
+            LEFT JOIN account student_account ON aa.student_id = student_account.id
             LEFT JOIN account rev ON aa.reviewed_by = rev.id
             WHERE s.teacher = $1
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
@@ -59,12 +59,16 @@ export async function GET() {
             return {
                 id: row.id,
                 studentName: row.student_name,
+                sectionId: row.section_id,
                 section: row.section_name,
                 courseId: row.course_id_db,
                 course: row.course_name,
                 date: row.record_time
                     ? new Date(row.record_time).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
                     : '-',
+                recordDate: row.record_time
+                    ? new Date(row.record_time).toISOString().slice(0, 10)
+                    : null,
                 recordedStatus,
                 requestedStatus: 'Present',
                 reason: row.reason,

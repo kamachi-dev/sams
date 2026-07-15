@@ -74,10 +74,12 @@ interface SectionComparisonData {
 interface Appeal {
     id: number;
     studentName: string;
+    sectionId: string;
     section: string;
     courseId: string;
     course: string;
     date: string;
+    recordDate: string | null;
     recordedStatus: string;
     requestedStatus: string;
     reason: string;
@@ -96,6 +98,8 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
 
     const [selectedCourseFilter, setSelectedCourseFilter] = useState("all");
     const [selectedSectionFilter, setSelectedSectionFilter] = useState("all");
+    const [historyNameFilter, setHistoryNameFilter] = useState("");
+    const [historyDateFilter, setHistoryDateFilter] = useState("");
 
     const [teacherResponse, setTeacherResponse] = useState("");
 
@@ -105,11 +109,20 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
         a => a.status === "approved" || a.status === "rejected"
     );
 
+    const filteredAppealHistory = appealHistory.filter(appeal => {
+        const matchesName = appeal.studentName
+            .toLocaleLowerCase()
+            .includes(historyNameFilter.trim().toLocaleLowerCase());
+        const matchesDate = !historyDateFilter || appeal.recordDate === historyDateFilter;
+
+        return matchesName && matchesDate;
+    });
+
     const filteredAppeals = pendingAppeals.filter(a => {
         if (selectedCourseFilter !== "all" && a.courseId !== selectedCourseFilter)
             return false;
 
-        if (selectedSectionFilter !== "all" && a.section !== selectedSectionFilter)
+        if (selectedSectionFilter !== "all" && a.sectionId !== selectedSectionFilter)
             return false;
 
         return true;
@@ -163,10 +176,6 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
         }
     };
 
-    if (isLoadingAppeals) {
-        return <div className="appeal-container"><div style={{ padding: '20px' }}>Loading appeals...</div></div>;
-    }
-
     return (
 
         <div className="appeal-container">
@@ -181,11 +190,14 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
                         <select
                             className="teacher-select"
                             value={selectedCourseFilter}
-                            onChange={(e) => setSelectedCourseFilter(e.target.value)}
+                            onChange={(e) => {
+                                setSelectedCourseFilter(e.target.value);
+                                setSelectedSectionFilter("all");
+                            }}
                         >
                             <option value="all">All Courses</option>
                             {courses.map((c: any) => (
-                                <option key={c.id} value={c.id}>
+                                <option key={c.courseId ?? c.id} value={c.courseId ?? c.id}>
                                     {c.name}
                                 </option>
                             ))}
@@ -196,17 +208,22 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
                             onChange={(e) => setSelectedSectionFilter(e.target.value)}
                         >
                             <option value="all">All Sections</option>
-                            {[...new Set(appeals.map(a => a.section))]
-                                .filter(Boolean)
-                                .map((section: any) => (
-                                    <option key={section} value={section}>
+                            {Array.from(new Map(
+                                pendingAppeals
+                                    .filter(appeal => selectedCourseFilter === "all" || appeal.courseId === selectedCourseFilter)
+                                    .filter(appeal => Boolean(appeal.sectionId))
+                                    .map(appeal => [appeal.sectionId, appeal.section])
+                            ).entries()).map(([sectionId, section]) => (
+                                    <option key={sectionId} value={sectionId}>
                                         {section}
                                     </option>
                                 ))}
                         </select>
                     </div>
                     <div className="appeal-list-scroll">
-                        {filteredAppeals.length === 0 ? (
+                        {isLoadingAppeals ? (
+                            <div className="appeal-empty">Loading appeals...</div>
+                        ) : filteredAppeals.length === 0 ? (
                             <div className="appeal-empty">
                                 No pending requests
                             </div>
@@ -305,8 +322,27 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
                             <div className="appeal-history-title">
                                 Appeal History
                             </div>
+                            <div className="appeal-list-filters">
+                                <input
+                                    className="teacher-select"
+                                    type="search"
+                                    placeholder="Search student"
+                                    value={historyNameFilter}
+                                    onChange={(e) => setHistoryNameFilter(e.target.value)}
+                                    aria-label="Search appeal history by student name"
+                                />
+                                <input
+                                    className="teacher-select"
+                                    type="date"
+                                    value={historyDateFilter}
+                                    onChange={(e) => setHistoryDateFilter(e.target.value)}
+                                    aria-label="Filter appeal history by date"
+                                />
+                            </div>
                             <div className="appeal-history-scroll">
-                                {appealHistory.map((appeal) => (
+                                {filteredAppealHistory.length === 0 ? (
+                                    <div className="appeal-empty">No matching appeal history</div>
+                                ) : filteredAppealHistory.map((appeal) => (
                                     <div
                                         key={appeal.id}
                                         className={`appeal-history-item ${appeal.status}`}
@@ -347,6 +383,163 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
     );
 }
 // End of Teacher Appeal Section
+
+function CameraConfigurationSection() {
+    const [room, setRoom] = useState('');
+    const [rooms, setRooms] = useState<string[]>([]);
+    const [courseName, setCourseName] = useState('');
+    const [section, setSection] = useState('');
+    const [contexts, setContexts] = useState<Array<{ room: string; courseName: string; section: string }>>([]);
+    const [startTime, setStartTime] = useState('');
+    const [endTime, setEndTime] = useState('');
+    const [useScheduleOverride, setUseScheduleOverride] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isCameraRunning, setIsCameraRunning] = useState(false);
+    const [isCameraAction, setIsCameraAction] = useState(false);
+    const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        const loadConfiguration = async () => {
+            try {
+                const response = await fetch('/api/teacher/camera-config');
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Failed to load camera configuration');
+                const config = result.data;
+                if (!config || !Array.isArray(config.roomOptions) || !Array.isArray(config.contexts)) throw new Error('Invalid camera configuration response');
+                setRoom(typeof config.room === 'string' ? config.room : '');
+                setRooms(config.roomOptions);
+                setContexts(config.contexts);
+                setCourseName(typeof config.courseName === 'string' ? config.courseName : '');
+                setSection(typeof config.section === 'string' ? config.section : '');
+                setStartTime(typeof config.startTime === 'string' ? config.startTime : '');
+                setEndTime(typeof config.endTime === 'string' ? config.endTime : '');
+                setUseScheduleOverride(config.hasScheduleOverride === true);
+            } catch (error) {
+                setMessage(error instanceof Error ? error.message : 'Failed to load camera configuration');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadConfiguration();
+    }, []);
+
+    useEffect(() => {
+        const loadCameraStatus = async () => {
+            try {
+                const response = await fetch('/api/teacher/camera-control');
+                const result = await response.json();
+                if (response.ok && result.success) setIsCameraRunning(result.data.running === true);
+            } catch (error) {
+                console.error('Error loading camera status:', error);
+            }
+        };
+        loadCameraStatus();
+    }, []);
+
+    const saveConfiguration = async () => {
+        setIsSaving(true);
+        setMessage('');
+        try {
+            const response = await fetch('/api/teacher/camera-config', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ room, courseName, section, startTime, endTime, useScheduleOverride }),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Failed to save camera configuration');
+            setStartTime(result.data.startTime);
+            setEndTime(result.data.endTime);
+            setMessage('Camera configuration saved.');
+        } catch (error) {
+            setMessage(error instanceof Error ? error.message : 'Failed to save camera configuration');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const toggleCamera = async () => {
+        setIsCameraAction(true);
+        setMessage('');
+        try {
+            const response = await fetch('/api/teacher/camera-control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: isCameraRunning ? 'stop' : 'start' }),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Failed to control camera');
+            setIsCameraRunning(result.data.running === true);
+            setMessage(result.data.running ? 'Camera started.' : 'Camera stopped.');
+        } catch (error) {
+            setMessage(error instanceof Error ? error.message : 'Failed to control camera');
+        } finally {
+            setIsCameraAction(false);
+        }
+    };
+
+    const roomContexts = contexts.filter(context => context.room === room);
+    const courseOptions = [...new Set(roomContexts.map(context => context.courseName))];
+    const sectionOptions = [...new Set(roomContexts
+        .filter(context => context.courseName === courseName)
+        .map(context => context.section))];
+
+    return (
+        <section className="teacher-camera-nav-settings" aria-label="Camera settings">
+            <h2>Camera Settings</h2>
+            <p className="teacher-camera-nav-description">Choose a room, course, and section; time override is optional.</p>
+            {isLoading ? <p className="teacher-camera-nav-status">Loading camera configuration...</p> : (
+                <div className="teacher-camera-nav-form">
+                    <div className="appeal-field">
+                            <label htmlFor="camera-room">Room</label>
+                            <select id="camera-room" className="teacher-select" value={room} onChange={e => { setRoom(e.target.value); setCourseName(''); setSection(''); }} disabled={isSaving || rooms.length === 0}>
+                                {rooms.length === 0 ? <option value="">No assigned rooms available</option> : rooms.map(value => <option key={value} value={value}>{value}</option>)}
+                            </select>
+                    </div>
+                    <div className="teacher-camera-nav-contexts">
+                        <div className="appeal-field">
+                            <label htmlFor="camera-course">Course override</label>
+                            <select id="camera-course" className="teacher-select" value={courseName} onChange={e => { setCourseName(e.target.value); setSection(''); }} disabled={isSaving || !room}>
+                                <option value="">Use detected course</option>
+                                {courseOptions.map(value => <option key={value} value={value}>{value}</option>)}
+                            </select>
+                        </div>
+                        <div className="appeal-field">
+                            <label htmlFor="camera-section">Section override</label>
+                            <select id="camera-section" className="teacher-select" value={section} onChange={e => setSection(e.target.value)} disabled={isSaving || !courseName}>
+                                <option value="">Use detected section</option>
+                                {sectionOptions.map(value => <option key={value} value={value}>{value}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <label className="teacher-camera-nav-override">
+                            <input type="checkbox" checked={useScheduleOverride} onChange={e => setUseScheduleOverride(e.target.checked)} disabled={isSaving} />
+                            Override scheduled time
+                    </label>
+                    <div className="teacher-camera-nav-times">
+                        <div className="appeal-field">
+                                <label htmlFor="camera-start">Start time</label>
+                                <input id="camera-start" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} disabled={!useScheduleOverride || isSaving} />
+                        </div>
+                        <div className="appeal-field">
+                                <label htmlFor="camera-end">End time</label>
+                                <input id="camera-end" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} disabled={!useScheduleOverride || isSaving} />
+                        </div>
+                    </div>
+                    <div className="teacher-camera-nav-actions">
+                        <button className="teacher-approve-btn" onClick={saveConfiguration} disabled={isSaving || !room || rooms.length === 0}>
+                            {isSaving ? 'Saving...' : 'Save settings'}
+                        </button>
+                        <button className="teacher-camera-control-btn" onClick={toggleCamera} disabled={isCameraAction}>
+                            {isCameraAction ? 'Working...' : isCameraRunning ? 'Stop camera' : 'Start camera'}
+                        </button>
+                    </div>
+                    {message && <p className="teacher-camera-nav-status" role="status">{message}</p>}
+                </div>
+            )}
+        </section>
+    );
+}
 
 export default function Teacher() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -671,10 +864,15 @@ export default function Teacher() {
         fetchStudentCount();
     }, []);
 
-    // Fetch appeals from database
+    // Fetch appeals once when the teacher portal opens.
     useEffect(() => {
-        const fetchAppealsCounts = async () => {
+        let isFetching = false;
+
+        const fetchAppeals = async () => {
+            if (isFetching) return;
+
             try {
+                isFetching = true;
                 setIsLoadingAppeals(true);
                 const response = await fetch('/api/teacher/appeals');
                 const result = await response.json();
@@ -685,11 +883,12 @@ export default function Teacher() {
             } catch (error) {
                 console.error('Error fetching appeals:', error);
             } finally {
+                isFetching = false;
                 setIsLoadingAppeals(false);
             }
         };
 
-        fetchAppealsCounts();
+        void fetchAppeals();
     }, []);
 
     // Fetch all at-risk students across all courses (for overview card + annotations)
@@ -2031,7 +2230,7 @@ export default function Teacher() {
     ];
 
     return (
-        <SamsTemplate activeTab={activeTab} onTabChange={setActiveTab} links={[
+        <SamsTemplate activeTab={activeTab} onTabChange={setActiveTab} navContent={<CameraConfigurationSection />} links={[
             {
                 label: "Overview",
                 Icon: DashboardIcon,

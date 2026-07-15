@@ -29,6 +29,7 @@ interface Props {
     }[];
     activeTab?: string;
     onTabChange?: (tab: string) => void;
+    navContent?: React.ReactNode;
 }
 
 function toggleTheme(checked: boolean) {
@@ -53,7 +54,7 @@ async function getUserData() {
     return user;
 }
 
-export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
+export default function SamsTemplate({ links, activeTab, onTabChange, navContent }: Props) {
     const { isLoaded, isSignedIn } = useAuth();
     const defaultTab = links && links.length > 0 ? links[0].label : undefined;
     const pathname = usePathname() ?? '';
@@ -154,6 +155,8 @@ export default function SamsTemplate({ links, activeTab, onTabChange }: Props) {
                     </Tabs.List>
                     
                     <Separator.Root className="sams-separator sams-nav-bottom-separator" decorative style={{ margin: "0 15px" }} />
+
+                    {navContent && <div className="sams-nav-custom-content">{navContent}</div>}
 
                     {/* Desktop Settings (Popover) */}
                     <Popover.Root>

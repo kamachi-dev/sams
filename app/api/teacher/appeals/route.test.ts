@@ -82,12 +82,18 @@ test('GET returns formatted appeals for the teacher', async () => {
   expect(json.data[0].status).toBe('pending');
   expect(json.data[0].recordedStatus).toBe('Absent');
   expect(json.data[0].studentName).toBe('Jane Doe');
+  expect(json.data[0].sectionId).toBe('sec_1');
+  expect(json.data[0].recordDate).toBe('2026-06-23');
 
   expect(json.data[1].status).toBe('approved');
   expect(json.data[1].recordedStatus).toBe('Late');
   expect(json.data[1].studentName).toBe('John Smith');
   expect(json.data[1].reviewedBy).toBe('Test Teacher');
   expect(json.data[1].teacherResponse).toBe('Approved');
+
+  const [query] = vi.mocked(db.query).mock.calls[0];
+  expect(query).toContain('account student_account');
+  expect(query).not.toContain('student_data');
 });
 
 test('GET returns 500 on database error', async () => {

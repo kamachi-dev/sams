@@ -15,12 +15,12 @@
     container-type: inline-size;
 }
 
-/* Keep the first two dashboard cards filling the parent panel height */
-.sams-content-panels > .sams-content-panel:nth-child(-n+2) {
+/* Keep every dashboard card flush with its parent panel. */
+.sams-content-panels > .sams-content-panel {
     display: flex;
 }
 
-.sams-content-panels > .sams-content-panel:nth-child(-n+2) > .teacher-panel-card {
+.sams-content-panels > .sams-content-panel > .teacher-panel-card {
     width: 100%;
     height: 100%;
 }
@@ -299,6 +299,12 @@
 
 .teacher-select:hover {
     box-shadow: 0 0 0 3px rgb(29 161 242 / 10%);
+}
+
+/* Native calendar indicators do not inherit the input text color. */
+input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.9;
 }
 
 .teacher-export-btn {
@@ -706,6 +712,7 @@
     gap: 16px;
     flex: 1;
     overflow-y: auto;
+    align-content: start;
 }
 
 .overview-course-card {
@@ -1975,4 +1982,128 @@
     font-weight: 500;
     width: 100%;
     padding-top: 2px;
+}
+
+/* Camera controls displayed directly in the teacher navigation. */
+.sams-nav-custom-content {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 2px 16px 8px;
+    min-width: 0;
+}
+
+.teacher-camera-nav-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid var(--foreground3);
+    border-radius: 10px;
+    background: var(--background2);
+    color: var(--foreground1);
+}
+
+.teacher-camera-nav-settings h2 {
+    margin: 0;
+    color: var(--accent1);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.teacher-camera-nav-description,
+.teacher-camera-nav-status {
+    margin: 0;
+    color: var(--foreground2);
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+.teacher-camera-nav-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.teacher-camera-nav-settings .appeal-field {
+    gap: 2px;
+}
+
+.teacher-camera-nav-settings .appeal-field label {
+    font-size: 11px;
+}
+
+.teacher-camera-nav-settings .teacher-select,
+.teacher-camera-nav-settings input[type="time"] {
+    width: 100%;
+    min-width: 0;
+    padding: 5px 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--foreground3);
+    border-radius: 6px;
+    background: var(--background1);
+    color: var(--accent1);
+    font-size: 11px;
+}
+
+.teacher-camera-nav-override {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: var(--foreground1);
+}
+
+.teacher-camera-nav-times {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    min-width: 0;
+}
+
+.teacher-camera-nav-contexts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+}
+
+.teacher-camera-nav-settings .teacher-approve-btn {
+    margin-top: 1px;
+    padding: 7px 10px;
+    font-size: 11px;
+}
+
+.teacher-camera-nav-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.teacher-camera-control-btn {
+    margin-top: 1px;
+    padding: 7px 10px;
+    border: 1px solid var(--accent1);
+    border-radius: 6px;
+    background: var(--background1);
+    color: var(--accent1);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.teacher-camera-control-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+@media (width <= 767px) {
+    .sams-nav-custom-content {
+        padding: 4px 0 12px;
+    }
+
+    .teacher-camera-nav-contexts {
+        grid-template-columns: 1fr;
+    }
 }
