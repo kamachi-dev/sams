@@ -3,7 +3,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
 import db from '@/app/services/database'
-import { readCameraConfig, writeCameraConfig } from '@/app/services/camera-config'
+import { readCameraSettings, writeCameraSettings } from '@/app/services/camera-settings'
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 
@@ -32,7 +32,7 @@ export async function GET() {
         const user = await currentUser()
         if (!user) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
 
-        const [config, contexts] = await Promise.all([readCameraConfig(), getTeacherContexts(user.id)])
+        const [config, contexts] = await Promise.all([readCameraSettings(), getTeacherContexts(user.id)])
         const roomOptions = [...new Set(contexts.map(context => context.room))]
         const defaultRoom = roomOptions[0] ?? ''
         return NextResponse.json({
@@ -93,7 +93,7 @@ export async function PUT(request: Request) {
             startTime: useScheduleOverride ? startTime : '',
             endTime: useScheduleOverride ? endTime : '',
         }
-        await writeCameraConfig(config)
+        await writeCameraSettings(config, user.id)
         return NextResponse.json({ success: true, data: { ...config, hasScheduleOverride: useScheduleOverride } })
     } catch (error) {
         console.error('Error saving camera configuration:', error)
