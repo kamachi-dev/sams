@@ -2,12 +2,14 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { currentUser } from '@clerk/nextjs/server'
-import { isCameraRunning, startCamera, stopCamera } from '@/app/services/camera-runner'
+import { queueCameraCommand, readLatestCameraCommand } from '@/app/services/camera-settings'
 
 export async function GET() {
     const user = await currentUser()
     if (!user) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
-    return NextResponse.json({ success: true, data: { running: isCameraRunning() } })
+    const command = await readLatestCameraCommand()
+    const running = command?.status === 'completed' && command.action === 'start'
+    return NextResponse.json({ success: true, data: { running, pending: command?.status === 'pending' || command?.status === 'claimed' } })
 }
 
 export async function POST(request: Request) {
@@ -17,12 +19,12 @@ export async function POST(request: Request) {
 
         const { action } = await request.json()
         if (action === 'start') {
-            startCamera()
-            return NextResponse.json({ success: true, data: { running: true } })
+            await queueCameraCommand('start', user.id)
+            return NextResponse.json({ success: true, data: { running: true, pending: true } })
         }
         if (action === 'stop') {
-            await stopCamera()
-            return NextResponse.json({ success: true, data: { running: false } })
+            await queueCameraCommand('stop', user.id)
+            return NextResponse.json({ success: true, data: { running: false, pending: true } })
         }
         return NextResponse.json({ success: false, error: 'Action must be start or stop.' }, { status: 400 })
     } catch (error) {

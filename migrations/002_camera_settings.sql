@@ -11,3 +11,20 @@ CREATE TABLE IF NOT EXISTS camera_settings (
     CONSTRAINT camera_settings_updated_by_fkey
         FOREIGN KEY (updated_by) REFERENCES account(id) ON UPDATE CASCADE ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS camera_command (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    action TEXT NOT NULL CHECK (action IN ('start', 'stop')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'claimed', 'completed', 'failed')),
+    requested_by TEXT,
+    requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    claimed_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    error TEXT,
+    CONSTRAINT camera_command_requested_by_fkey
+        FOREIGN KEY (requested_by) REFERENCES account(id) ON UPDATE CASCADE ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS camera_command_pending_idx
+    ON camera_command (requested_at)
+    WHERE status = 'pending';

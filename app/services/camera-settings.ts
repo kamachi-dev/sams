@@ -8,6 +8,12 @@ export type CameraSettings = {
     endTime: string
 }
 
+export type CameraCommand = {
+    id: number
+    action: 'start' | 'stop'
+    status: 'pending' | 'claimed' | 'completed' | 'failed'
+}
+
 const EMPTY_SETTINGS: CameraSettings = {
     room: '',
     courseName: '',
@@ -48,4 +54,52 @@ export async function writeCameraSettings(config: CameraSettings, updatedBy: str
              updated_at = NOW()`,
         [config.room, config.courseName, config.section, config.startTime, config.endTime, updatedBy],
     )
+}
+
+export async function queueCameraCommand(action: 'start' | 'stop', requestedBy: string): Promise<CameraCommand> {
+    const result = await db.query(
+        `INSERT INTO camera_command (action, requested_by)
+         VALUES ($1, $2)
+         RETURNING id, action, status`,
+        [action, requestedBy],
+    )
+    return result.rows[0] as CameraCommand
+}
+
+export async function claimNextCameraCommand(): Promise<CameraCommand | null> {
+    const result = await db.query(
+        `WITH next_command AS (
+            SELECT id
+            FROM camera_command
+            WHERE status = 'pending'
+            ORDER BY requested_at ASC
+            FOR UPDATE SKIP LOCKED
+            LIMIT 1
+         )
+         UPDATE camera_command AS command
+         SET status = 'claimed', claimed_at = NOW()
+         FROM next_command
+         WHERE command.id = next_command.id
+         RETURNING command.id, command.action, command.status`,
+    )
+    return (result.rows[0] as CameraCommand | undefined) ?? null
+}
+
+export async function completeCameraCommand(id: number, succeeded: boolean, error = ''): Promise<void> {
+    await db.query(
+        `UPDATE camera_command
+         SET status = $2, completed_at = NOW(), error = $3
+         WHERE id = $1 AND status = 'claimed'`,
+        [id, succeeded ? 'completed' : 'failed', error.slice(0, 1000)],
+    )
+}
+
+export async function readLatestCameraCommand(): Promise<CameraCommand | null> {
+    const result = await db.query(
+        `SELECT id, action, status
+         FROM camera_command
+         ORDER BY requested_at DESC
+         LIMIT 1`,
+    )
+    return (result.rows[0] as CameraCommand | undefined) ?? null
 }

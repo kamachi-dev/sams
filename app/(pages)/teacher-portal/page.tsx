@@ -470,7 +470,9 @@ function CameraConfigurationSection() {
             const result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.error || 'Failed to control camera');
             setIsCameraRunning(result.data.running === true);
-            setMessage(result.data.running ? 'Camera started.' : 'Camera stopped.');
+            setMessage(result.data.pending
+                ? `Camera ${result.data.running ? 'start' : 'stop'} requested; the camera PC will respond shortly.`
+                : result.data.running ? 'Camera started.' : 'Camera stopped.');
         } catch (error) {
             setMessage(error instanceof Error ? error.message : 'Failed to control camera');
         } finally {
