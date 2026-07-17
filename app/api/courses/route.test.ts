@@ -18,13 +18,16 @@ test('GET returns courses list', async () => {
 });
 
 test('POST creates course and default section', async () => {
-  vi.spyOn(db, 'query')
+  const querySpy = vi.spyOn(db, 'query')
     .mockResolvedValueOnce({ rows: [{ active_school_year: 'sy_1' }] } as any) // meta
     .mockResolvedValueOnce({ rows: [{ id: 'c_1', name: 'Math' }] } as any) // course
-    .mockResolvedValueOnce({ rows: [{ id: 's_1', name: 'Math', schedule: null }] } as any); // section
+    .mockResolvedValueOnce({ rows: [{ id: 's_1', name: 'Math', schedule: null, teacher: 't_1', classroom: 'Room A' }] } as any); // section
 
   const formData = new FormData();
   formData.append('name', 'Math');
+  formData.append('teacher', 't_1');
+  formData.append('classroom', 'Room A');
+  formData.append('schedule', '{"monday": {"start": "08:00", "end": "09:15"}}');
 
   const req = new Request('http://localhost/api/courses', {
     method: 'POST',
@@ -36,6 +39,10 @@ test('POST creates course and default section', async () => {
 
   expect(json.success).toBe(true);
   expect(json.data.id).toBe('c_1');
+  expect(querySpy).toHaveBeenCalledWith(
+    expect.stringContaining('INSERT INTO section'),
+    ['Math', '{"monday": {"start": "08:00", "end": "09:15"}}', 'c_1', 't_1', 'Room A']
+  );
 });
 
 test('DELETE removes course and dependencies', async () => {

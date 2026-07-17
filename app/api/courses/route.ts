@@ -8,6 +8,8 @@ export async function POST(req: Request) {
         const name = String(formData.get('name') ?? '').trim()
         const schedule = String(formData.get('schedule') ?? '').trim()
         const studentsRaw = String(formData.get('students') ?? '').trim()
+        const teacher = formData.get('teacher') ? String(formData.get('teacher')).trim() : null
+        const classroom = formData.get('classroom') ? String(formData.get('classroom')).trim() : null
 
         if (!name) {
             return NextResponse.json({ success: false, status: 400, data: null, error: 'Name required' }, { status: 400 })
@@ -26,8 +28,8 @@ export async function POST(req: Request) {
 
         // Create a default section for this course
         const sectionResult = await db.query(
-            `INSERT INTO section (name, schedule, course) VALUES ($1, $2, $3) RETURNING *`,
-            [name, schedule || null, course.id]
+            `INSERT INTO section (name, schedule, course, teacher, classroom) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [name, schedule || null, course.id, teacher || null, classroom || null]
         )
         const section = sectionResult.rows[0]
 

@@ -43,10 +43,15 @@ export async function GET() {
     try {
         const data = (await db.query(
             `SELECT * FROM account WHERE role = 1
-              AND id IN (
-                SELECT DISTINCT s.teacher FROM section s
-                INNER JOIN course c ON s.course = c.id
-                WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
+              AND (
+                id IN (
+                  SELECT DISTINCT s.teacher FROM section s
+                  INNER JOIN course c ON s.course = c.id
+                  WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
+                )
+                OR id NOT IN (
+                  SELECT DISTINCT teacher FROM section WHERE teacher IS NOT NULL
+                )
               )`
         )).rows
         return NextResponse.json({ success: true, status: 200, data, error: null })

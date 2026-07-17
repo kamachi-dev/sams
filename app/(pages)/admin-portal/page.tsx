@@ -64,6 +64,179 @@ export default function Admin() {
         });
     }
 
+    // Import User states
+    const [importUserDialogOpen, setImportUserDialogOpen] = useState<boolean>(false);
+    const [importUserName, setImportUserName] = useState<string>('');
+    const [importUserEmail, setImportUserEmail] = useState<string>('');
+    const [importUserRole, setImportUserRole] = useState<string>('3'); // default to student (3)
+    const [importParentEmail, setImportParentEmail] = useState<string>('');
+    const [importParentName, setImportParentName] = useState<string>('');
+    const [importUserLoading, setImportUserLoading] = useState<boolean>(false);
+
+    function closeImportUserDialog() {
+        setImportUserDialogOpen(false);
+        setImportUserName('');
+        setImportUserEmail('');
+        setImportUserRole('3');
+        setImportParentEmail('');
+        setImportParentName('');
+    }
+
+    async function handleImportUser() {
+        if (!importUserName.trim() || !importUserEmail.trim() || !importUserRole) {
+            setImportStatus('Name, Email, and Role are required');
+            setTimeout(() => setImportStatus(null), 5000);
+            return;
+        }
+
+        try {
+            setImportUserLoading(true);
+            const res = await fetch('/api/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: importUserName,
+                    email: importUserEmail,
+                    role: parseInt(importUserRole),
+                    parentEmail: importUserRole === '3' ? importParentEmail : undefined,
+                    parentName: importUserRole === '3' ? importParentName : undefined,
+                }),
+            });
+            const json = await res.json();
+
+            if (!res.ok || json?.success === false) {
+                setImportStatus(`Import failed: ${json?.error ?? res.statusText}`);
+                setTimeout(() => setImportStatus(null), 5000);
+                return;
+            }
+
+            setImportStatus('User imported successfully');
+            setTimeout(() => setImportStatus(null), 5000);
+
+            // Refresh counts and lists
+            try {
+                const [sc, tc] = await Promise.all([
+                    fetch('/api/students/count').then(r => r.json()),
+                    fetch('/api/teachers/count').then(r => r.json()),
+                ]);
+                if (sc?.success) setStudentCount(Number(sc.data.count));
+                if (tc?.success) setTeacherCount(Number(tc.data.count));
+            } catch { /* ignore refresh errors */ }
+            try {
+                const studentsRes = await fetch('/api/students').then(r => r.json());
+                if (studentsRes?.success) setStudents(studentsRes.data ?? []);
+                const teachersRes = await fetch('/api/teachers').then(r => r.json());
+                if (teachersRes?.success) setTeachers(teachersRes.data ?? []);
+            } catch { /* ignore */ }
+
+            closeImportUserDialog();
+        } catch (err: unknown) {
+            let message = 'Unknown error';
+            if (err instanceof Error) message = err.message;
+            setImportStatus(`Import error: ${message}`);
+            setTimeout(() => setImportStatus(null), 5000);
+        } finally {
+            setImportUserLoading(false);
+        }
+    }
+
+    // Add Course states
+    type DaySchedule = { enabled: boolean; start: string; end: string };
+    const [addCourseDialogOpen, setAddCourseDialogOpen] = useState<boolean>(false);
+    const [newCourseName, setNewCourseName] = useState<string>('');
+    const [newCourseTeacher, setNewCourseTeacher] = useState<string>('');
+    const [newCourseClassroom, setNewCourseClassroom] = useState<string>('');
+    const [addCourseLoading, setAddCourseLoading] = useState<boolean>(false);
+    const [courseSchedule, setCourseSchedule] = useState<Record<string, DaySchedule>>({
+        monday: { enabled: false, start: '08:00', end: '09:15' },
+        tuesday: { enabled: false, start: '08:00', end: '09:15' },
+        wednesday: { enabled: false, start: '08:00', end: '09:15' },
+        thursday: { enabled: false, start: '08:00', end: '09:15' },
+        friday: { enabled: false, start: '08:00', end: '09:15' },
+        saturday: { enabled: false, start: '08:00', end: '09:15' },
+        sunday: { enabled: false, start: '08:00', end: '09:15' },
+    });
+
+    function closeAddCourseDialog() {
+        setAddCourseDialogOpen(false);
+        setNewCourseName('');
+        setNewCourseTeacher('');
+        setNewCourseClassroom('');
+        setCourseSchedule({
+            monday: { enabled: false, start: '08:00', end: '09:15' },
+            tuesday: { enabled: false, start: '08:00', end: '09:15' },
+            wednesday: { enabled: false, start: '08:00', end: '09:15' },
+            thursday: { enabled: false, start: '08:00', end: '09:15' },
+            friday: { enabled: false, start: '08:00', end: '09:15' },
+            saturday: { enabled: false, start: '08:00', end: '09:15' },
+            sunday: { enabled: false, start: '08:00', end: '09:15' },
+        });
+    }
+
+    async function handleCreateCourse() {
+        if (!newCourseName.trim()) {
+            setImportStatus('Course Name is required');
+            setTimeout(() => setImportStatus(null), 5000);
+            return;
+        }
+
+        try {
+            setAddCourseLoading(true);
+
+            // Construct schedule JSON
+            const scheduleObj: Record<string, { start: string; end: string }> = {};
+            Object.entries(courseSchedule).forEach(([day, sched]) => {
+                if (sched.enabled) {
+                    scheduleObj[day] = { start: sched.start, end: sched.end };
+                }
+            });
+            const scheduleStr = Object.keys(scheduleObj).length > 0 ? JSON.stringify(scheduleObj) : '';
+
+            const form = new FormData();
+            form.append('name', newCourseName);
+            if (newCourseTeacher) form.append('teacher', newCourseTeacher);
+            if (newCourseClassroom) form.append('classroom', newCourseClassroom);
+            if (scheduleStr) form.append('schedule', scheduleStr);
+
+            const res = await fetch('/api/courses', {
+                method: 'POST',
+                body: form
+            });
+            const json = await res.json();
+
+            if (!res.ok || json?.success === false) {
+                setImportStatus(`Create course failed: ${json?.error ?? res.statusText}`);
+                setTimeout(() => setImportStatus(null), 5000);
+                return;
+            }
+
+            setImportStatus('Course created successfully');
+            setTimeout(() => setImportStatus(null), 5000);
+
+            // Refresh course list and class count
+            try {
+                const countRes = await fetch('/api/classes/count').then(r => r.json());
+                if (countRes?.success) setClassCount(Number(countRes.data.count));
+
+                const coursesRes = await fetch('/api/courses').then(r => r.json());
+                if (coursesRes?.success && Array.isArray(coursesRes.data)) {
+                    setCoursesList(coursesRes.data);
+                }
+            } catch { /* ignore refresh errors */ }
+
+            closeAddCourseDialog();
+        } catch (err: unknown) {
+            let message = 'Unknown error';
+            if (err instanceof Error) message = err.message;
+            setImportStatus(`Create course error: ${message}`);
+            setTimeout(() => setImportStatus(null), 5000);
+        } finally {
+            setAddCourseLoading(false);
+        }
+    }
+
     // Course viewer state
     type Course = { id: string; course_id?: string; name: string; section_name?: string; schedule?: string; teacher?: string };
     type EnrolledStudent = { id: string; name?: string; email?: string; section?: string; sectionId?: string };
@@ -629,6 +802,9 @@ export default function Admin() {
                                 <button className="import-button" onClick={() => scheduleFileRef.current?.click()}>
                                     <Label.Root>Schedule</Label.Root>
                                 </button>
+                                <button className="import-button" onClick={() => setImportUserDialogOpen(true)}>
+                                    <Label.Root>Import User</Label.Root>
+                                </button>
                             </div>
                             <input
                                 ref={scheduleFileRef}
@@ -1014,7 +1190,12 @@ export default function Admin() {
                             <Tabs.Content value="view" className="tab-content">
                                 <div className="course-viewer">
                                     <div className="course-viewer-left">
-                                        <Label.Root className="form-field-label">Search Courses</Label.Root>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                                            <Label.Root className="form-field-label" style={{ margin: 0 }}>Search Courses</Label.Root>
+                                            <button className="import-button" onClick={() => setAddCourseDialogOpen(true)} style={{ margin: 0, padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>
+                                                <Label.Root style={{ cursor: 'pointer' }}>Add Course</Label.Root>
+                                            </button>
+                                        </div>
                                         <input
                                             type="text"
                                             value={courseViewerSearch}
@@ -1446,6 +1627,229 @@ export default function Admin() {
                                 }}
                             >
                                 <Label.Root>Add {studentsToAdd.length ? `(${studentsToAdd.length})` : ''}</Label.Root>
+                            </button>
+                        </div>
+                        <Dialog.Close asChild>
+                            <button className="dialog-close" aria-label="Close">
+                                ×
+                            </button>
+                        </Dialog.Close>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+
+            {/* Add Course Dialog */}
+            <Dialog.Root open={addCourseDialogOpen} onOpenChange={setAddCourseDialogOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="dialog-overlay" />
+                    <Dialog.Content className="dialog-content" style={{ maxWidth: '32rem' }}>
+                        <Dialog.Title className="dialog-title">Add New Course</Dialog.Title>
+                        <Dialog.Description className="dialog-description">
+                            Create a new course and its default section.
+                        </Dialog.Description>
+                        <div className="form-field-group" style={{ marginTop: '1rem' }}>
+                            <Label.Root className="form-field-label">Course Name</Label.Root>
+                            <input
+                                type="text"
+                                value={newCourseName}
+                                onChange={(e) => setNewCourseName(e.target.value)}
+                                className="school-year-input"
+                                placeholder="e.g., Mathematics 101"
+                                style={{ marginBottom: '0.75rem' }}
+                            />
+
+                            <Label.Root className="form-field-label">Teacher</Label.Root>
+                            <select
+                                value={newCourseTeacher}
+                                onChange={(e) => setNewCourseTeacher(e.target.value)}
+                                className="school-year-input"
+                                style={{ marginBottom: '0.75rem', height: '2.5rem' }}
+                            >
+                                <option value="">Select a Teacher (Optional)</option>
+                                {teachers.map(t => (
+                                    <option key={t.id} value={t.id}>{t.username ?? t.email}</option>
+                                ))}
+                            </select>
+
+                            <Label.Root className="form-field-label">Classroom</Label.Root>
+                            <input
+                                type="text"
+                                value={newCourseClassroom}
+                                onChange={(e) => setNewCourseClassroom(e.target.value)}
+                                className="school-year-input"
+                                placeholder="e.g., Room 302"
+                                style={{ marginBottom: '0.75rem' }}
+                            />
+
+                            <Label.Root className="form-field-label" style={{ fontWeight: 'bold', marginTop: '0.5rem', marginBottom: '0.25rem' }}>Schedule (Optional)</Label.Root>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '12rem', overflowY: 'auto', border: '1px solid #e5e7eb', padding: '0.5rem', borderRadius: '0.375rem', marginBottom: '0.75rem' }}>
+                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                                    const sched = courseSchedule[day];
+                                    return (
+                                        <div key={day} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.25rem 0' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', width: '5.5rem', textTransform: 'capitalize', cursor: 'pointer', userSelect: 'none' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={sched.enabled}
+                                                    onChange={(e) => {
+                                                        setCourseSchedule(prev => ({
+                                                            ...prev,
+                                                            [day]: { ...prev[day], enabled: e.target.checked }
+                                                        }));
+                                                    }}
+                                                />
+                                                {day.substring(0, 3)}
+                                            </label>
+                                            
+                                            {sched.enabled && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                                                    <input
+                                                        type="time"
+                                                        value={sched.start}
+                                                        onChange={(e) => {
+                                                            setCourseSchedule(prev => ({
+                                                                ...prev,
+                                                                [day]: { ...prev[day], start: e.target.value }
+                                                            }));
+                                                        }}
+                                                        className="school-year-input"
+                                                        style={{ padding: '0.25rem 0.5rem', height: '2rem', fontSize: '0.8rem', flex: 1 }}
+                                                    />
+                                                    <span style={{ fontSize: '0.8rem' }}>to</span>
+                                                    <input
+                                                        type="time"
+                                                        value={sched.end}
+                                                        onChange={(e) => {
+                                                            setCourseSchedule(prev => ({
+                                                                ...prev,
+                                                                [day]: { ...prev[day], end: e.target.value }
+                                                            }));
+                                                        }}
+                                                        className="school-year-input"
+                                                        style={{ padding: '0.25rem 0.5rem', height: '2rem', fontSize: '0.8rem', flex: 1 }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={closeAddCourseDialog}
+                                className="import-button"
+                                style={{ backgroundColor: '#6b7280' }}
+                            >
+                                <Label.Root>Cancel</Label.Root>
+                            </button>
+                            <button
+                                onClick={handleCreateCourse}
+                                disabled={addCourseLoading || !newCourseName.trim()}
+                                className="import-button"
+                                style={{
+                                    opacity: (addCourseLoading || !newCourseName.trim()) ? 0.5 : 1,
+                                    cursor: (addCourseLoading || !newCourseName.trim()) ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                <Label.Root>{addCourseLoading ? 'Creating...' : 'Create Course'}</Label.Root>
+                            </button>
+                        </div>
+                        <Dialog.Close asChild>
+                            <button className="dialog-close" aria-label="Close">
+                                ×
+                            </button>
+                        </Dialog.Close>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+
+            {/* Import User Dialog */}
+            <Dialog.Root open={importUserDialogOpen} onOpenChange={setImportUserDialogOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay className="dialog-overlay" />
+                    <Dialog.Content className="dialog-content" style={{ maxWidth: '32rem' }}>
+                        <Dialog.Title className="dialog-title">Import User</Dialog.Title>
+                        <Dialog.Description className="dialog-description">
+                            Import a new administrator, teacher, parent, or student.
+                        </Dialog.Description>
+                        <div className="form-field-group" style={{ marginTop: '1rem' }}>
+                            <Label.Root className="form-field-label">Name / Username</Label.Root>
+                            <input
+                                type="text"
+                                value={importUserName}
+                                onChange={(e) => setImportUserName(e.target.value)}
+                                className="school-year-input"
+                                placeholder="e.g., Jane Doe"
+                                style={{ marginBottom: '0.75rem' }}
+                            />
+
+                            <Label.Root className="form-field-label">Email</Label.Root>
+                            <input
+                                type="email"
+                                value={importUserEmail}
+                                onChange={(e) => setImportUserEmail(e.target.value)}
+                                className="school-year-input"
+                                placeholder="e.g., jane.doe@school.edu"
+                                style={{ marginBottom: '0.75rem' }}
+                            />
+
+                            <Label.Root className="form-field-label">Role</Label.Root>
+                            <select
+                                value={importUserRole}
+                                onChange={(e) => setImportUserRole(e.target.value)}
+                                className="school-year-input"
+                                style={{ marginBottom: '0.75rem', height: '2.5rem' }}
+                            >
+                                <option value="3">Student</option>
+                                <option value="1">Teacher</option>
+                                <option value="2">Parent</option>
+                                <option value="0">Admin</option>
+                            </select>
+
+                            {importUserRole === '3' && (
+                                <div style={{ border: '1px solid #e5e7eb', padding: '0.75rem', borderRadius: '0.375rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    <Label.Root className="form-field-label" style={{ fontWeight: 'bold' }}>Parent Information (Optional)</Label.Root>
+                                    
+                                    <Label.Root className="form-field-label">Parent Email</Label.Root>
+                                    <input
+                                        type="email"
+                                        value={importParentEmail}
+                                        onChange={(e) => setImportParentEmail(e.target.value)}
+                                        className="school-year-input"
+                                        placeholder="e.g., parent@email.com"
+                                    />
+
+                                    <Label.Root className="form-field-label">Parent Name</Label.Root>
+                                    <input
+                                        type="text"
+                                        value={importParentName}
+                                        onChange={(e) => setImportParentName(e.target.value)}
+                                        className="school-year-input"
+                                        placeholder="e.g., John Doe Sr."
+                                    />
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={closeImportUserDialog}
+                                className="import-button"
+                                style={{ backgroundColor: '#6b7280' }}
+                            >
+                                <Label.Root>Cancel</Label.Root>
+                            </button>
+                            <button
+                                onClick={handleImportUser}
+                                disabled={importUserLoading || !importUserName.trim() || !importUserEmail.trim()}
+                                className="import-button"
+                                style={{
+                                    opacity: (importUserLoading || !importUserName.trim() || !importUserEmail.trim()) ? 0.5 : 1,
+                                    cursor: (importUserLoading || !importUserName.trim() || !importUserEmail.trim()) ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                <Label.Root>{importUserLoading ? 'Importing...' : 'Import User'}</Label.Root>
                             </button>
                         </div>
                         <Dialog.Close asChild>

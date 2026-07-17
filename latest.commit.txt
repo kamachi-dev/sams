@@ -1,0 +1,7 @@
+Added user and course import/creation modals in the Admin Portal (admin-portal) using Radix UI Dialogs.
+Created a backend API endpoint `/api/users` supporting the insertion/update of Admin (role 0), Teacher (role 1), Parent (role 2), and Student (role 3) accounts.
+Implemented linking between Students and Parents in the database (updating the `student_data` table) upon student import.
+Updated `/api/courses` POST endpoint and tests to support teacher, classroom, and custom schedules.
+Updated the course creation modal UI to support custom time slots (start time and end time) for each day of the week independently.
+Modified students and teachers GET & count API endpoints to return newly created/unenrolled users, allowing them to appear in portal lists for management and enrollment.
+Added Vitest tests for `/api/users` and `/api/courses` API endpoints to ensure reliable creation of all resources.
