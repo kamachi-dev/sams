@@ -711,8 +711,12 @@
 /* Notifications Layout */
 .notifications-container {
   display: grid;
-  grid-template-columns: 40% 60%;
+  grid-template-columns: minmax(0, 40%) minmax(0, 60%);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 100%;
+  box-sizing: border-box;
 }
 
 /* LEFT */
