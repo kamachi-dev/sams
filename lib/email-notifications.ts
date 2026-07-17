@@ -12,6 +12,16 @@ type AppealDecision = 'approved' | 'rejected';
 
 const smtpPort = Number(process.env.SMTP_PORT || 465);
 
+function escapeHtml(value: string) {
+	return value.replace(/[&<>'"]/g, (character) => ({
+		'&': '&amp;',
+		'<': '&lt;',
+		'>': '&gt;',
+		"'": '&#39;',
+		'"': '&quot;',
+	}[character] || character));
+}
+
 function createTransporter() {
 	const host = process.env.SMTP_HOST;
 	const user = process.env.SMTP_USER;
@@ -129,12 +139,28 @@ export async function sendAttendanceUpdateEmail(options: {
 	studentId: string;
 	parentIds: string[];
 	teacherId?: string | null;
+	studentName: string;
 	courseName: string;
+	teacherName?: string | null;
+	roomId?: string | null;
+	classTime?: string | null;
 	status: AttendanceStatus;
 	recordedTime: string;
 	recordedDate: string;
 }) {
-	const { studentId, parentIds, teacherId, courseName, status, recordedTime, recordedDate } = options;
+	const {
+		studentId,
+		parentIds,
+		teacherId,
+		studentName,
+		courseName,
+		teacherName,
+		roomId,
+		classTime,
+		status,
+		recordedTime,
+		recordedDate,
+	} = options;
 
 	const subjectMap: Record<AttendanceStatus, string> = {
 		present: 'Present Attendance Recorded',
@@ -142,29 +168,37 @@ export async function sendAttendanceUpdateEmail(options: {
 		absent: 'Absence Recorded',
 	};
 
-	const studentText =
-		status === 'absent'
-			? `You were marked as absent for ${courseName} on ${recordedDate}.`
-			: `You were marked as ${status} for ${courseName} at ${recordedTime}.`;
+	const attendanceDescription = status === 'absent'
+		? `was marked absent on ${recordedDate}`
+		: `was marked ${status} at ${recordedTime} on ${recordedDate}`;
+	const details = [
+		`Student: ${studentName}`,
+		`Subject: ${courseName}`,
+		`Teacher: ${teacherName || 'Not assigned'}`,
+		`Room: ${roomId || 'Not specified'}`,
+		`Class time: ${classTime || 'Not specified'}`,
+	].join('\n');
+	const htmlDetails = [
+		['Student', studentName],
+		['Subject', courseName],
+		['Teacher', teacherName || 'Not assigned'],
+		['Room', roomId || 'Not specified'],
+		['Class time', classTime || 'Not specified'],
+	].map(([label, value]) => `<tr><td style="padding:6px 12px 6px 0;font-weight:600">${escapeHtml(label)}</td><td style="padding:6px 0">${escapeHtml(value)}</td></tr>`).join('');
+	const emailHtml = (message: string) => `<p>${escapeHtml(message)}</p><table style="border-collapse:collapse">${htmlDetails}</table>`;
 
-	const parentText =
-		status === 'absent'
-			? `Your child was marked as absent for ${courseName} on ${recordedDate}.`
-			: `Your child was marked as ${status} for ${courseName} at ${recordedTime}.`;
+	const studentText = `${studentName}, you ${attendanceDescription} for ${courseName}.\n\n${details}`;
+	const parentText = `${studentName} ${attendanceDescription} for ${courseName}.\n\n${details}`;
+	const teacherText = `${studentName} ${attendanceDescription} for ${courseName}.\n\n${details}`;
 
-	const teacherText =
-		status === 'absent'
-			? `Student marked absent for ${courseName} on ${recordedDate}.`
-			: `Student marked ${status} for ${courseName} at ${recordedTime}.`;
-
-	const studentHtml = `<p>${studentText}</p>`;
-	const parentHtml = `<p>${parentText}</p>`;
-	const teacherHtml = `<p>${teacherText}</p>`;
+	const studentHtml = emailHtml(studentText.split('\n\n')[0]);
+	const parentHtml = emailHtml(parentText.split('\n\n')[0]);
+	const teacherHtml = emailHtml(teacherText.split('\n\n')[0]);
 
 	const targetGroups = [
-		{ userIds: [studentId], subject: subjectMap[status], text: studentText, html: studentHtml },
+		{ userIds: [studentId], subject: `${subjectMap[status]} — ${courseName}`, text: studentText, html: studentHtml },
 		...(parentIds.length > 0
-			? [{ userIds: parentIds, subject: `Child ${status === 'present' ? 'Present' : status === 'late' ? 'Late' : 'Absent'}`, text: parentText, html: parentHtml }]
+			? [{ userIds: parentIds, subject: `${studentName}: ${status === 'present' ? 'Present' : status === 'late' ? 'Late' : 'Absent'} — ${courseName}`, text: parentText, html: parentHtml }]
 			: []),
 		...(teacherId
 			? [{ userIds: [teacherId], subject: `Attendance: ${status === 'present' ? 'Present' : status === 'late' ? 'Late' : 'Absent'}`, text: teacherText, html: teacherHtml }]

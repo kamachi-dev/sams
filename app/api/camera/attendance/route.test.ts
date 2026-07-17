@@ -1,6 +1,7 @@
 import { POST, GET } from './route';
 import { expect, test, vi, beforeEach } from 'vitest';
 import db from '@/app/services/database';
+import { sendAttendanceUpdateEmail } from '@/lib/email-notifications';
 
 vi.mock('@/lib/createAndNotify', () => ({
   createNotificationWithPush: vi.fn().mockResolvedValue(true),
@@ -32,7 +33,7 @@ test('POST records attendance and triggers notifications', async () => {
   vi.spyOn(db, 'connect').mockResolvedValue(mockClient as any);
   vi.spyOn(db, 'query').mockImplementation((sql) => {
     if (sql.includes('SELECT c.name')) {
-      return Promise.resolve({ rows: [{ course_name: 'Science', teacher: 't_1' }] });
+      return Promise.resolve({ rows: [{ course_name: 'Science', teacher: 't_1', student_name: 'Alice Cruz', teacher_name: 'Mr. Smith', classroom: 'Room 101', schedule: { tuesday: { start: '08:00', end: '09:00' } } }] });
     }
     return Promise.resolve({ rows: [] });
   });
@@ -55,4 +56,11 @@ test('POST records attendance and triggers notifications', async () => {
 
   expect(response.status).toBe(200);
   expect(json.success).toBe(true);
+  expect(sendAttendanceUpdateEmail).toHaveBeenCalledWith(expect.objectContaining({
+    studentName: 'Alice Cruz',
+    courseName: 'Science',
+    teacherName: 'Mr. Smith',
+    roomId: 'Room 101',
+    classTime: '08:00 – 09:00',
+  }));
 });

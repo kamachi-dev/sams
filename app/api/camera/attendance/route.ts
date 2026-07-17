@@ -68,15 +68,23 @@ export async function POST(req: Request) {
         // 🚀 TRIGGER NOTIFICATIONS FOR EACH RECORD
         for (const record of insertedRecords) {
             const courseData = await db.query(
-                `SELECT c.name as course_name, s.teacher 
-                 FROM course c 
-                 INNER JOIN section s ON c.id = s.course 
+                `SELECT c.name AS course_name, s.teacher, s.classroom, s.schedule,
+                        student_account.username AS student_name,
+                        teacher_account.username AS teacher_name
+                 FROM course c
+                 INNER JOIN section s ON c.id = s.course
+                 INNER JOIN account student_account ON student_account.id = $2
+                 LEFT JOIN account teacher_account ON teacher_account.id = s.teacher
                  WHERE s.id = $1 AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')`,
-                [record.course]
+                [record.course, record.student]
             );
 
             const courseName = courseData.rows.length > 0 ? courseData.rows[0].course_name : 'Unknown Course';
             const teacherId = courseData.rows.length > 0 ? courseData.rows[0].teacher : null;
+            const studentName = courseData.rows[0]?.student_name || 'Student';
+            const teacherName = courseData.rows[0]?.teacher_name || null;
+            const roomId = courseData.rows[0]?.classroom || null;
+            const classTime = getClassTime(courseData.rows[0]?.schedule, record.time);
             const recordedTime = new Date(record.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
             const recordedDate = new Date(record.time).toLocaleDateString();
 
@@ -163,7 +171,11 @@ export async function POST(req: Request) {
                 studentId: record.student,
                 parentIds: parentResult.rows.map((row: any) => row.parent),
                 teacherId,
+                studentName,
                 courseName,
+                teacherName,
+                roomId,
+                classTime,
                 status: record.attendance === 1 ? 'present' : record.attendance === 2 ? 'late' : 'absent',
                 recordedTime,
                 recordedDate,
@@ -192,6 +204,22 @@ export async function POST(req: Request) {
             },
             { status: 500 }
         );
+    }
+}
+
+function getClassTime(schedule: unknown, date: string | Date): string | null {
+    if (!schedule) return null;
+
+    try {
+        const parsed = typeof schedule === 'string' ? JSON.parse(schedule) : schedule;
+        if (!parsed || typeof parsed !== 'object') return null;
+
+        const day = new Date(date).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        const classSchedule = (parsed as Record<string, { start?: string; end?: string }>)[day];
+        if (!classSchedule?.start && !classSchedule?.end) return null;
+        return [classSchedule.start, classSchedule.end].filter(Boolean).join(' – ');
+    } catch {
+        return null;
     }
 }
 
