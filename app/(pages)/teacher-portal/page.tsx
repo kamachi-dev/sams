@@ -399,6 +399,16 @@ function CameraConfigurationSection() {
     const [isCameraAction, setIsCameraAction] = useState(false);
     const [message, setMessage] = useState('');
 
+    const refreshCameraStatus = async () => {
+        const response = await fetch('/api/teacher/camera-control', { cache: 'no-store' });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Failed to load camera status');
+        }
+        setIsCameraRunning(result.data.running === true);
+        return result.data as { running: boolean; pending: boolean };
+    };
+
     useEffect(() => {
         const loadConfiguration = async () => {
             try {
@@ -427,14 +437,26 @@ function CameraConfigurationSection() {
     useEffect(() => {
         const loadCameraStatus = async () => {
             try {
-                const response = await fetch('/api/teacher/camera-control');
-                const result = await response.json();
-                if (response.ok && result.success) setIsCameraRunning(result.data.running === true);
+                await refreshCameraStatus();
             } catch (error) {
                 console.error('Error loading camera status:', error);
             }
         };
         loadCameraStatus();
+    }, []);
+
+    useEffect(() => {
+        const pollCameraStatus = async () => {
+            try {
+                const status = await refreshCameraStatus();
+                if (!status.pending) return;
+            } catch (error) {
+                console.error('Error refreshing camera status:', error);
+            }
+        };
+
+        const intervalId = window.setInterval(pollCameraStatus, 3000);
+        return () => window.clearInterval(intervalId);
     }, []);
 
     const saveConfiguration = async () => {
@@ -459,13 +481,14 @@ function CameraConfigurationSection() {
     };
 
     const toggleCamera = async () => {
+        const action = isCameraRunning ? 'stop' : 'start';
         setIsCameraAction(true);
         setMessage('');
         try {
             const response = await fetch('/api/teacher/camera-control', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: isCameraRunning ? 'stop' : 'start' }),
+                body: JSON.stringify({ action }),
             });
             const result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.error || 'Failed to control camera');
@@ -474,7 +497,18 @@ function CameraConfigurationSection() {
                 ? `Camera ${result.data.running ? 'start' : 'stop'} requested; the camera PC will respond shortly.`
                 : result.data.running ? 'Camera started.' : 'Camera stopped.');
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : 'Failed to control camera');
+            // A response can fail after the server has already committed the command.
+            // Re-read the command state so the controls do not remain stuck on Start.
+            try {
+                const status = await refreshCameraStatus();
+                if (status.running || status.pending) {
+                    setMessage(`Camera ${action} may already be queued; the controls were synchronized with the latest command.`);
+                } else {
+                    setMessage(error instanceof Error ? error.message : 'Failed to control camera');
+                }
+            } catch {
+                setMessage(error instanceof Error ? error.message : 'Failed to control camera');
+            }
         } finally {
             setIsCameraAction(false);
         }

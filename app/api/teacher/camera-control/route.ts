@@ -8,7 +8,11 @@ export async function GET() {
     const user = await currentUser()
     if (!user) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
     const command = await readLatestCameraCommand()
-    const running = command?.status === 'completed' && command.action === 'start'
+    // A command is the desired local camera state.  Treat a queued/claimed start
+    // as running so a status refresh cannot change the button back to Start while
+    // the on-premises agent is launching it.  A failed stop leaves the camera
+    // marked running, allowing the teacher to retry Stop.
+    const running = command?.action === 'start' || (command?.action === 'stop' && command.status === 'failed')
     return NextResponse.json({ success: true, data: { running, pending: command?.status === 'pending' || command?.status === 'claimed' } })
 }
 

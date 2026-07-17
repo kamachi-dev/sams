@@ -21,6 +21,22 @@ test('GET reports the last completed camera command state', async () => {
     expect(await response.json()).toEqual({ success: true, data: { running: true, pending: false } })
 })
 
+test('GET keeps the camera marked running while a start is pending', async () => {
+    vi.mocked(readLatestCameraCommand).mockResolvedValue({ id: 1, action: 'start', status: 'pending' })
+
+    const response = await GET()
+
+    expect(await response.json()).toEqual({ success: true, data: { running: true, pending: true } })
+})
+
+test('GET keeps the camera marked running after a failed stop so it can be retried', async () => {
+    vi.mocked(readLatestCameraCommand).mockResolvedValue({ id: 2, action: 'stop', status: 'failed' })
+
+    const response = await GET()
+
+    expect(await response.json()).toEqual({ success: true, data: { running: true, pending: false } })
+})
+
 test('POST queues a start command for the on-premises agent', async () => {
     vi.mocked(queueCameraCommand).mockResolvedValue({ id: 1, action: 'start', status: 'pending' })
     const response = await POST(new Request('http://localhost/api/teacher/camera-control', {
