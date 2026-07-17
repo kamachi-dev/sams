@@ -29,7 +29,7 @@ test('POST starts training successfully', async () => {
   expect(json.success).toBe(true);
   expect(json.message).toBe('Training started');
   expect(exec).toHaveBeenCalledWith(
-    expect.stringContaining('TestingEnsembleV4.py" c_123'),
+    expect.stringContaining('train.py" c_123'),
     expect.any(Function)
   );
 });

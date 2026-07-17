@@ -1,14 +1,19 @@
 // /api/train/route.ts
 import { NextResponse } from 'next/server'
 import { exec } from 'child_process'
+import path from 'path'
 
 export async function POST(req: Request) {
     const { courseId } = await req.json()
     if (!courseId) {
         return NextResponse.json({ success: false, error: 'Missing courseId' }, { status: 400 })
     }
+    
+    const pythonPath = process.env.PYTHON_PATH || 'python'
+    const scriptPath = path.join(process.cwd(), 'camera-agent', 'train.py')
+    
     // Call the Python script with the courseId as argument
-    exec(`python "C:/Users/Windows 11/Downloads/Deepface Contents/Camera-Attendance-App/TestingEnsembleV4.py" ${courseId}`, (error, stdout, stderr) => {
+    exec(`"${pythonPath}" "${scriptPath}" ${courseId}`, (error, stdout, stderr) => {
         if (error) {
             console.error('Training error:', error)
         }

@@ -1,0 +1,3 @@
+- Created Workspace Customization Root Rule in `.agents/AGENTS.md` requiring the agent to update `latest.commit.txt`.
+- Set up a Python 3.13 virtual environment (`venv`) for the camera agent and installed all required libraries in it (including deepface, tensorflow, torch, opencv-python, and insightface).
+- Reverted code changes in `recognize.py`, `train.py`, and `requirements.txt` to keep the original `deepface` library usage instead of replacing it with PyTorch.

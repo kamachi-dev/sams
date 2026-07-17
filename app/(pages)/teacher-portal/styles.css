@@ -2107,3 +2107,107 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
         grid-template-columns: 1fr;
     }
 }
+
+/* Camera Monitoring Dashboard in Teacher page */
+.teacher-camera-monitoring {
+    margin-top: 20px;
+    padding: 16px;
+    background: var(--background2);
+    border: 1px solid var(--border1);
+    border-radius: 8px;
+}
+
+.teacher-camera-monitoring h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent1);
+}
+
+.teacher-camera-monitoring-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.teacher-camera-log-panel,
+.teacher-camera-detections-panel {
+    background: var(--background1);
+    border: 1px solid var(--border1);
+    border-radius: 6px;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.teacher-camera-log-panel h4,
+.teacher-camera-detections-panel h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--foreground2);
+}
+
+.activity-log-box {
+    background: #111;
+    color: #39ff14; /* Matrix Green */
+    font-family: 'Consolas', monospace;
+    font-size: 11px;
+    height: 180px;
+    overflow-y: auto;
+    padding: 8px;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.activity-log-box .log-line {
+    margin: 0 0 4px;
+    line-height: 1.4;
+}
+
+.no-log-text {
+    color: #888;
+    margin: 0;
+}
+
+.detections-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+    max-height: 100px;
+    overflow-y: auto;
+    font-family: inherit;
+    font-size: 11px;
+}
+
+.detections-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border1);
+}
+
+.present-list li {
+    background: rgba(46, 125, 50, 0.1);
+    color: #2e7d32;
+    border-left: 3px solid #2e7d32;
+}
+
+.absent-list li {
+    background: rgba(198, 40, 40, 0.1);
+    color: #c62828;
+    border-left: 3px solid #c62828;
+}
+
+.detections-list .student-name {
+    font-weight: 600;
+}
+
+.detections-list .confidence {
+    opacity: 0.8;
+}
+
+.detections-list .time {
+    opacity: 0.6;
+}
