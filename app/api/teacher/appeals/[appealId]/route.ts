@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 import { createNotificationWithPush } from '@/lib/createAndNotify'
-import { sendAppealDecisionEmail } from '@/lib/email-notifications'
+import { sendAppealDecisionEmail, sendParentAppealDecisionEmail } from '@/lib/email-notifications'
 
 /**
  * PATCH: Review an appeal (approve/reject with teacher response)
@@ -117,14 +117,24 @@ export async function PATCH(
 
         const updatedAppeal = result.rows[0]
 
-        // Query to get student_id for notification
+        // Query to get student_id and record details for notification
         const studentInfo = await db.query(`
-            SELECT student_id FROM attendance_appeal WHERE id = $1
+            SELECT aa.student_id, aa.course_id, r.attendance as original_attendance,
+                   a.username as student_name
+            FROM attendance_appeal aa
+            LEFT JOIN record r ON aa.record_id = r.id
+            LEFT JOIN account a ON aa.student_id = a.id
+            WHERE aa.id = $1
         `, [appealId]);
 
         // 🚀 NOTIFY STUDENT ABOUT APPEAL DECISION
         if (studentInfo.rows.length > 0) {
             const studentId = studentInfo.rows[0].student_id;
+            const studentName = studentInfo.rows[0].student_name || 'Your child';
+            const originalAttendance = studentInfo.rows[0].original_attendance;
+            const originalStatus = originalAttendance === 2 ? 'Late' : 'Absent';
+            const finalAttendance = decision === 'approved' ? 'Present' : originalStatus;
+
             const message = decision === 'approved'
                 ? 'Your appeal has been approved! The attendance record has been corrected.'
                 : `Your appeal has been rejected. Teacher's response: ${teacherResponse || 'No response provided'}`;
@@ -145,6 +155,23 @@ export async function PATCH(
                 decision,
                 teacherResponse,
             });
+
+            // 🚀 NOTIFY PARENT WITH FINAL CONFIRMED ATTENDANCE
+            const parentResult = await db.query(
+                `SELECT parent FROM student_data WHERE student = $1 AND parent IS NOT NULL`,
+                [studentId]
+            );
+
+            for (const pRow of parentResult.rows) {
+                await sendParentAppealDecisionEmail({
+                    parentId: pRow.parent,
+                    studentName,
+                    courseName: appeal.course_name || 'your course',
+                    finalAttendance,
+                    decision,
+                    teacherResponse,
+                });
+            }
         }
 
         return NextResponse.json({
