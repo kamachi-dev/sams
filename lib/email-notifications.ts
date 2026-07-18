@@ -241,3 +241,19 @@ export async function sendAppealDecisionEmail(options: {
 
 	return sendToRecipients([studentId], subject, text, html);
 }
+
+export async function sendAppealNotificationToTeacher(options: {
+	teacherId: string;
+	studentName: string;
+	courseName: string;
+	recordedStatus: string;
+	reason: string;
+}) {
+	const { teacherId, studentName, courseName, recordedStatus, reason } = options;
+
+	const subject = `New Student Appeal — ${courseName}`;
+	const text = `${studentName} has submitted an appeal for their ${recordedStatus} attendance in ${courseName}.\n\nReason: ${reason}\n\nPlease review this appeal in the teacher portal.`;
+	const html = `<p><strong>${escapeHtml(studentName)}</strong> has submitted an appeal for their <strong>${escapeHtml(recordedStatus)}</strong> attendance in <strong>${escapeHtml(courseName)}</strong>.</p><p><strong>Reason:</strong> ${escapeHtml(reason)}</p><p><a href="${process.env.NEXT_PUBLIC_APP_URL || ''}/teacher-portal" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:#fff;text-decoration:none;border-radius:6px">Review in Teacher Portal</a></p>`;
+
+	return sendToRecipients([teacherId], subject, text, html);
+}

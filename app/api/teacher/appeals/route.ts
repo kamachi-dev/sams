@@ -19,6 +19,19 @@ export async function GET() {
             }, { status: 401 })
         }
 
+        // Auto-reject any pending appeals older than today (review window expired)
+        await db.query(`
+            UPDATE attendance_appeal aa
+            SET
+                status = 2,
+                teacher_response = 'Auto-rejected: The appeal review period has expired.',
+                reviewed_by = $1,
+                reviewed_at = NOW()
+            WHERE aa.status = 0
+              AND aa.course_id IN (SELECT s.id FROM section s WHERE s.teacher = $1)
+              AND aa.created_at::date < CURRENT_DATE
+        `, [user.id])
+
         // Get all appeals where teacher owns the course
         const result = await db.query(`
             SELECT

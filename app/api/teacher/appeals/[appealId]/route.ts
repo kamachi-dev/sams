@@ -37,7 +37,7 @@ export async function PATCH(
 
         // Verify appeal exists and teacher owns the course
         const appealCheck = await db.query(`
-            SELECT aa.id, aa.status, aa.course_id, s.teacher, c.name as course_name
+            SELECT aa.id, aa.status, aa.course_id, aa.created_at, s.teacher, c.name as course_name
             FROM attendance_appeal aa
             LEFT JOIN section s ON aa.course_id = s.id
             LEFT JOIN course c ON s.course = c.id
@@ -67,6 +67,31 @@ export async function PATCH(
             return NextResponse.json({
                 success: false,
                 error: 'Appeal has already been reviewed'
+            }, { status: 400 })
+        }
+
+        // Check if appeal is still within the same-day review window
+        const appealDate = new Date(appeal.created_at)
+        const now = new Date()
+        const isSameDay = appealDate.getFullYear() === now.getFullYear()
+            && appealDate.getMonth() === now.getMonth()
+            && appealDate.getDate() === now.getDate()
+
+        if (!isSameDay) {
+            // Auto-reject since review window has expired
+            await db.query(`
+                UPDATE attendance_appeal
+                SET
+                    status = 2,
+                    teacher_response = 'Auto-rejected: The appeal review period has expired.',
+                    reviewed_by = $1,
+                    reviewed_at = NOW()
+                WHERE id = $2
+            `, [user.id, appealId])
+
+            return NextResponse.json({
+                success: false,
+                error: 'The appeal review period has expired (only available within the same day). Appeal has been auto-rejected.'
             }, { status: 400 })
         }
 

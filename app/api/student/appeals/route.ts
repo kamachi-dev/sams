@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import db from '@/app/services/database'
 import { currentUser } from '@clerk/nextjs/server'
 import { createNotificationWithPush } from '@/lib/createAndNotify'
+import { sendAppealNotificationToTeacher } from '@/lib/email-notifications'
 
 /**
  * GET: Fetch all appeals filed by the current student
@@ -202,6 +203,15 @@ export async function POST(request: Request) {
                 title: 'New Student Appeal',
                 message: `A student submitted an appeal for their ${recordedStatus} attendance.`,
                 sendPush: true
+            });
+
+            const studentName = user.username || user.firstName || user.lastName || 'A student';
+            sendAppealNotificationToTeacher({
+                teacherId,
+                studentName,
+                courseName: record.course_name,
+                recordedStatus,
+                reason: student_reason,
             });
         }
 
