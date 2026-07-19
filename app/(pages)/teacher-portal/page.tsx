@@ -402,6 +402,7 @@ function useCamera() {
     const [detections, setDetections] = useState<{ detected: any[], undetected: any[] }>({ detected: [], undetected: [] });
     const [snapshotLogs, setSnapshotLogs] = useState<string[]>([]);
     const [totalStudents, setTotalStudents] = useState(0);
+    const [snapshots, setSnapshots] = useState<Array<{ url: string; timestamp: string; capturedAt: string }>>([]);
 
     const refreshCameraStatus = async () => {
         const response = await fetch('/api/teacher/camera-control', { cache: 'no-store' });
@@ -466,6 +467,7 @@ function useCamera() {
     useEffect(() => {
         if (!isCameraRunning) {
             setDetections({ detected: [], undetected: [] });
+            setSnapshots([]);
             return;
         }
 
@@ -482,8 +484,21 @@ function useCamera() {
             }
         };
 
+        const fetchSnapshots = async () => {
+            try {
+                const response = await fetch('/api/teacher/camera-snapshots');
+                const result = await response.json();
+                if (result.success) {
+                    setSnapshots(result.data);
+                }
+            } catch (err) {
+                console.error("Error fetching snapshots:", err);
+            }
+        };
+
         fetchDetections();
-        const pollId = setInterval(fetchDetections, 5000);
+        fetchSnapshots();
+        const pollId = setInterval(() => { fetchDetections(); fetchSnapshots(); }, 5000);
 
         const triggerSnapshot = async () => {
             try {
@@ -595,7 +610,7 @@ function useCamera() {
         contexts, startTime, setStartTime, endTime, setEndTime,
         useScheduleOverride, setUseScheduleOverride,
         isLoading, isSaving, isCameraRunning, isCameraAction,
-        message, detections, snapshotLogs,
+        message, detections, snapshotLogs, snapshots,
         totalStudents,
         saveConfiguration, toggleCamera,
     };
@@ -2412,62 +2427,69 @@ export default function Teacher() {
                                 message={camera.message}
                                 saveConfiguration={camera.saveConfiguration} toggleCamera={camera.toggleCamera}
                             />
+                            <section className="teacher-camera-nav-settings" aria-label="Snapshot log" style={{ marginTop: '8px' }}>
+                                <h3 style={{ margin: '0 0 6px', color: 'var(--accent1)', fontSize: '13px', fontWeight: 700 }}>Snapshot Activity Log</h3>
+                                <div className="activity-log-box" style={{ height: '140px' }}>
+                                    {camera.snapshotLogs.length === 0 ? (
+                                        <p className="no-log-text">No snapshot activity yet.</p>
+                                    ) : (
+                                        camera.snapshotLogs.map((log, idx) => (
+                                            <p key={idx} className="log-line">{log}</p>
+                                        ))
+                                    )}
+                                </div>
+                            </section>
                         </div>
                         <div className="teacher-right-column">
-                            {camera.isCameraRunning ? (
-                                <div className="teacher-camera-monitoring" style={{ marginTop: 0 }}>
-                                    <h3>Live Camera Feed Logs</h3>
-                                    <div className="teacher-camera-monitoring-grid">
-                                        <div className="teacher-camera-log-panel">
-                                            <h4>Snapshot Activity Log</h4>
-                                            <div className="activity-log-box">
-                                                {camera.snapshotLogs.length === 0 ? (
-                                                    <p className="no-log-text">No snapshot activity yet.</p>
-                                                ) : (
-                                                    camera.snapshotLogs.map((log, idx) => (
-                                                        <p key={idx} className="log-line">{log}</p>
-                                                    ))
-                                                )}
-                                            </div>
+                            <div className="teacher-camera-monitoring" style={{ marginTop: 0 }}>
+                                <h3>Snapshots</h3>
+                                {camera.isCameraRunning ? (
+                                    camera.snapshots.length === 0 ? (
+                                        <p style={{ color: 'var(--foreground2)', fontSize: '13px' }}>No snapshots captured yet.</p>
+                                    ) : (
+                                        <div className="snapshot-gallery">
+                                            {camera.snapshots.map((snap, idx) => (
+                                                <a key={idx} href={snap.url} target="_blank" rel="noopener noreferrer" className="snapshot-thumb-link">
+                                                    <img src={snap.url} alt={`Snapshot ${snap.timestamp}`} className="snapshot-thumb" loading="lazy" />
+                                                    <span className="snapshot-thumb-time">{snap.timestamp.replace('_', ' ')}</span>
+                                                </a>
+                                            ))}
                                         </div>
-                                        <div className="teacher-camera-detections-panel">
-                                            <h4>✓ Detected ({camera.detections.detected.length})</h4>
-                                            <ul className="detections-list present-list">
-                                                {camera.detections.detected.length === 0 ? (
-                                                    <li style={{ background: 'transparent', border: 'none', color: '#888' }}>No students detected yet</li>
-                                                ) : (
-                                                    camera.detections.detected.map(student => (
-                                                        <li key={student.studentId}>
-                                                            <span className="student-name">{student.studentName}</span>
-                                                            <span className="confidence">({Math.round(student.maxConfidence * 100)}%)</span>
-                                                            <span className="time">{new Date(student.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                        </li>
-                                                    ))
-                                                )}
-                                            </ul>
-                                            <h4>✗ Not Detected ({camera.detections.undetected.length})</h4>
-                                            <ul className="detections-list absent-list">
-                                                {camera.detections.undetected.length === 0 ? (
-                                                    <li style={{ background: 'transparent', border: 'none', color: '#888' }}>All enrolled students detected</li>
-                                                ) : (
-                                                    camera.detections.undetected.map(student => (
-                                                        <li key={student.studentId}>
-                                                            <span className="student-name">{student.studentName}</span>
-                                                        </li>
-                                                    ))
-                                                )}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="teacher-camera-monitoring" style={{ marginTop: 0 }}>
-                                    <h3>Live Camera Feed Logs</h3>
+                                    )
+                                ) : (
                                     <p style={{ color: 'var(--foreground2)', fontSize: '13px' }}>
-                                        Camera is not running. Configure settings and start the camera to view live feed.
+                                        Camera is not running. Configure settings and start the camera to view snapshots.
                                     </p>
-                                </div>
-                            )}
+                                )}
+                            </div>
+                            <div className="teacher-camera-detections-panel" style={{ marginTop: '8px', background: 'var(--background2)', border: '1px solid var(--border1)', borderRadius: '6px', padding: '12px' }}>
+                                <h4>✓ Detected ({camera.detections.detected.length})</h4>
+                                <ul className="detections-list present-list">
+                                    {camera.detections.detected.length === 0 ? (
+                                        <li style={{ background: 'transparent', border: 'none', color: '#888' }}>No students detected yet</li>
+                                    ) : (
+                                        camera.detections.detected.map(student => (
+                                            <li key={student.studentId}>
+                                                <span className="student-name">{student.studentName}</span>
+                                                <span className="confidence">({Math.round(student.maxConfidence * 100)}%)</span>
+                                                <span className="time">{new Date(student.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </li>
+                                        ))
+                                    )}
+                                </ul>
+                                <h4>✗ Not Detected ({camera.detections.undetected.length})</h4>
+                                <ul className="detections-list absent-list">
+                                    {camera.detections.undetected.length === 0 ? (
+                                        <li style={{ background: 'transparent', border: 'none', color: '#888' }}>All enrolled students detected</li>
+                                    ) : (
+                                        camera.detections.undetected.map(student => (
+                                            <li key={student.studentId}>
+                                                <span className="student-name">{student.studentName}</span>
+                                            </li>
+                                        ))
+                                    )}
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 )

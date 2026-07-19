@@ -147,6 +147,30 @@ def take_snapshot_and_recognize():
     snapshot_filename = os.path.join(SNAPSHOTS_DIR, f"snapshot_{active_section_id}_{timestamp}.jpg")
     cv2.imwrite(snapshot_filename, frame)
     log(f"Snapshot saved to: {snapshot_filename}")
+
+    # Upload snapshot image to server
+    try:
+        with open(snapshot_filename, 'rb') as img_file:
+            img_base64 = base64.b64encode(img_file.read()).decode('utf-8')
+        upload_body = json.dumps({
+            "section_id": active_section_id,
+            "timestamp": timestamp,
+            "image_base64": img_base64
+        }).encode('utf-8')
+        upload_request = urllib.request.Request(
+            f'{API_URL}/api/camera/snapshot-image',
+            data=upload_body,
+            method='POST',
+            headers={'X-Camera-Agent-Token': TOKEN, 'Content-Type': 'application/json'},
+        )
+        with urllib.request.urlopen(upload_request, timeout=30) as upload_response:
+            upload_result = json.load(upload_response)
+            if upload_result.get('success'):
+                log(f"Snapshot image uploaded to server successfully.")
+            else:
+                log(f"Snapshot image upload failed: {upload_result.get('error')}")
+    except Exception as e:
+        log(f"Error uploading snapshot image: {e}")
     
     log("Running face recognition on snapshot...")
     results = recognize_faces(frame, active_model_data, scrfd_app)

@@ -134,7 +134,7 @@
     height: 100%;
     max-height: 100%;
     min-height: 0;
-    overflow: hidden;
+    overflow-y: auto;
 }
 
 /* Info Card */
@@ -2235,4 +2235,52 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
 .teacher-right-column .activity-log-box {
     flex: 1;
     min-height: 0;
+}
+
+.teacher-right-column .teacher-camera-detections-panel .detections-list {
+    max-height: 120px;
+}
+
+/* Snapshot Gallery */
+.snapshot-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.snapshot-thumb-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    border: 1px solid var(--border1);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--background1);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.snapshot-thumb-link:hover {
+    transform: scale(1.03);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.snapshot-thumb {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    display: block;
+}
+
+.snapshot-thumb-time {
+    font-size: 10px;
+    color: var(--foreground2);
+    padding: 3px 4px;
+    text-align: center;
+    line-height: 1.2;
+    width: 100%;
+    box-sizing: border-box;
 }
