@@ -80,13 +80,14 @@ export async function queueCameraCommand(action: 'start' | 'stop' | 'snapshot', 
     return result.rows[0] as CameraCommand
 }
 
-export async function claimNextCameraCommand(teacherId?: string): Promise<CameraCommand | null> {
+export async function claimNextCameraCommand(teacherId?: string, actions?: string[]): Promise<CameraCommand | null> {
     const result = await db.query(
         `WITH next_command AS (
             SELECT id
             FROM camera_command
             WHERE status = 'pending'
               AND ($1::text IS NULL OR requested_by = $1)
+              AND ($2::text[] IS NULL OR action = ANY($2))
             ORDER BY requested_at ASC
             FOR UPDATE SKIP LOCKED
             LIMIT 1
@@ -96,7 +97,7 @@ export async function claimNextCameraCommand(teacherId?: string): Promise<Camera
          FROM next_command
          WHERE command.id = next_command.id
          RETURNING command.id, command.action, command.status, command.requested_by`,
-        [teacherId ?? null],
+        [teacherId ?? null, actions ?? null],
     )
     const row = result.rows[0] as CameraCommand | undefined
     return row ?? null

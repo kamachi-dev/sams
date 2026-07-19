@@ -94,10 +94,10 @@ def load_active_model(settings):
     return model_data, section_id
 
 def load_command(teacher_id=''):
-    url = f'{API_URL}/api/camera/commands'
+    url = f'{API_URL}/api/camera/commands?action=start&action=snapshot&action=stop'
     effective_id = teacher_id or TEACHER_ID
     if effective_id:
-        url += f'?teacher_id={effective_id}'
+        url += f'&teacher_id={effective_id}'
     request = urllib.request.Request(
         url,
         headers={'X-Camera-Agent-Token': TOKEN},

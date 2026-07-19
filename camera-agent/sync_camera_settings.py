@@ -44,7 +44,7 @@ def apply_settings(settings):
 
 def load_command():
     request = urllib.request.Request(
-        f'{API_URL}/api/camera/commands',
+        f'{API_URL}/api/camera/commands?action=start&action=stop',
         headers={'X-Camera-Agent-Token': TOKEN},
     )
     with urllib.request.urlopen(request, timeout=15) as response:

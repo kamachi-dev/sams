@@ -8,11 +8,10 @@ export async function GET() {
     const user = await currentUser()
     if (!user) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
     const command = await readLatestCameraCommand(user.id)
-    // A command is the desired local camera state.  Treat a queued/claimed start
-    // as running so a status refresh cannot change the button back to Start while
-    // the on-premises agent is launching it.  A failed stop leaves the camera
-    // marked running, allowing the teacher to retry Stop.
-    const running = command?.action === 'start' || (command?.action === 'stop' && command.status === 'failed')
+    // Camera is running when the latest command is start, snapshot (which
+    // gets queued 5 s after start), or a failed stop.  Only a successful
+    // stop makes it not running.
+    const running = command && (command.action === 'start' || command.action === 'snapshot' || (command.action === 'stop' && command.status === 'failed'))
     return NextResponse.json({ success: true, data: { running, pending: command?.status === 'pending' || command?.status === 'claimed' } })
 }
 

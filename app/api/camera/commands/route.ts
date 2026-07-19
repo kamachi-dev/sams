@@ -17,7 +17,8 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
         const teacherId = searchParams.get('teacher_id') || undefined
-        return NextResponse.json({ success: true, data: await claimNextCameraCommand(teacherId) })
+        const actions = searchParams.getAll('action')
+        return NextResponse.json({ success: true, data: await claimNextCameraCommand(teacherId, actions.length ? actions : undefined) })
     } catch (error) {
         console.error('Error claiming camera command:', error)
         return NextResponse.json({ success: false, error: 'Failed to load camera command.' }, { status: 500 })
