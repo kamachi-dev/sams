@@ -63,7 +63,7 @@ export async function GET() {
 
         for (const student of enrolledStudents) {
             const det = detectionMap.get(student.student_id)
-            if (det) {
+            if (det && Number(det.maxConfidence) > 0) {
                 detected.push({
                     studentId: student.student_id,
                     studentName: student.student_name,
