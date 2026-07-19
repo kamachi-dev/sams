@@ -1,0 +1,11 @@
+numpy
+opencv-python
+torch
+deepface
+insightface
+onnxruntime
+scikit-learn
+xgboost
+openpyxl
+requests
+scikit-image

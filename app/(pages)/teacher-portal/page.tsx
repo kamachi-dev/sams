@@ -398,6 +398,8 @@ function CameraConfigurationSection() {
     const [isCameraRunning, setIsCameraRunning] = useState(false);
     const [isCameraAction, setIsCameraAction] = useState(false);
     const [message, setMessage] = useState('');
+    const [detections, setDetections] = useState<{ detected: any[], undetected: any[] }>({ detected: [], undetected: [] });
+    const [snapshotLogs, setSnapshotLogs] = useState<string[]>([]);
 
     const refreshCameraStatus = async () => {
         const response = await fetch('/api/teacher/camera-control', { cache: 'no-store' });
@@ -459,6 +461,53 @@ function CameraConfigurationSection() {
         return () => window.clearInterval(intervalId);
     }, []);
 
+    // Effect to poll detections and trigger snapshots at intervals when running
+    useEffect(() => {
+        if (!isCameraRunning) {
+            setDetections({ detected: [], undetected: [] });
+            return;
+        }
+
+        const fetchDetections = async () => {
+            try {
+                const response = await fetch('/api/teacher/camera-detections');
+                const result = await response.json();
+                if (result.success) {
+                    setDetections(result.data);
+                }
+            } catch (err) {
+                console.error("Error polling detections:", err);
+            }
+        };
+
+        fetchDetections();
+        const pollId = setInterval(fetchDetections, 5000);
+
+        const triggerSnapshot = async () => {
+            try {
+                const nowStr = new Date().toLocaleTimeString();
+                setSnapshotLogs(prev => [`[${nowStr}] Snapshot triggered...`, ...prev.slice(0, 19)]);
+                
+                const response = await fetch('/api/teacher/camera-snapshot', { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    setSnapshotLogs(prev => [`[${nowStr}] Snapshot successfully completed.`, ...prev.slice(1)]);
+                } else {
+                    setSnapshotLogs(prev => [`[${nowStr}] Snapshot failed: ${result.error}`, ...prev.slice(1)]);
+                }
+            } catch (err) {
+                console.error("Error triggering snapshot:", err);
+            }
+        };
+
+        const snapshotId = setInterval(triggerSnapshot, 60000);
+
+        return () => {
+            clearInterval(pollId);
+            clearInterval(snapshotId);
+        };
+    }, [isCameraRunning]);
+
     const saveConfiguration = async () => {
         setIsSaving(true);
         setMessage('');
@@ -485,20 +534,47 @@ function CameraConfigurationSection() {
         setIsCameraAction(true);
         setMessage('');
         try {
-            const response = await fetch('/api/teacher/camera-control', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action }),
-            });
-            const result = await response.json();
-            if (!response.ok || !result.success) throw new Error(result.error || 'Failed to control camera');
-            setIsCameraRunning(result.data.running === true);
-            setMessage(result.data.pending
-                ? `Camera ${result.data.running ? 'start' : 'stop'} requested; the camera PC will respond shortly.`
-                : result.data.running ? 'Camera started.' : 'Camera stopped.');
+            if (action === 'start') {
+                const response = await fetch('/api/teacher/camera-control', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action }),
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Failed to control camera');
+                setIsCameraRunning(result.data.running === true);
+                setMessage('Camera started. Initializing snapshot...');
+
+                // Trigger initial snapshot after 5 seconds to allow camera to warm up
+                setTimeout(async () => {
+                    try {
+                        const nowStr = new Date().toLocaleTimeString();
+                        setSnapshotLogs(prev => [`[${nowStr}] Snapshot triggered...`, ...prev]);
+                        const snapRes = await fetch('/api/teacher/camera-snapshot', { method: 'POST' });
+                        const snapResult = await snapRes.json();
+                        if (snapResult.success) {
+                            setSnapshotLogs(prev => [`[${nowStr}] Snapshot successfully completed.`, ...prev.slice(1)]);
+                        } else {
+                            setSnapshotLogs(prev => [`[${nowStr}] Snapshot failed: ${snapResult.error}`, ...prev.slice(1)]);
+                        }
+                    } catch (err) {
+                        console.error('Initial snapshot error:', err);
+                    }
+                }, 5000);
+            } else {
+                // Finalize attendance
+                setMessage('Finalizing attendance and stopping camera...');
+                const response = await fetch('/api/teacher/finalize-attendance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Failed to finalize attendance');
+                setIsCameraRunning(false);
+                setMessage('Attendance finalized. Camera stopped.');
+                setSnapshotLogs(prev => [`[${new Date().toLocaleTimeString()}] Camera stopped. Attendance finalized.`, ...prev.slice(0, 19)]);
+            }
         } catch (error) {
-            // A response can fail after the server has already committed the command.
-            // Re-read the command state so the controls do not remain stuck on Start.
             try {
                 const status = await refreshCameraStatus();
                 if (status.running || status.pending) {
@@ -571,6 +647,54 @@ function CameraConfigurationSection() {
                         </button>
                     </div>
                     {message && <p className="teacher-camera-nav-status" role="status">{message}</p>}
+
+                    {isCameraRunning && (
+                        <div className="teacher-camera-monitoring">
+                            <h3>Live Camera Feed Logs</h3>
+                            <div className="teacher-camera-monitoring-grid">
+                                <div className="teacher-camera-log-panel">
+                                    <h4>Snapshot Activity Log</h4>
+                                    <div className="activity-log-box">
+                                        {snapshotLogs.length === 0 ? (
+                                            <p className="no-log-text">No snapshot activity yet.</p>
+                                        ) : (
+                                            snapshotLogs.map((log, idx) => (
+                                                <p key={idx} className="log-line">{log}</p>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="teacher-camera-detections-panel">
+                                    <h4>✓ Detected ({detections.detected.length})</h4>
+                                    <ul className="detections-list present-list">
+                                        {detections.detected.length === 0 ? (
+                                            <li style={{ background: 'transparent', border: 'none', color: '#888' }}>No students detected yet</li>
+                                        ) : (
+                                            detections.detected.map(student => (
+                                                <li key={student.studentId}>
+                                                    <span className="student-name">{student.studentName}</span>
+                                                    <span className="confidence">({Math.round(student.maxConfidence * 100)}%)</span>
+                                                    <span className="time">{new Date(student.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </li>
+                                            ))
+                                        )}
+                                    </ul>
+                                    <h4>✗ Not Detected ({detections.undetected.length})</h4>
+                                    <ul className="detections-list absent-list">
+                                        {detections.undetected.length === 0 ? (
+                                            <li style={{ background: 'transparent', border: 'none', color: '#888' }}>All enrolled students detected</li>
+                                        ) : (
+                                            detections.undetected.map(student => (
+                                                <li key={student.studentId}>
+                                                    <span className="student-name">{student.studentName}</span>
+                                                </li>
+                                            ))
+                                        )}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </section>

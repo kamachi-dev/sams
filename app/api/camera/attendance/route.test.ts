@@ -22,21 +22,15 @@ test('GET returns API live message', async () => {
   expect(json.message).toBe('Camera attendance API is live');
 });
 
-test('POST records attendance and triggers notifications', async () => {
+test('POST records attendance detections', async () => {
   const mockClient = {
     query: vi.fn().mockResolvedValue({
-      rows: [{ id: 'rec_1', student: 'stud_1', course: 'c_1', attendance: 1, time: '2026-06-23T12:00:00Z' }],
+      rows: [{ id: 'rec_1', student_id: 'stud_1', course_id: 'c_1', confidence: 0.95, detected_at: '2026-06-23T12:00:00Z' }],
     }),
     release: vi.fn(),
   };
 
   vi.spyOn(db, 'connect').mockResolvedValue(mockClient as any);
-  vi.spyOn(db, 'query').mockImplementation((sql) => {
-    if (sql.includes('SELECT c.name')) {
-      return Promise.resolve({ rows: [{ course_name: 'Science', teacher: 't_1', student_name: 'Alice Cruz', teacher_name: 'Mr. Smith', classroom: 'Room 101', schedule: { tuesday: { start: '08:00', end: '09:00' } } }] });
-    }
-    return Promise.resolve({ rows: [] });
-  });
 
   const reqBody = {
     student: 'stud_1',
@@ -56,11 +50,10 @@ test('POST records attendance and triggers notifications', async () => {
 
   expect(response.status).toBe(200);
   expect(json.success).toBe(true);
-  expect(sendAttendanceUpdateEmail).toHaveBeenCalledWith(expect.objectContaining({
-    studentName: 'Alice Cruz',
-    courseName: 'Science',
-    teacherName: 'Mr. Smith',
-    roomId: 'Room 101',
-    classTime: '08:00 – 09:00',
-  }));
+  expect(json.message).toContain('Detections registered');
+  expect(mockClient.query).toHaveBeenCalledWith(
+    expect.stringContaining('INSERT INTO camera_session_detections'),
+    ['c_1', 'stud_1', 0.95, '2026-06-23T12:00:00Z']
+  );
+  expect(sendAttendanceUpdateEmail).not.toHaveBeenCalled();
 });

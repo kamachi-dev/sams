@@ -10,7 +10,7 @@ export type CameraSettings = {
 
 export type CameraCommand = {
     id: number
-    action: 'start' | 'stop'
+    action: 'start' | 'stop' | 'snapshot'
     status: 'pending' | 'claimed' | 'completed' | 'failed'
 }
 
@@ -52,11 +52,11 @@ export async function writeCameraSettings(config: CameraSettings, updatedBy: str
              end_time = EXCLUDED.end_time,
              updated_by = EXCLUDED.updated_by,
              updated_at = NOW()`,
-        [config.room, config.courseName, config.section, config.startTime, config.endTime, updatedBy],
-    )
+         [config.room, config.courseName, config.section, config.startTime, config.endTime, updatedBy],
+     )
 }
 
-export async function queueCameraCommand(action: 'start' | 'stop', requestedBy: string): Promise<CameraCommand> {
+export async function queueCameraCommand(action: 'start' | 'stop' | 'snapshot', requestedBy: string): Promise<CameraCommand> {
     const result = await db.query(
         `INSERT INTO camera_command (action, requested_by)
          VALUES ($1, $2)
