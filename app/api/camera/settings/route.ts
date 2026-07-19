@@ -18,7 +18,9 @@ export async function GET(request: Request) {
     }
 
     try {
-        const settings = await readCameraSettings()
+        const { searchParams } = new URL(request.url)
+        const teacherId = searchParams.get('teacher_id') || undefined
+        const settings = await readCameraSettings(teacherId)
         return NextResponse.json({ success: true, data: settings })
     } catch (error) {
         console.error('Error reading camera settings for agent:', error)

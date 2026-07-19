@@ -15,7 +15,9 @@ function unauthorized() {
 export async function GET(request: Request) {
     if (!isAuthorized(request)) return unauthorized()
     try {
-        return NextResponse.json({ success: true, data: await claimNextCameraCommand() })
+        const { searchParams } = new URL(request.url)
+        const teacherId = searchParams.get('teacher_id') || undefined
+        return NextResponse.json({ success: true, data: await claimNextCameraCommand(teacherId) })
     } catch (error) {
         console.error('Error claiming camera command:', error)
         return NextResponse.json({ success: false, error: 'Failed to load camera command.' }, { status: 500 })

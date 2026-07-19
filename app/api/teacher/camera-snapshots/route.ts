@@ -14,7 +14,7 @@ export async function GET() {
         const user = await currentUser()
         if (!user) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
 
-        const config = await readCameraSettings()
+        const config = await readCameraSettings(user.id)
         if (!config.courseName || !config.section) {
             return NextResponse.json({ success: true, data: [] })
         }

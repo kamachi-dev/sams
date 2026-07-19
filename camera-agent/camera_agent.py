@@ -17,6 +17,7 @@ from recognize import recognize_faces
 # Environment config
 API_URL = os.environ.get('SAMS_API_URL', 'http://localhost:3000').rstrip('/')
 TOKEN = os.environ.get('CAMERA_AGENT_TOKEN', 'camera_agent_secure_token_default')
+TEACHER_ID = os.environ.get('TEACHER_ID', '')
 POLL_SECONDS = max(2, int(os.environ.get('CAMERA_SETTINGS_POLL_SECONDS', '3')))
 LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'camera_agent.log')
 SNAPSHOTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'snapshots')
@@ -44,8 +45,11 @@ def log(message):
         pass
 
 def load_settings():
+    url = f'{API_URL}/api/camera/settings'
+    if TEACHER_ID:
+        url += f'?teacher_id={TEACHER_ID}'
     request = urllib.request.Request(
-        f'{API_URL}/api/camera/settings',
+        url,
         headers={'X-Camera-Agent-Token': TOKEN},
     )
     with urllib.request.urlopen(request, timeout=15) as response:
@@ -89,8 +93,11 @@ def load_active_model(settings):
     return model_data, section_id
 
 def load_command():
+    url = f'{API_URL}/api/camera/commands'
+    if TEACHER_ID:
+        url += f'?teacher_id={TEACHER_ID}'
     request = urllib.request.Request(
-        f'{API_URL}/api/camera/commands',
+        url,
         headers={'X-Camera-Agent-Token': TOKEN},
     )
     try:
@@ -157,8 +164,11 @@ def take_snapshot_and_recognize():
             "timestamp": timestamp,
             "image_base64": img_base64
         }).encode('utf-8')
+        upload_url = f'{API_URL}/api/camera/snapshot-image'
+        if TEACHER_ID:
+            upload_url += f'?teacher_id={TEACHER_ID}'
         upload_request = urllib.request.Request(
-            f'{API_URL}/api/camera/snapshot-image',
+            upload_url,
             data=upload_body,
             method='POST',
             headers={'X-Camera-Agent-Token': TOKEN, 'Content-Type': 'application/json'},

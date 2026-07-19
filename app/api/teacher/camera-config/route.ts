@@ -32,7 +32,7 @@ export async function GET() {
         const user = await currentUser()
         if (!user) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
 
-        const [config, contexts] = await Promise.all([readCameraSettings(), getTeacherContexts(user.id)])
+        const [config, contexts] = await Promise.all([readCameraSettings(user.id), getTeacherContexts(user.id)])
         const roomOptions = [...new Set(contexts.map(context => context.room))]
         const defaultRoom = roomOptions[0] ?? ''
         return NextResponse.json({

@@ -7,7 +7,7 @@ import { queueCameraCommand, readLatestCameraCommand } from '@/app/services/came
 export async function GET() {
     const user = await currentUser()
     if (!user) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
-    const command = await readLatestCameraCommand()
+    const command = await readLatestCameraCommand(user.id)
     // A command is the desired local camera state.  Treat a queued/claimed start
     // as running so a status refresh cannot change the button back to Start while
     // the on-premises agent is launching it.  A failed stop leaves the camera
