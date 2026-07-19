@@ -2484,12 +2484,12 @@ export default function Teacher() {
                                         <h4>✗ Not Detected ({camera.detections.undetected.length})</h4>
                                         <ul className="detections-list absent-list">
                                             {camera.detections.undetected.length === 0 ? (
-                                                <li style={{ background: 'transparent', border: 'none', color: '#888' }}>All enrolled students detected</li>
+                                                <li style={{ background: 'transparent', border: 'none', color: '#888' }}>—</li>
                                             ) : (
                                                 camera.detections.undetected.map(student => (
                                                     <li key={student.studentId}>
                                                         <span className="student-name">{student.studentName}</span>
-                                                        <span className="confidence">(0%)</span>
+                                                        <span className="confidence" style={{ color: '#888' }}>Not yet detected</span>
                                                     </li>
                                                 ))
                                             )}
