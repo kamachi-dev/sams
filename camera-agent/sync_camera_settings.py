@@ -11,6 +11,7 @@ API_URL = os.environ.get('SAMS_API_URL', '').rstrip('/')
 TOKEN = os.environ.get('CAMERA_AGENT_TOKEN', '')
 CONFIG_PATH = os.environ.get('CAMERA_CONFIG_PATH', r'C:\SAMS-MMCL\Camera-Attendance-App\config.ini')
 POLL_SECONDS = max(5, int(os.environ.get('CAMERA_SETTINGS_POLL_SECONDS', '10')))
+TEACHER_ID = os.environ.get('TEACHER_ID', '')
 LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'camera-settings-agent.log')
 RUNNER_PATH = os.environ.get('CAMERA_RUNNER_PATH', r'C:\SAMS-MMCL\Camera-Attendance-App\run_camera.bat')
 camera_process = None
@@ -27,8 +28,11 @@ def log(message):
 
 
 def load_settings():
+    url = f'{API_URL}/api/camera/settings'
+    if TEACHER_ID:
+        url += f'?teacher_id={TEACHER_ID}'
     request = urllib.request.Request(
-        f'{API_URL}/api/camera/settings',
+        url,
         headers={'X-Camera-Agent-Token': TOKEN},
     )
     with urllib.request.urlopen(request, timeout=15) as response:
@@ -55,8 +59,11 @@ def apply_settings(settings):
 
 
 def load_command():
+    url = f'{API_URL}/api/camera/commands'
+    if TEACHER_ID:
+        url += f'?teacher_id={TEACHER_ID}'
     request = urllib.request.Request(
-        f'{API_URL}/api/camera/commands',
+        url,
         headers={'X-Camera-Agent-Token': TOKEN},
     )
     with urllib.request.urlopen(request, timeout=15) as response:
