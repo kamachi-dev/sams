@@ -11,7 +11,6 @@ API_URL = os.environ.get('SAMS_API_URL', '').rstrip('/')
 TOKEN = os.environ.get('CAMERA_AGENT_TOKEN', '')
 CONFIG_PATH = os.environ.get('CAMERA_CONFIG_PATH', r'C:\SAMS-MMCL\Camera-Attendance-App\config.ini')
 POLL_SECONDS = max(5, int(os.environ.get('CAMERA_SETTINGS_POLL_SECONDS', '10')))
-TEACHER_ID = os.environ.get('TEACHER_ID', '')
 LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'camera-settings-agent.log')
 RUNNER_PATH = os.environ.get('CAMERA_RUNNER_PATH', r'C:\SAMS-MMCL\Camera-Attendance-App\run_camera.bat')
 camera_process = None
@@ -25,22 +24,6 @@ def log(message):
             log_file.write(f'{line}\n')
     except OSError:
         pass
-
-
-def load_settings():
-    url = f'{API_URL}/api/camera/settings'
-    if TEACHER_ID:
-        url += f'?teacher_id={TEACHER_ID}'
-    request = urllib.request.Request(
-        url,
-        headers={'X-Camera-Agent-Token': TOKEN},
-    )
-    with urllib.request.urlopen(request, timeout=15) as response:
-        import json
-        payload = json.load(response)
-    if not payload.get('success'):
-        raise RuntimeError(payload.get('error', 'Settings request failed'))
-    return payload['data']
 
 
 def apply_settings(settings):
@@ -59,11 +42,8 @@ def apply_settings(settings):
 
 
 def load_command():
-    url = f'{API_URL}/api/camera/commands'
-    if TEACHER_ID:
-        url += f'?teacher_id={TEACHER_ID}'
     request = urllib.request.Request(
-        url,
+        f'{API_URL}/api/camera/commands',
         headers={'X-Camera-Agent-Token': TOKEN},
     )
     with urllib.request.urlopen(request, timeout=15) as response:
@@ -110,10 +90,9 @@ def execute_command(command):
     if action == 'start':
         if camera_process and camera_process.poll() is None:
             return
-        teacher_for_settings = requesting_teacher or TEACHER_ID
-        if teacher_for_settings:
-            log(f"Loading settings for teacher: {teacher_for_settings}")
-            settings = load_settings_for(teacher_for_settings)
+        if requesting_teacher:
+            log(f"Loading settings for teacher: {requesting_teacher}")
+            settings = load_settings_for(requesting_teacher)
             apply_settings(settings)
         camera_process = subprocess.Popen(
             ['cmd.exe', '/d', '/s', '/c', RUNNER_PATH],
@@ -135,7 +114,6 @@ def main():
     log(f'Camera settings agent running; syncing every {POLL_SECONDS} seconds.')
     while True:
         try:
-            apply_settings(load_settings())
             command = load_command()
             if command:
                 try:
