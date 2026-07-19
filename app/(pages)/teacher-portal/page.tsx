@@ -10,6 +10,7 @@ import {
     DownloadIcon,
     CalendarIcon,
     BookmarkIcon,
+    CameraIcon,
     DashboardIcon,
     ExclamationTriangleIcon,
     BarChartIcon,
@@ -384,7 +385,7 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
 }
 // End of Teacher Appeal Section
 
-function CameraConfigurationSection() {
+function useCamera() {
     const [room, setRoom] = useState('');
     const [rooms, setRooms] = useState<string[]>([]);
     const [courseName, setCourseName] = useState('');
@@ -400,6 +401,7 @@ function CameraConfigurationSection() {
     const [message, setMessage] = useState('');
     const [detections, setDetections] = useState<{ detected: any[], undetected: any[] }>({ detected: [], undetected: [] });
     const [snapshotLogs, setSnapshotLogs] = useState<string[]>([]);
+    const [totalStudents, setTotalStudents] = useState(0);
 
     const refreshCameraStatus = async () => {
         const response = await fetch('/api/teacher/camera-control', { cache: 'no-store' });
@@ -461,7 +463,6 @@ function CameraConfigurationSection() {
         return () => window.clearInterval(intervalId);
     }, []);
 
-    // Effect to poll detections and trigger snapshots at intervals when running
     useEffect(() => {
         if (!isCameraRunning) {
             setDetections({ detected: [], undetected: [] });
@@ -474,6 +475,7 @@ function CameraConfigurationSection() {
                 const result = await response.json();
                 if (result.success) {
                     setDetections(result.data);
+                    setTotalStudents(result.data.detected.length + result.data.undetected.length);
                 }
             } catch (err) {
                 console.error("Error polling detections:", err);
@@ -545,7 +547,6 @@ function CameraConfigurationSection() {
                 setIsCameraRunning(result.data.running === true);
                 setMessage('Camera started. Initializing snapshot...');
 
-                // Trigger initial snapshot after 5 seconds to allow camera to warm up
                 setTimeout(async () => {
                     try {
                         const nowStr = new Date().toLocaleTimeString();
@@ -562,7 +563,6 @@ function CameraConfigurationSection() {
                     }
                 }, 5000);
             } else {
-                // Finalize attendance
                 setMessage('Finalizing attendance and stopping camera...');
                 const response = await fetch('/api/teacher/finalize-attendance', {
                     method: 'POST',
@@ -590,111 +590,86 @@ function CameraConfigurationSection() {
         }
     };
 
-    const roomContexts = contexts.filter(context => context.room === room);
-    const courseOptions = [...new Set(roomContexts.map(context => context.courseName))];
+    return {
+        room, setRoom, rooms, courseName, setCourseName, section, setSection,
+        contexts, startTime, setStartTime, endTime, setEndTime,
+        useScheduleOverride, setUseScheduleOverride,
+        isLoading, isSaving, isCameraRunning, isCameraAction,
+        message, detections, snapshotLogs,
+        totalStudents,
+        saveConfiguration, toggleCamera,
+    };
+}
+
+function CameraSettingsForm(props: {
+    room: string; setRoom: (v: string) => void; rooms: string[];
+    courseName: string; setCourseName: (v: string) => void;
+    section: string; setSection: (v: string) => void;
+    contexts: Array<{ room: string; courseName: string; section: string }>;
+    startTime: string; setStartTime: (v: string) => void;
+    endTime: string; setEndTime: (v: string) => void;
+    useScheduleOverride: boolean; setUseScheduleOverride: (v: boolean) => void;
+    isLoading: boolean; isSaving: boolean; isCameraRunning: boolean; isCameraAction: boolean;
+    message: string;
+    saveConfiguration: () => Promise<void>; toggleCamera: () => Promise<void>;
+}) {
+    const roomContexts = props.contexts.filter(c => c.room === props.room);
+    const courseOptions = [...new Set(roomContexts.map(c => c.courseName))];
     const sectionOptions = [...new Set(roomContexts
-        .filter(context => context.courseName === courseName)
-        .map(context => context.section))];
+        .filter(c => c.courseName === props.courseName)
+        .map(c => c.section))];
 
     return (
         <section className="teacher-camera-nav-settings" aria-label="Camera settings">
             <h2>Camera Settings</h2>
             <p className="teacher-camera-nav-description">Choose a room, course, and section; time override is optional.</p>
-            {isLoading ? <p className="teacher-camera-nav-status">Loading camera configuration...</p> : (
+            {props.isLoading ? <p className="teacher-camera-nav-status">Loading camera configuration...</p> : (
                 <div className="teacher-camera-nav-form">
                     <div className="appeal-field">
-                            <label htmlFor="camera-room">Room</label>
-                            <select id="camera-room" className="teacher-select" value={room} onChange={e => { setRoom(e.target.value); setCourseName(''); setSection(''); }} disabled={isSaving || rooms.length === 0}>
-                                {rooms.length === 0 ? <option value="">No assigned rooms available</option> : rooms.map(value => <option key={value} value={value}>{value}</option>)}
-                            </select>
+                        <label htmlFor="camera-room">Room</label>
+                        <select id="camera-room" className="teacher-select" value={props.room} onChange={e => { props.setRoom(e.target.value); props.setCourseName(''); props.setSection(''); }} disabled={props.isSaving || props.rooms.length === 0}>
+                            {props.rooms.length === 0 ? <option value="">No assigned rooms available</option> : props.rooms.map(value => <option key={value} value={value}>{value}</option>)}
+                        </select>
                     </div>
                     <div className="teacher-camera-nav-contexts">
                         <div className="appeal-field">
                             <label htmlFor="camera-course">Course override</label>
-                            <select id="camera-course" className="teacher-select" value={courseName} onChange={e => { setCourseName(e.target.value); setSection(''); }} disabled={isSaving || !room}>
+                            <select id="camera-course" className="teacher-select" value={props.courseName} onChange={e => { props.setCourseName(e.target.value); props.setSection(''); }} disabled={props.isSaving || !props.room}>
                                 <option value="">Use detected course</option>
                                 {courseOptions.map(value => <option key={value} value={value}>{value}</option>)}
                             </select>
                         </div>
                         <div className="appeal-field">
                             <label htmlFor="camera-section">Section override</label>
-                            <select id="camera-section" className="teacher-select" value={section} onChange={e => setSection(e.target.value)} disabled={isSaving || !courseName}>
+                            <select id="camera-section" className="teacher-select" value={props.section} onChange={e => props.setSection(e.target.value)} disabled={props.isSaving || !props.courseName}>
                                 <option value="">Use detected section</option>
                                 {sectionOptions.map(value => <option key={value} value={value}>{value}</option>)}
                             </select>
                         </div>
                     </div>
                     <label className="teacher-camera-nav-override">
-                            <input type="checkbox" checked={useScheduleOverride} onChange={e => setUseScheduleOverride(e.target.checked)} disabled={isSaving} />
-                            Override scheduled time
+                        <input type="checkbox" checked={props.useScheduleOverride} onChange={e => props.setUseScheduleOverride(e.target.checked)} disabled={props.isSaving} />
+                        Override scheduled time
                     </label>
                     <div className="teacher-camera-nav-times">
                         <div className="appeal-field">
-                                <label htmlFor="camera-start">Start time</label>
-                                <input id="camera-start" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} disabled={!useScheduleOverride || isSaving} />
+                            <label htmlFor="camera-start">Start time</label>
+                            <input id="camera-start" type="time" value={props.startTime} onChange={e => props.setStartTime(e.target.value)} disabled={!props.useScheduleOverride || props.isSaving} />
                         </div>
                         <div className="appeal-field">
-                                <label htmlFor="camera-end">End time</label>
-                                <input id="camera-end" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} disabled={!useScheduleOverride || isSaving} />
+                            <label htmlFor="camera-end">End time</label>
+                            <input id="camera-end" type="time" value={props.endTime} onChange={e => props.setEndTime(e.target.value)} disabled={!props.useScheduleOverride || props.isSaving} />
                         </div>
                     </div>
                     <div className="teacher-camera-nav-actions">
-                        <button className="teacher-approve-btn" onClick={saveConfiguration} disabled={isSaving || !room || rooms.length === 0}>
-                            {isSaving ? 'Saving...' : 'Save settings'}
+                        <button className="teacher-approve-btn" onClick={props.saveConfiguration} disabled={props.isSaving || !props.room || props.rooms.length === 0}>
+                            {props.isSaving ? 'Saving...' : 'Save settings'}
                         </button>
-                        <button className="teacher-camera-control-btn" onClick={toggleCamera} disabled={isCameraAction}>
-                            {isCameraAction ? 'Working...' : isCameraRunning ? 'Stop camera' : 'Start camera'}
+                        <button className="teacher-camera-control-btn" onClick={props.toggleCamera} disabled={props.isCameraAction}>
+                            {props.isCameraAction ? 'Working...' : props.isCameraRunning ? 'Stop camera' : 'Start camera'}
                         </button>
                     </div>
-                    {message && <p className="teacher-camera-nav-status" role="status">{message}</p>}
-
-                    {isCameraRunning && (
-                        <div className="teacher-camera-monitoring">
-                            <h3>Live Camera Feed Logs</h3>
-                            <div className="teacher-camera-monitoring-grid">
-                                <div className="teacher-camera-log-panel">
-                                    <h4>Snapshot Activity Log</h4>
-                                    <div className="activity-log-box">
-                                        {snapshotLogs.length === 0 ? (
-                                            <p className="no-log-text">No snapshot activity yet.</p>
-                                        ) : (
-                                            snapshotLogs.map((log, idx) => (
-                                                <p key={idx} className="log-line">{log}</p>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="teacher-camera-detections-panel">
-                                    <h4>✓ Detected ({detections.detected.length})</h4>
-                                    <ul className="detections-list present-list">
-                                        {detections.detected.length === 0 ? (
-                                            <li style={{ background: 'transparent', border: 'none', color: '#888' }}>No students detected yet</li>
-                                        ) : (
-                                            detections.detected.map(student => (
-                                                <li key={student.studentId}>
-                                                    <span className="student-name">{student.studentName}</span>
-                                                    <span className="confidence">({Math.round(student.maxConfidence * 100)}%)</span>
-                                                    <span className="time">{new Date(student.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                </li>
-                                            ))
-                                        )}
-                                    </ul>
-                                    <h4>✗ Not Detected ({detections.undetected.length})</h4>
-                                    <ul className="detections-list absent-list">
-                                        {detections.undetected.length === 0 ? (
-                                            <li style={{ background: 'transparent', border: 'none', color: '#888' }}>All enrolled students detected</li>
-                                        ) : (
-                                            detections.undetected.map(student => (
-                                                <li key={student.studentId}>
-                                                    <span className="student-name">{student.studentName}</span>
-                                                </li>
-                                            ))
-                                        )}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {props.message && <p className="teacher-camera-nav-status" role="status">{props.message}</p>}
                 </div>
             )}
         </section>
@@ -702,6 +677,7 @@ function CameraConfigurationSection() {
 }
 
 export default function Teacher() {
+    const camera = useCamera();
     const [searchQuery, setSearchQuery] = useState("");
     const [isExporting, setIsExporting] = useState(false);
     const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("daily");
@@ -2390,7 +2366,112 @@ export default function Teacher() {
     ];
 
     return (
-        <SamsTemplate activeTab={activeTab} onTabChange={setActiveTab} navContent={<CameraConfigurationSection />} links={[
+        <SamsTemplate activeTab={activeTab} onTabChange={setActiveTab} links={[
+            {
+                label: "Camera",
+                Icon: CameraIcon,
+                panels: [
+                    <div key="camera-total" className="teacher-panel-card enroll">
+                        <PersonIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Number of Students</div>
+                            <div className="teacher-panel-value">{camera.totalStudents || '-'}</div>
+                            <div className="teacher-panel-sub">Enrolled in selected section</div>
+                        </div>
+                    </div>,
+                    <div key="camera-detected" className="teacher-panel-card present">
+                        <CalendarIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Detected</div>
+                            <div className="teacher-panel-value">{camera.detections.detected.length}</div>
+                            <div className="teacher-panel-sub">Present in current session</div>
+                        </div>
+                    </div>,
+                    <div key="camera-undetected" className="teacher-panel-card absent">
+                        <PersonIcon className="teacher-panel-icon" />
+                        <div className="teacher-panel-content">
+                            <div className="teacher-panel-label">Not Detected</div>
+                            <div className="teacher-panel-value">{camera.detections.undetected.length}</div>
+                            <div className="teacher-panel-sub">Absent in current session</div>
+                        </div>
+                    </div>,
+                ],
+                content: (
+                    <div className="teacher-split-layout">
+                        <div className="teacher-left-column">
+                            <CameraSettingsForm
+                                room={camera.room} setRoom={camera.setRoom} rooms={camera.rooms}
+                                courseName={camera.courseName} setCourseName={camera.setCourseName}
+                                section={camera.section} setSection={camera.setSection}
+                                contexts={camera.contexts}
+                                startTime={camera.startTime} setStartTime={camera.setStartTime}
+                                endTime={camera.endTime} setEndTime={camera.setEndTime}
+                                useScheduleOverride={camera.useScheduleOverride} setUseScheduleOverride={camera.setUseScheduleOverride}
+                                isLoading={camera.isLoading} isSaving={camera.isSaving}
+                                isCameraRunning={camera.isCameraRunning} isCameraAction={camera.isCameraAction}
+                                message={camera.message}
+                                saveConfiguration={camera.saveConfiguration} toggleCamera={camera.toggleCamera}
+                            />
+                        </div>
+                        <div className="teacher-right-column">
+                            {camera.isCameraRunning ? (
+                                <div className="teacher-camera-monitoring" style={{ marginTop: 0 }}>
+                                    <h3>Live Camera Feed Logs</h3>
+                                    <div className="teacher-camera-monitoring-grid">
+                                        <div className="teacher-camera-log-panel">
+                                            <h4>Snapshot Activity Log</h4>
+                                            <div className="activity-log-box">
+                                                {camera.snapshotLogs.length === 0 ? (
+                                                    <p className="no-log-text">No snapshot activity yet.</p>
+                                                ) : (
+                                                    camera.snapshotLogs.map((log, idx) => (
+                                                        <p key={idx} className="log-line">{log}</p>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="teacher-camera-detections-panel">
+                                            <h4>✓ Detected ({camera.detections.detected.length})</h4>
+                                            <ul className="detections-list present-list">
+                                                {camera.detections.detected.length === 0 ? (
+                                                    <li style={{ background: 'transparent', border: 'none', color: '#888' }}>No students detected yet</li>
+                                                ) : (
+                                                    camera.detections.detected.map(student => (
+                                                        <li key={student.studentId}>
+                                                            <span className="student-name">{student.studentName}</span>
+                                                            <span className="confidence">({Math.round(student.maxConfidence * 100)}%)</span>
+                                                            <span className="time">{new Date(student.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        </li>
+                                                    ))
+                                                )}
+                                            </ul>
+                                            <h4>✗ Not Detected ({camera.detections.undetected.length})</h4>
+                                            <ul className="detections-list absent-list">
+                                                {camera.detections.undetected.length === 0 ? (
+                                                    <li style={{ background: 'transparent', border: 'none', color: '#888' }}>All enrolled students detected</li>
+                                                ) : (
+                                                    camera.detections.undetected.map(student => (
+                                                        <li key={student.studentId}>
+                                                            <span className="student-name">{student.studentName}</span>
+                                                        </li>
+                                                    ))
+                                                )}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="teacher-camera-monitoring" style={{ marginTop: 0 }}>
+                                    <h3>Live Camera Feed Logs</h3>
+                                    <p style={{ color: 'var(--foreground2)', fontSize: '13px' }}>
+                                        Camera is not running. Configure settings and start the camera to view live feed.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )
+            },
             {
                 label: "Overview",
                 Icon: DashboardIcon,
@@ -3635,7 +3716,7 @@ export default function Teacher() {
                 content: (
                     <TeacherAppealsSection courses={courses} appeals={appeals} setAppeals={setAppeals} isLoadingAppeals={isLoadingAppeals} />
                 )
-            }
+            },
 
         ]} />
     );

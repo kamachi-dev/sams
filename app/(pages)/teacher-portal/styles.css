@@ -2211,3 +2211,28 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
 .detections-list .time {
     opacity: 0.6;
 }
+
+/* Camera tab right column */
+.teacher-right-column .teacher-camera-monitoring {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.teacher-right-column .teacher-camera-monitoring-grid {
+    flex: 1;
+    min-height: 0;
+}
+
+.teacher-right-column .teacher-camera-log-panel,
+.teacher-right-column .teacher-camera-detections-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.teacher-right-column .activity-log-box {
+    flex: 1;
+    min-height: 0;
+}
