@@ -12,6 +12,7 @@ export type CameraCommand = {
     id: number
     action: 'start' | 'stop' | 'snapshot'
     status: 'pending' | 'claimed' | 'completed' | 'failed'
+    requested_by?: string | null
 }
 
 const EMPTY_SETTINGS: CameraSettings = {
@@ -87,10 +88,11 @@ export async function claimNextCameraCommand(teacherId?: string): Promise<Camera
          SET status = 'claimed', claimed_at = NOW()
          FROM next_command
          WHERE command.id = next_command.id
-         RETURNING command.id, command.action, command.status`,
+         RETURNING command.id, command.action, command.status, command.requested_by`,
         [teacherId ?? null],
     )
-    return (result.rows[0] as CameraCommand | undefined) ?? null
+    const row = result.rows[0] as CameraCommand | undefined
+    return row ?? null
 }
 
 export async function completeCameraCommand(id: number, succeeded: boolean, error = ''): Promise<void> {

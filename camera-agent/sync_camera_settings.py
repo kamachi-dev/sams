@@ -88,12 +88,33 @@ def complete_command(command_id, succeeded, error=''):
             raise RuntimeError(f'Camera command completion failed with HTTP {response.status}')
 
 
+def load_settings_for(teacher_id=''):
+    url = f'{API_URL}/api/camera/settings'
+    if teacher_id:
+        url += f'?teacher_id={teacher_id}'
+    request = urllib.request.Request(
+        url,
+        headers={'X-Camera-Agent-Token': TOKEN},
+    )
+    with urllib.request.urlopen(request, timeout=15) as response:
+        import json
+        payload = json.load(response)
+    if not payload.get('success'):
+        raise RuntimeError(payload.get('error', 'Settings request failed'))
+    return payload['data']
+
 def execute_command(command):
     global camera_process
     action = command['action']
+    requesting_teacher = (command.get('requested_by') or '').strip()
     if action == 'start':
         if camera_process and camera_process.poll() is None:
             return
+        teacher_for_settings = requesting_teacher or TEACHER_ID
+        if teacher_for_settings:
+            log(f"Loading settings for teacher: {teacher_for_settings}")
+            settings = load_settings_for(teacher_for_settings)
+            apply_settings(settings)
         camera_process = subprocess.Popen(
             ['cmd.exe', '/d', '/s', '/c', RUNNER_PATH],
             cwd=os.path.dirname(RUNNER_PATH),

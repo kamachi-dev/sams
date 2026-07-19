@@ -44,10 +44,11 @@ def log(message):
     except OSError:
         pass
 
-def load_settings():
+def load_settings(teacher_id=''):
     url = f'{API_URL}/api/camera/settings'
-    if TEACHER_ID:
-        url += f'?teacher_id={TEACHER_ID}'
+    effective_id = teacher_id or TEACHER_ID
+    if effective_id:
+        url += f'?teacher_id={effective_id}'
     request = urllib.request.Request(
         url,
         headers={'X-Camera-Agent-Token': TOKEN},
@@ -92,10 +93,11 @@ def load_active_model(settings):
     section_id = active_model['course_id']
     return model_data, section_id
 
-def load_command():
+def load_command(teacher_id=''):
     url = f'{API_URL}/api/camera/commands'
-    if TEACHER_ID:
-        url += f'?teacher_id={TEACHER_ID}'
+    effective_id = teacher_id or TEACHER_ID
+    if effective_id:
+        url += f'?teacher_id={effective_id}'
     request = urllib.request.Request(
         url,
         headers={'X-Camera-Agent-Token': TOKEN},
@@ -230,13 +232,14 @@ def execute_command(command):
     
     action = command['action']
     command_id = command['id']
+    requesting_teacher = (command.get('requested_by') or '').strip()
     log(f"Executing command: {action} (ID: {command_id})")
     
     try:
         if action == 'start':
-            # Load settings
-            settings = load_settings()
-            log(f"Loaded Settings: Room: {settings['room']}, Course: {settings['courseName']}, Section: {settings['section']}")
+            # Load settings using the requesting teacher or fallback to env var
+            settings = load_settings(requesting_teacher)
+            log(f"Loaded Settings for teacher {requesting_teacher or TEACHER_ID}: Room: {settings['room']}, Course: {settings['courseName']}, Section: {settings['section']}")
             
             # Load active model from DB
             active_model_data, active_section_id = load_active_model(settings)
@@ -248,7 +251,7 @@ def execute_command(command):
         elif action == 'snapshot':
             if active_model_data is None:
                 # Fallback to load settings and model if not loaded
-                settings = load_settings()
+                settings = load_settings(requesting_teacher)
                 active_model_data, active_section_id = load_active_model(settings)
                 
             num_found = take_snapshot_and_recognize()
