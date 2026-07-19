@@ -94,6 +94,7 @@ export async function PUT(request: Request) {
             endTime: useScheduleOverride ? endTime : '',
         }
         await writeCameraSettings(config, user.id)
+        console.log(`Camera settings saved by teacher ${user.id}:`, config)
         return NextResponse.json({ success: true, data: { ...config, hasScheduleOverride: useScheduleOverride } })
     } catch (error) {
         console.error('Error saving camera configuration:', error)

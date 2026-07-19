@@ -43,9 +43,16 @@ export async function readCameraSettings(teacherId?: string): Promise<CameraSett
         if (result.rows[0]) return toSettings(result.rows[0])
     }
     const result = await db.query(
+        `SELECT room, course_name, section, start_time, end_time
+         FROM teacher_camera_settings
+         ORDER BY updated_at DESC NULLS LAST
+         LIMIT 1`,
+    )
+    if (result.rows[0]) return toSettings(result.rows[0])
+    const fallback = await db.query(
         'SELECT room, course_name, section, start_time, end_time FROM camera_settings WHERE id = 1',
     )
-    return toSettings(result.rows[0])
+    return toSettings(fallback.rows[0])
 }
 
 export async function writeCameraSettings(config: CameraSettings, updatedBy: string): Promise<void> {

@@ -39,6 +39,7 @@ def apply_settings(settings):
     parser['Camera']['end_time'] = settings['endTime']
     with open(CONFIG_PATH, 'w', encoding='utf-8', newline='') as config_file:
         parser.write(config_file)
+    log(f"Config updated: {settings['room']}/{settings['courseName']}/{settings['section']} ({settings['startTime']}-{settings['endTime']})")
 
 
 def load_command():
@@ -114,6 +115,7 @@ def main():
     log(f'Camera settings agent running; syncing every {POLL_SECONDS} seconds.')
     while True:
         try:
+            apply_settings(load_settings_for())
             command = load_command()
             if command:
                 try:
