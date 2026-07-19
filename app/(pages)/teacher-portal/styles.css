@@ -2241,6 +2241,16 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
     max-height: 120px;
 }
 
+.detections-split {
+    display: flex;
+    gap: 12px;
+}
+
+.detections-column {
+    flex: 1;
+    min-width: 0;
+}
+
 /* Snapshot Gallery */
 .snapshot-gallery {
     display: grid;

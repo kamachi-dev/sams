@@ -102,8 +102,29 @@ def execute_command(command):
         )
         return
     if action == 'stop':
-        stop_script = os.path.join(os.path.dirname(RUNNER_PATH), 'request_camera_stop.bat')
+        app_root = os.path.dirname(RUNNER_PATH)
+        stop_completed = os.path.join(app_root, 'stop_camera.completed')
+        if os.path.exists(stop_completed):
+            os.remove(stop_completed)
+        stop_script = os.path.join(app_root, 'request_camera_stop.bat')
         subprocess.run(['cmd.exe', '/d', '/s', '/c', stop_script], check=True, timeout=90)
+        log('Waiting for camera to shut down gracefully (finalizing attendance)...')
+        deadline = time.time() + 90
+        while time.time() < deadline:
+            if camera_process and camera_process.poll() is not None:
+                log('Camera process exited.')
+                break
+            if os.path.exists(stop_completed):
+                log('Camera confirmed graceful shutdown via completion file.')
+                break
+            time.sleep(2)
+        else:
+            log('Timed out waiting for camera shutdown. Continuing.')
+        if os.path.exists(stop_completed):
+            try:
+                os.remove(stop_completed)
+            except OSError:
+                pass
         camera_process = None
         return
     raise RuntimeError(f'Unsupported camera command: {action}')

@@ -2463,32 +2463,39 @@ export default function Teacher() {
                                 )}
                             </div>
                             <div className="teacher-camera-detections-panel" style={{ marginTop: '8px', background: 'var(--background2)', border: '1px solid var(--border1)', borderRadius: '6px', padding: '12px' }}>
-                                <h4>✓ Detected ({camera.detections.detected.length})</h4>
-                                <ul className="detections-list present-list">
-                                    {camera.detections.detected.length === 0 ? (
-                                        <li style={{ background: 'transparent', border: 'none', color: '#888' }}>No students detected yet</li>
-                                    ) : (
-                                        camera.detections.detected.map(student => (
-                                            <li key={student.studentId}>
-                                                <span className="student-name">{student.studentName}</span>
-                                                <span className="confidence">({Math.round(student.maxConfidence * 100)}%)</span>
-                                                <span className="time">{new Date(student.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                            </li>
-                                        ))
-                                    )}
-                                </ul>
-                                <h4>✗ Not Detected ({camera.detections.undetected.length})</h4>
-                                <ul className="detections-list absent-list">
-                                    {camera.detections.undetected.length === 0 ? (
-                                        <li style={{ background: 'transparent', border: 'none', color: '#888' }}>All enrolled students detected</li>
-                                    ) : (
-                                        camera.detections.undetected.map(student => (
-                                            <li key={student.studentId}>
-                                                <span className="student-name">{student.studentName}</span>
-                                            </li>
-                                        ))
-                                    )}
-                                </ul>
+                                <div className="detections-split">
+                                    <div className="detections-column">
+                                        <h4>✓ Detected ({camera.detections.detected.length})</h4>
+                                        <ul className="detections-list present-list">
+                                            {camera.detections.detected.length === 0 ? (
+                                                <li style={{ background: 'transparent', border: 'none', color: '#888' }}>No students detected yet</li>
+                                            ) : (
+                                                camera.detections.detected.map(student => (
+                                                    <li key={student.studentId}>
+                                                        <span className="student-name">{student.studentName}</span>
+                                                        <span className="confidence">({Math.round(student.maxConfidence * 100)}%)</span>
+                                                        <span className="time">{new Date(student.firstSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </li>
+                                                ))
+                                            )}
+                                        </ul>
+                                    </div>
+                                    <div className="detections-column">
+                                        <h4>✗ Not Detected ({camera.detections.undetected.length})</h4>
+                                        <ul className="detections-list absent-list">
+                                            {camera.detections.undetected.length === 0 ? (
+                                                <li style={{ background: 'transparent', border: 'none', color: '#888' }}>All enrolled students detected</li>
+                                            ) : (
+                                                camera.detections.undetected.map(student => (
+                                                    <li key={student.studentId}>
+                                                        <span className="student-name">{student.studentName}</span>
+                                                        <span className="confidence">(0%)</span>
+                                                    </li>
+                                                ))
+                                            )}
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
