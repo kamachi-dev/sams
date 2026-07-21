@@ -2427,8 +2427,8 @@ export default function Teacher() {
                                 message={camera.message}
                                 saveConfiguration={camera.saveConfiguration} toggleCamera={camera.toggleCamera}
                             />
-                            <section className="teacher-camera-nav-settings" aria-label="Snapshot log" style={{ marginTop: '8px' }}>
-                                <h3 style={{ margin: '0 0 6px', color: 'var(--accent1)', fontSize: '13px', fontWeight: 700 }}>Snapshot Activity Log</h3>
+                            <section className="teacher-camera-nav-settings camera-snapshot-log-section" aria-label="Snapshot log">
+                                <h3 className="camera-snapshot-log-title">Snapshot Activity Log</h3>
                                 <div className="activity-log-box" style={{ height: '140px' }}>
                                     {camera.snapshotLogs.length === 0 ? (
                                         <p className="no-log-text">No snapshot activity yet.</p>
@@ -2441,11 +2441,11 @@ export default function Teacher() {
                             </section>
                         </div>
                         <div className="teacher-right-column">
-                            <div className="teacher-camera-monitoring" style={{ marginTop: 0 }}>
+                            <div className="teacher-camera-monitoring camera-monitoring-inline">
                                 <h3>Snapshots</h3>
                                 {camera.isCameraRunning ? (
                                     camera.snapshots.length === 0 ? (
-                                        <p style={{ color: 'var(--foreground2)', fontSize: '13px' }}>No snapshots captured yet.</p>
+                                        <p className="camera-empty-text">No snapshots captured yet.</p>
                                     ) : (
                                         <div className="snapshot-gallery">
                                             {camera.snapshots.map((snap, idx) => (
@@ -2457,18 +2457,18 @@ export default function Teacher() {
                                         </div>
                                     )
                                 ) : (
-                                    <p style={{ color: 'var(--foreground2)', fontSize: '13px' }}>
+                                    <p className="camera-not-running-text">
                                         Camera is not running. Configure settings and start the camera to view snapshots.
                                     </p>
                                 )}
                             </div>
-                            <div className="teacher-camera-detections-panel" style={{ marginTop: '8px', background: 'var(--background2)', border: '1px solid var(--border1)', borderRadius: '6px', padding: '12px' }}>
+                            <div className="camera-detections-inline">
                                 <div className="detections-split">
                                     <div className="detections-column">
                                         <h4>✓ Detected ({camera.detections.detected.length})</h4>
                                         <ul className="detections-list present-list">
                                             {camera.detections.detected.length === 0 ? (
-                                                <li style={{ background: 'transparent', border: 'none', color: '#888' }}>No students detected yet</li>
+                                                <li className="camera-empty-list-item">No students detected yet</li>
                                             ) : (
                                                 camera.detections.detected.map(student => (
                                                     <li key={student.studentId}>
@@ -2484,12 +2484,12 @@ export default function Teacher() {
                                         <h4>✗ Not Detected ({camera.detections.undetected.length})</h4>
                                         <ul className="detections-list absent-list">
                                             {camera.detections.undetected.length === 0 ? (
-                                                <li style={{ background: 'transparent', border: 'none', color: '#888' }}>—</li>
+                                                <li className="camera-empty-list-item">—</li>
                                             ) : (
                                                 camera.detections.undetected.map(student => (
                                                     <li key={student.studentId}>
                                                         <span className="student-name">{student.studentName}</span>
-                                                        <span className="confidence" style={{ color: '#888' }}>Not yet detected</span>
+                                                        <span className="confidence" style={{ color: 'var(--foreground2)' }}>Not yet detected</span>
                                                     </li>
                                                 ))
                                             )}

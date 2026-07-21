@@ -2112,8 +2112,8 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
 .teacher-camera-monitoring {
     margin-top: 20px;
     padding: 16px;
-    background: var(--background2);
-    border: 1px solid var(--border1);
+    background: var(--background1);
+    border: 1px solid var(--foreground3);
     border-radius: 8px;
 }
 
@@ -2134,7 +2134,7 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
 .teacher-camera-log-panel,
 .teacher-camera-detections-panel {
     background: var(--background1);
-    border: 1px solid var(--border1);
+    border: 1px solid var(--foreground3);
     border-radius: 6px;
     padding: 12px;
     box-sizing: border-box;
@@ -2150,15 +2150,16 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .activity-log-box {
-    background: #111;
-    color: #39ff14; /* Matrix Green */
-    font-family: 'Consolas', monospace;
+    background: var(--background1);
+    color: var(--foreground1);
     font-size: 11px;
     height: 180px;
     overflow-y: auto;
     padding: 8px;
-    border-radius: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--foreground3);
     box-sizing: border-box;
+    line-height: 1.5;
 }
 
 .activity-log-box .log-line {
@@ -2167,7 +2168,7 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .no-log-text {
-    color: #888;
+    color: var(--foreground2);
     margin: 0;
 }
 
@@ -2185,7 +2186,7 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
     display: flex;
     justify-content: space-between;
     padding: 4px 6px;
-    border-bottom: 1px solid var(--border1);
+    border-bottom: 1px solid var(--foreground3);
 }
 
 .present-list li {
@@ -2241,6 +2242,45 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
     max-height: 120px;
 }
 
+.camera-snapshot-log-section {
+    margin-top: 8px;
+}
+
+.camera-snapshot-log-title {
+    margin: 0 0 6px;
+    color: var(--accent1);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.camera-monitoring-inline {
+    margin-top: 0;
+}
+
+.camera-detections-inline {
+    margin-top: 8px;
+    background: var(--background1);
+    border: 1px solid var(--foreground3);
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.camera-empty-text {
+    color: var(--foreground2);
+    font-size: 13px;
+}
+
+.camera-empty-list-item {
+    background: transparent;
+    border: none;
+    color: var(--foreground2);
+}
+
+.camera-not-running-text {
+    color: var(--foreground2);
+    font-size: 13px;
+}
+
 .detections-split {
     display: flex;
     gap: 12px;
@@ -2266,7 +2306,7 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
     flex-direction: column;
     align-items: center;
     text-decoration: none;
-    border: 1px solid var(--border1);
+    border: 1px solid var(--foreground3);
     border-radius: 6px;
     overflow: hidden;
     background: var(--background1);
