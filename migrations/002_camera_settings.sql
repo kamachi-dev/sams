@@ -6,15 +6,29 @@ CREATE TABLE IF NOT EXISTS camera_settings (
     section TEXT NOT NULL DEFAULT '',
     start_time TEXT NOT NULL DEFAULT '',
     end_time TEXT NOT NULL DEFAULT '',
+    snapshot_interval INTEGER NOT NULL DEFAULT 30,  -- Interval in seconds for automatic snapshots
     updated_by TEXT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT camera_settings_updated_by_fkey
         FOREIGN KEY (updated_by) REFERENCES account(id) ON UPDATE CASCADE ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS teacher_camera_settings (
+    teacher_id TEXT PRIMARY KEY,
+    room TEXT NOT NULL DEFAULT '',
+    course_name TEXT NOT NULL DEFAULT '',
+    section TEXT NOT NULL DEFAULT '',
+    start_time TEXT NOT NULL DEFAULT '',
+    end_time TEXT NOT NULL DEFAULT '',
+    snapshot_interval INTEGER NOT NULL DEFAULT 30,  -- Interval in seconds for automatic snapshots
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT teacher_camera_settings_teacher_id_fkey
+        FOREIGN KEY (teacher_id) REFERENCES account(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS camera_command (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    action TEXT NOT NULL CHECK (action IN ('start', 'stop')),
+    action TEXT NOT NULL CHECK (action IN ('start', 'stop', 'snapshot')),
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'claimed', 'completed', 'failed')),
     requested_by TEXT,
     requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

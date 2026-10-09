@@ -19,6 +19,7 @@ API_URL = os.environ.get('SAMS_API_URL', 'http://localhost:3000').rstrip('/')
 TOKEN = os.environ.get('CAMERA_AGENT_TOKEN', 'camera_agent_secure_token_default')
 TEACHER_ID = os.environ.get('TEACHER_ID', '')
 POLL_SECONDS = max(2, int(os.environ.get('CAMERA_SETTINGS_POLL_SECONDS', '3')))
+SNAPSHOT_INTERVAL_SECONDS = int(os.environ.get('SNAPSHOT_INTERVAL_SECONDS', '30'))  # Default 30 seconds
 LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'camera_agent.log')
 SNAPSHOTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'snapshots')
 os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
@@ -34,6 +35,9 @@ torch.load = torch_load_patch
 active_model_data = None
 active_section_id = None
 scrfd_app = None
+last_snapshot_time = 0  # Timestamp of last automatic snapshot
+snapshot_enabled = False  # Whether automatic snapshots are enabled
+current_snapshot_interval = SNAPSHOT_INTERVAL_SECONDS  # Current interval in seconds
 
 def log(message):
     line = f'{datetime.datetime.now().isoformat(timespec="seconds")} {message}'
@@ -228,7 +232,7 @@ def take_snapshot_and_recognize():
     return len(detections)
 
 def execute_command(command):
-    global active_model_data, active_section_id, scrfd_app
+    global active_model_data, active_section_id, scrfd_app, snapshot_enabled, current_snapshot_interval
     
     action = command['action']
     command_id = command['id']
@@ -241,9 +245,18 @@ def execute_command(command):
             settings = load_settings(requesting_teacher)
             log(f"Loaded Settings for teacher {requesting_teacher or TEACHER_ID}: Room: {settings['room']}, Course: {settings['courseName']}, Section: {settings['section']}")
             
+            # Update snapshot interval from settings if available
+            if 'snapshotInterval' in settings and settings['snapshotInterval'] > 0:
+                current_snapshot_interval = settings['snapshotInterval']
+                log(f"Updated snapshot interval to {current_snapshot_interval} seconds from settings")
+            
             # Load active model from DB
             active_model_data, active_section_id = load_active_model(settings)
             log(f"Active model loaded successfully. Section ID: {active_section_id}")
+            
+            # Enable automatic snapshots when camera starts
+            snapshot_enabled = True
+            last_snapshot_time = time.time()  # Reset timer
             
             complete_command(command_id, succeeded=True)
             log(f"Command 'start' completed successfully.")
@@ -261,6 +274,7 @@ def execute_command(command):
         elif action == 'stop':
             active_model_data = None
             active_section_id = None
+            snapshot_enabled = False  # Disable automatic snapshots when camera stops
             complete_command(command_id, succeeded=True)
             log(f"Command 'stop' completed successfully. Model released.")
             
@@ -280,6 +294,7 @@ def main():
     log("==============================================")
     log("SAMS Headless Camera Agent Starting...")
     log(f"Backend API: {API_URL}")
+    log(f"Default snapshot interval: {SNAPSHOT_INTERVAL_SECONDS} seconds")
     log("==============================================")
     
     # Initialize SCRFD model
@@ -290,9 +305,26 @@ def main():
     
     log("Starting command polling loop...")
     while True:
+        # Check for automatic snapshot timing
+        current_time = time.time()
+        if (snapshot_enabled and 
+            active_model_data is not None and 
+            active_section_id is not None and 
+            current_time - last_snapshot_time >= current_snapshot_interval):
+            
+            try:
+                log(f"Taking automatic snapshot (interval: {current_snapshot_interval}s)")
+                num_found = take_snapshot_and_recognize()
+                last_snapshot_time = current_time
+                log(f"Automatic snapshot completed. Found {num_found} student(s).")
+            except Exception as e:
+                log(f"Error taking automatic snapshot: {e}")
+        
+        # Process pending commands
         command = load_command()
         if command:
             execute_command(command)
+            
         time.sleep(POLL_SECONDS)
 
 if __name__ == "__main__":

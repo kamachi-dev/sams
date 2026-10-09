@@ -6,6 +6,7 @@ export type CameraSettings = {
     section: string
     startTime: string
     endTime: string
+    snapshotInterval?: number // Interval in seconds for automatic snapshots
 }
 
 export type CameraCommand = {
@@ -21,6 +22,7 @@ const EMPTY_SETTINGS: CameraSettings = {
     section: '',
     startTime: '',
     endTime: '',
+    snapshotInterval: 30 // Default 30 seconds
 }
 
 function toSettings(row: Record<string, unknown> | undefined): CameraSettings {
@@ -31,43 +33,45 @@ function toSettings(row: Record<string, unknown> | undefined): CameraSettings {
         section: String(row.section ?? '').trim(),
         startTime: String(row.start_time ?? '').trim(),
         endTime: String(row.end_time ?? '').trim(),
+        snapshotInterval: Number(row.snapshot_interval ?? 30)
     }
 }
 
 export async function readCameraSettings(teacherId?: string): Promise<CameraSettings> {
     if (teacherId) {
         const result = await db.query(
-            'SELECT room, course_name, section, start_time, end_time FROM teacher_camera_settings WHERE teacher_id = $1',
+            'SELECT room, course_name, section, start_time, end_time, snapshot_interval FROM teacher_camera_settings WHERE teacher_id = $1',
             [teacherId],
         )
         if (result.rows[0]) return toSettings(result.rows[0])
     }
     const result = await db.query(
-        `SELECT room, course_name, section, start_time, end_time
+        `SELECT room, course_name, section, start_time, end_time, snapshot_interval
          FROM teacher_camera_settings
          ORDER BY updated_at DESC NULLS LAST
          LIMIT 1`,
     )
     if (result.rows[0]) return toSettings(result.rows[0])
     const fallback = await db.query(
-        'SELECT room, course_name, section, start_time, end_time FROM camera_settings WHERE id = 1',
+        'SELECT room, course_name, section, start_time, end_time, snapshot_interval FROM camera_settings WHERE id = 1',
     )
     return toSettings(fallback.rows[0])
 }
 
 export async function writeCameraSettings(config: CameraSettings, updatedBy: string): Promise<void> {
     await db.query(
-        `INSERT INTO teacher_camera_settings (teacher_id, room, course_name, section, start_time, end_time)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO teacher_camera_settings (teacher_id, room, course_name, section, start_time, end_time, snapshot_interval)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (teacher_id) DO UPDATE SET
              room = EXCLUDED.room,
              course_name = EXCLUDED.course_name,
              section = EXCLUDED.section,
              start_time = EXCLUDED.start_time,
              end_time = EXCLUDED.end_time,
+             snapshot_interval = EXCLUDED.snapshot_interval,
              updated_at = NOW()`,
-         [updatedBy, config.room, config.courseName, config.section, config.startTime, config.endTime],
-     )
+        [updatedBy, config.room, config.courseName, config.section, config.startTime, config.endTime, config.snapshotInterval ?? 30],
+    )
 }
 
 export async function queueCameraCommand(action: 'start' | 'stop' | 'snapshot', requestedBy: string): Promise<CameraCommand> {

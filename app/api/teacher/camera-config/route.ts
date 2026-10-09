@@ -47,6 +47,7 @@ export async function GET() {
                 section: config.section,
                 startTime: config.startTime,
                 endTime: config.endTime,
+                snapshotInterval: config.snapshotInterval ?? 30,
                 hasScheduleOverride: Boolean(config.startTime && config.endTime),
             },
         })
@@ -67,6 +68,7 @@ export async function PUT(request: Request) {
         const section = typeof body.section === 'string' ? body.section.trim() : ''
         const startTime = typeof body.startTime === 'string' ? body.startTime.trim() : ''
         const endTime = typeof body.endTime === 'string' ? body.endTime.trim() : ''
+        const snapshotInterval = typeof body.snapshotInterval === 'number' && body.snapshotInterval >= 5 && body.snapshotInterval <= 300 ? body.snapshotInterval : 30
         const useScheduleOverride = body.useScheduleOverride === true
         const contexts = await getTeacherContexts(user.id)
         const roomOptions = [...new Set(contexts.map(context => context.room))]
@@ -77,7 +79,7 @@ export async function PUT(request: Request) {
         if (!courseName && section) {
             return NextResponse.json({ success: false, error: 'Choose a course before choosing a section.' }, { status: 400 })
         }
-        if (courseName && !contexts.some(context =>
+        if (courseName && !contexts.some(context => 
             context.room === room && context.courseName === courseName && (!section || context.section === section)
         )) {
             return NextResponse.json({ success: false, error: 'Choose a course and section assigned to you in the selected room.' }, { status: 400 })
@@ -92,6 +94,7 @@ export async function PUT(request: Request) {
             section,
             startTime: useScheduleOverride ? startTime : '',
             endTime: useScheduleOverride ? endTime : '',
+            snapshotInterval
         }
         await writeCameraSettings(config, user.id)
         console.log(`Camera settings saved by teacher ${user.id}:`, config)
