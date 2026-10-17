@@ -1,5 +1,11 @@
-import { NextResponse } from 'next/server'
-import db from '@/app/services/database'
+export const runtime = 'nodejs';
+
+import { NextResponse } from 'next/server';
+import db from '@/app/services/database';
+import { join } from 'node:path';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+
+const MODELS_BASE_DIR = join(process.cwd(), 'models', 'face-recognition');
 
 export async function POST(request: Request) {
     try {
@@ -58,13 +64,28 @@ export async function POST(request: Request) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // Store model in course_models table (one row per course + section)
+        // Ensure models directory exists
+        if (!existsSync(MODELS_BASE_DIR)) {
+            mkdirSync(MODELS_BASE_DIR, { recursive: true });
+        }
+
+        // Generate consistent filename
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const safeSection = section || 'null';
+        const filename = `model_section_${courseId}_${safeSection}_${timestamp}.joblib`;
+        const filePath = join(MODELS_BASE_DIR, filename);
+
+        // Save file to filesystem
+        writeFileSync(filePath, buffer);
+
+        // Store metadata in database (lightweight)
         const updateResult = await db.query(
             `UPDATE course_models
-             SET model_pickle = $1,
+             SET model_path = $1,
+                 file_size = $2,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE course_id = $2
-               AND section IS NOT DISTINCT FROM $3
+             WHERE course_id = $3
+               AND section IS NOT DISTINCT FROM $4
                AND course_id IN (
                    SELECT s.id
                    FROM section s
@@ -72,7 +93,7 @@ export async function POST(request: Request) {
                    WHERE c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
                )
              RETURNING id`,
-            [buffer, courseId, section]
+            [filePath, buffer.length, courseId, section]
         );
 
         let modelId: string;
@@ -81,10 +102,10 @@ export async function POST(request: Request) {
             modelId = updateResult.rows[0].id;
         } else {
             const insertResult = await db.query(
-                `INSERT INTO course_models (course_id, section, model_pickle)
-                 VALUES ($1, $2, $3)
+                `INSERT INTO course_models (course_id, section, model_path, file_size)
+                 VALUES ($1, $2, $3, $4)
                  RETURNING id`,
-                [courseId, section, buffer]
+                [courseId, section, filePath, buffer.length]
             );
             modelId = insertResult.rows[0].id;
         }
@@ -96,7 +117,8 @@ export async function POST(request: Request) {
             course_id: courseId,
             section,
             fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
-            fileName: file.name
+            fileName: file.name,
+            storedPath: filePath
         });
     } catch (error) {
         console.error('Model upload error:', error);

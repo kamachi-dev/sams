@@ -1,53 +1,42 @@
 #!/usr/bin/env python3
 """
-Wrapper script to make the existing recognize.py functionality 
+Wrapper script to make the existing recognize.py functionality
 callable from Node.js API routes for processing snapshots.
+Accepts base64-encoded pickle data for model instead of JSON.
 """
 
 import sys
 import json
-import base64
 import os
-import cv2
-import numpy as np
+import contextlib
 import joblib
-from insightface.app import FaceAnalysis
 
 # Add the camera-agent directory to path so we can import recognize.py
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'camera-agent'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'camera-agent')))
 
-from recognize import recognize_faces, align_face_scrfd, check_luminance, check_frontal_pose, ensemble_vote
+from insightface.app import FaceAnalysis
+from recognize import recognize_faces
 
 def main():
     if len(sys.argv) < 3:
-        print(json.dumps({"success": false, "error": "Usage: python recognize-wrapper.py <image_base64> <model_data_json>"}))
+        print(json.dumps({"success": False, "error": "Usage: python recognize-wrapper.py <image_path> <model_path>"}))
         sys.exit(1)
-    
+
     try:
-        # Decode base64 image
-        image_base64 = sys.argv[1]
-        model_data_json = sys.argv[2]
-        
-        # Convert base64 to image
-        image_data = base64.b64decode(image_base64)
-        nparr = np.frombuffer(image_data, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
+        image_path = sys.argv[1]
+        model_path = sys.argv[2]
+        model_data = joblib.load(model_path)
+
+        import cv2
+        image = cv2.imread(image_path, cv2.IMREAD_COLOR)
         if image is None:
-            print(json.dumps({"success": false, "error": "Failed to decode image"}))
+            print(json.dumps({"success": False, "error": "Failed to decode image"}))
             sys.exit(1)
-        
-        # Load model data
-        model_data = json.loads(model_data_json)
-        
-        # Initialize SCRFD face detector (same as in camera agent)
-        scrfd_app = FaceAnalysis(name='buffalo_sc', providers=['CPUExecutionProvider'])
-        scrfd_app.prepare(ctx_id=0, det_size=(640, 640))  # Using smaller size for performance
-        
-        # Recognize faces
-        results = recognize_faces(image, model_data, scrfd_app)
-        
-        # Format results for JSON response
+
+        with contextlib.redirect_stdout(sys.stderr):
+            scrfd_app = FaceAnalysis(name='buffalo_sc', providers=['CPUExecutionProvider'])
+            scrfd_app.prepare(ctx_id=0, det_size=(1280, 1280))
+            results = recognize_faces(image, model_data, scrfd_app)
         records = []
         for result in results:
             if result["identity"] != "Unknown" and result["confidence"] > 0:
@@ -55,21 +44,19 @@ def main():
                     "student": result["identity"],
                     "course": model_data.get("course_id", "unknown"),
                     "confidence": result["confidence"],
-                    "timestamp": None  # Will be set by caller
+                    "timestamp": None
                 })
-        
-        response = {
+
+        print(json.dumps({
             "success": True,
             "data": {
                 "records": records,
                 "count": len(records)
             }
-        }
-        
-        print(json.dumps(response))
-        
+        }))
+
     except Exception as e:
-        print(json.dumps({"success": false, "error": str(e)}))
+        print(json.dumps({"success": False, "error": str(e)}))
         sys.exit(1)
 
 if __name__ == "__main__":

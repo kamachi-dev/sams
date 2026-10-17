@@ -1,0 +1,3 @@
+ALTER TABLE course_models
+    ADD COLUMN IF NOT EXISTS model_path TEXT,
+    ADD COLUMN IF NOT EXISTS file_size BIGINT;

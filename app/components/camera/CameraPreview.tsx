@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 
 export default function CameraPreview({ showControls = true }: { showControls?: boolean } = {}) {
@@ -11,7 +13,7 @@ export default function CameraPreview({ showControls = true }: { showControls?: 
     // For now, we'll simulate or leave as placeholder
     
     const initializePreview = async () => {
-      try:
+      try {
         // In a real implementation, you might:
         // 1. Check if camera system provides a web-accessible stream
         // 2. Set up WebRTC connection to the camera agent

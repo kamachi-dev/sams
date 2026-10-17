@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
     allowedDevOrigins: ['100.103.137.37'],
+    experimental: {
+        proxyClientMaxBodySize: 60 * 1024 * 1024,
+    },
     async headers() {
         return [
             {

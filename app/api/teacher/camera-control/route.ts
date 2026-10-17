@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         const user = await currentUser()
         if (!user) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
 
-        const { action } = await request.json()
+        const { action, cameraId } = await request.json()
         if (action === 'start') {
             await queueCameraCommand('start', user.id)
             return NextResponse.json({ success: true, data: { running: true, pending: true } })

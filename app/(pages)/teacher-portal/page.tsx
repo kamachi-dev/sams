@@ -4,6 +4,7 @@ import SamsTemplate from "@/app/components/SamsTemplate";
 import XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import BrowserCamera from '@/app/components/camera/BrowserCamera';
 import { 
     MagnifyingGlassIcon, 
     PersonIcon, 
@@ -35,7 +36,7 @@ import {
 } from "recharts";
 import { useState, useEffect, useRef } from "react";
 import './styles.css';
-import '../student-portal/styles.css';
+import '../teacher-portal/styles.css';
 
 // Types for low attendance students
 interface LowAttendanceStudent {
@@ -386,50 +387,87 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
 // End of Teacher Appeal Section
 
 function useCamera() {
-    const [room, setRoom] = useState('');
-    const [rooms, setRooms] = useState<string[]>([]);
-    const [courseName, setCourseName] = useState('');
-    const [section, setSection] = useState('');
-    const [contexts, setContexts] = useState<Array<{ room: string; courseName: string; section: string }>>([]);
-    const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState('');
-    const [useScheduleOverride, setUseScheduleOverride] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isCameraRunning, setIsCameraRunning] = useState(false);
-    const [isCameraAction, setIsCameraAction] = useState(false);
-    const [message, setMessage] = useState('');
-    const [detections, setDetections] = useState<{ detected: any[], undetected: any[] }>({ detected: [], undetected: [] });
-    const [snapshotLogs, setSnapshotLogs] = useState<string[]>([]);
-    const [totalStudents, setTotalStudents] = useState(0);
-    const [snapshots, setSnapshots] = useState<Array<{ url: string; timestamp: string; capturedAt: string }>>([]);
+      const [room, setRoom] = useState('');
+      const [rooms, setRooms] = useState<string[]>([]);
+      const [courseName, setCourseName] = useState('');
+      const [section, setSection] = useState('');
+      const [contexts, setContexts] = useState<Array<{ room: string; courseName: string; section: string }>>([]);
+      const [startTime, setStartTime] = useState('');
+      const [endTime, setEndTime] = useState('');
+      const [useScheduleOverride, setUseScheduleOverride] = useState(false);
+      const [isLoading, setIsLoading] = useState(true);
+      const [isSaving, setIsSaving] = useState(false);
+      const [isCameraRunning, setIsCameraRunning] = useState(false);
+      const [isCameraAction, setIsCameraAction] = useState(false);
+      const [message, setMessage] = useState('');
+      const [detections, setDetections] = useState<{ detected: any[], undetected: any[] }>({ detected: [], undetected: [] });
+      const [snapshotLogs, setSnapshotLogs] = useState<string[]>([]);
+      const [totalStudents, setTotalStudents] = useState(0);
+      const [snapshots, setSnapshots] = useState<Array<{ url: string; timestamp: string; capturedAt: string }>>([]);
+      const snapshotUrlsRef = useRef(new Set<string>());
+      const [selectedCameraId, setSelectedCameraId] = useState<string>('');
 
-    const refreshCameraStatus = async () => {
-        const response = await fetch('/api/teacher/camera-control', { cache: 'no-store' });
-        const result = await response.json();
-        if (!response.ok || !result.success) {
-            throw new Error(result.error || 'Failed to load camera status');
-        }
-        setIsCameraRunning(result.data.running === true);
-        return result.data as { running: boolean; pending: boolean };
-    };
+      const refreshCameraDetections = async () => {
+          const response = await fetch('/api/teacher/camera-detections', { credentials: 'include' });
+          const result = await response.json();
+          if (!response.ok || !result.success) {
+              throw new Error(result.error || 'Failed to load section students and detections');
+          }
+          const data = result.data as { detected: any[]; undetected: any[] };
+          setDetections(data);
+          setTotalStudents(data.detected.length + data.undetected.length);
+          return data;
+      };
 
-    useEffect(() => {
+      useEffect(() => () => {
+          snapshotUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+          snapshotUrlsRef.current.clear();
+      }, []);
+      const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+      const [snapshotInterval, setSnapshotInterval] = useState<number>(30); // Default 30 seconds
+
+useEffect(() => {
         const loadConfiguration = async () => {
             try {
-                const response = await fetch('/api/teacher/camera-config');
+                console.log('[Camera] Loading configuration from /api/teacher/camera-config');
+                const response = await fetch('/api/teacher/camera-config', { credentials: 'include' });
                 const result = await response.json();
                 if (!response.ok || !result.success) throw new Error(result.error || 'Failed to load camera configuration');
                 const config = result.data;
+                console.log('[Camera] Configuration loaded:', config);
                 if (!config || !Array.isArray(config.roomOptions) || !Array.isArray(config.contexts)) throw new Error('Invalid camera configuration response');
-                setRoom(typeof config.room === 'string' ? config.room : '');
+                console.log('[Camera] Room options:', config.roomOptions);
+                console.log('[Camera] Contexts (room/course/section combos):', config.contexts);
+
+                // Use the saved room if it exists in contexts, otherwise fall back to first context's room
+                const savedRoom = typeof config.room === 'string' ? config.room : '';
+                const contextRooms = config.contexts.map((c: { room: string }) => c.room);
+                const roomToUse = contextRooms.includes(savedRoom) ? savedRoom : (contextRooms[0] || '');
+
+                // If saved room doesn't match contexts, log a warning
+                if (savedRoom && !contextRooms.includes(savedRoom)) {
+                    console.warn('[Camera] Saved room "' + savedRoom + '" not in teacher contexts. Using "' + roomToUse + '" instead.');
+                }
+
+                setRoom(roomToUse);
                 setRooms(config.roomOptions);
                 setContexts(config.contexts);
-                setCourseName(typeof config.courseName === 'string' ? config.courseName : '');
-                setSection(typeof config.section === 'string' ? config.section : '');
+
+                // Find the context that matches our room, or use first context
+                const matchingContext = config.contexts.find((c: { room: string }) => c.room === roomToUse) || config.contexts[0];
+                if (matchingContext) {
+                    setCourseName(typeof matchingContext.courseName === 'string' ? matchingContext.courseName : '');
+                    setSection(typeof matchingContext.section === 'string' ? matchingContext.section : '');
+                }
+
                 setStartTime(typeof config.startTime === 'string' ? config.startTime : '');
                 setEndTime(typeof config.endTime === 'string' ? config.endTime : '');
                 setUseScheduleOverride(config.hasScheduleOverride === true);
+                try {
+                    await refreshCameraDetections();
+                } catch (error) {
+                    setMessage(error instanceof Error ? error.message : 'Failed to load section students');
+                }
             } catch (error) {
                 setMessage(error instanceof Error ? error.message : 'Failed to load camera configuration');
             } finally {
@@ -439,105 +477,46 @@ function useCamera() {
         loadConfiguration();
     }, []);
 
+    // Enumerate available cameras
     useEffect(() => {
-        const loadCameraStatus = async () => {
+        const enumerateCameras = async () => {
             try {
-                await refreshCameraStatus();
+                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                    console.warn('Camera enumeration not supported');
+                    return;
+                }
+
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                setCameras(videoDevices);
+
+                // Auto-select first available camera if none selected
+                if (videoDevices.length > 0 && !selectedCameraId) {
+                    setSelectedCameraId(videoDevices[0].deviceId);
+                }
             } catch (error) {
-                console.error('Error loading camera status:', error);
+                console.error('Error enumerating cameras:', error);
             }
         };
-        loadCameraStatus();
-    }, []);
 
-    useEffect(() => {
-        const pollCameraStatus = async () => {
+        enumerateCameras();
+    }, []); // Run once on mount
+
+const saveConfiguration = async () => {
+            setIsSaving(true);
+            setMessage('');
             try {
-                const status = await refreshCameraStatus();
-                if (!status.pending) return;
-            } catch (error) {
-                console.error('Error refreshing camera status:', error);
-            }
-        };
-
-        const intervalId = window.setInterval(pollCameraStatus, 3000);
-        return () => window.clearInterval(intervalId);
-    }, []);
-
-    useEffect(() => {
-        if (!isCameraRunning) {
-            setDetections({ detected: [], undetected: [] });
-            setSnapshots([]);
-            return;
-        }
-
-        const fetchDetections = async () => {
-            try {
-                const response = await fetch('/api/teacher/camera-detections');
-                const result = await response.json();
-                if (result.success) {
-                    setDetections(result.data);
-                    setTotalStudents(result.data.detected.length + result.data.undetected.length);
-                }
-            } catch (err) {
-                console.error("Error polling detections:", err);
-            }
-        };
-
-        const fetchSnapshots = async () => {
-            try {
-                const response = await fetch('/api/teacher/camera-snapshots');
-                const result = await response.json();
-                if (result.success) {
-                    setSnapshots(result.data);
-                }
-            } catch (err) {
-                console.error("Error fetching snapshots:", err);
-            }
-        };
-
-        fetchDetections();
-        fetchSnapshots();
-        const pollId = setInterval(() => { fetchDetections(); fetchSnapshots(); }, 5000);
-
-        const triggerSnapshot = async () => {
-            try {
-                const nowStr = new Date().toLocaleTimeString();
-                setSnapshotLogs(prev => [`[${nowStr}] Snapshot triggered...`, ...prev.slice(0, 19)]);
-                
-                const response = await fetch('/api/teacher/camera-snapshot', { method: 'POST' });
-                const result = await response.json();
-                if (result.success) {
-                    setSnapshotLogs(prev => [`[${nowStr}] Snapshot successfully completed.`, ...prev.slice(1)]);
-                } else {
-                    setSnapshotLogs(prev => [`[${nowStr}] Snapshot failed: ${result.error}`, ...prev.slice(1)]);
-                }
-            } catch (err) {
-                console.error("Error triggering snapshot:", err);
-            }
-        };
-
-        const snapshotId = setInterval(triggerSnapshot, 60000);
-
-        return () => {
-            clearInterval(pollId);
-            clearInterval(snapshotId);
-        };
-    }, [isCameraRunning]);
-
-    const saveConfiguration = async () => {
-        setIsSaving(true);
-        setMessage('');
-        try {
-            const response = await fetch('/api/teacher/camera-config', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ room, courseName, section, startTime, endTime, useScheduleOverride }),
-            });
+               const response = await fetch('/api/teacher/camera-config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ room, courseName, section, startTime, endTime, useScheduleOverride }),
+                });
             const result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.error || 'Failed to save camera configuration');
             setStartTime(result.data.startTime);
             setEndTime(result.data.endTime);
+            await refreshCameraDetections();
             setMessage('Camera configuration saved.');
         } catch (error) {
             setMessage(error instanceof Error ? error.message : 'Failed to save camera configuration');
@@ -547,92 +526,203 @@ function useCamera() {
     };
 
     const toggleCamera = async () => {
-        const action = isCameraRunning ? 'stop' : 'start';
         setIsCameraAction(true);
         setMessage('');
         try {
-            if (action === 'start') {
-                const response = await fetch('/api/teacher/camera-control', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action }),
-                });
-                const result = await response.json();
-                if (!response.ok || !result.success) throw new Error(result.error || 'Failed to control camera');
-                setIsCameraRunning(result.data.running === true);
-                setMessage('Camera started. Initializing snapshot...');
-
-                setTimeout(async () => {
-                    try {
-                        const nowStr = new Date().toLocaleTimeString();
-                        setSnapshotLogs(prev => [`[${nowStr}] Snapshot triggered...`, ...prev]);
-                        const snapRes = await fetch('/api/teacher/camera-snapshot', { method: 'POST' });
-                        const snapResult = await snapRes.json();
-                        if (snapResult.success) {
-                            setSnapshotLogs(prev => [`[${nowStr}] Snapshot successfully completed.`, ...prev.slice(1)]);
-                        } else {
-                            setSnapshotLogs(prev => [`[${nowStr}] Snapshot failed: ${snapResult.error}`, ...prev.slice(1)]);
-                        }
-                    } catch (err) {
-                        console.error('Initial snapshot error:', err);
-                    }
-                }, 5000);
-            } else {
-                setMessage('Finalizing attendance and stopping camera...');
-                const response = await fetch('/api/teacher/finalize-attendance', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                });
-                const result = await response.json();
-                if (!response.ok || !result.success) throw new Error(result.error || 'Failed to finalize attendance');
+            if (isCameraRunning) {
                 setIsCameraRunning(false);
-                setMessage('Attendance finalized. Camera stopped.');
-                setSnapshotLogs(prev => [`[${new Date().toLocaleTimeString()}] Camera stopped. Attendance finalized.`, ...prev.slice(0, 19)]);
+                setMessage('Browser camera stopped. Recognition results remain available in the activity log.');
+                return;
             }
+
+            if (!courseName || !section) {
+                throw new Error('Choose a course and section before starting the camera.');
+            }
+            if (!navigator.mediaDevices?.getUserMedia) {
+                throw new Error('This browser does not support camera access.');
+            }
+
+            const response = await fetch('/api/teacher/camera-config', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ room, courseName, section, startTime, endTime, useScheduleOverride })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Failed to save camera configuration');
+            }
+
+            await refreshCameraDetections();
+            setIsCameraRunning(true);
+            setMessage(`Browser camera started for ${courseName}, section ${section}.`);
         } catch (error) {
-            try {
-                const status = await refreshCameraStatus();
-                if (status.running || status.pending) {
-                    setMessage(`Camera ${action} may already be queued; the controls were synchronized with the latest command.`);
-                } else {
-                    setMessage(error instanceof Error ? error.message : 'Failed to control camera');
-                }
-            } catch {
-                setMessage(error instanceof Error ? error.message : 'Failed to control camera');
-            }
+            setMessage(error instanceof Error ? error.message : String(error));
         } finally {
             setIsCameraAction(false);
         }
     };
 
-    return {
-        room, setRoom, rooms, courseName, setCourseName, section, setSection,
-        contexts, startTime, setStartTime, endTime, setEndTime,
-        useScheduleOverride, setUseScheduleOverride,
-        isLoading, isSaving, isCameraRunning, isCameraAction,
-        message, detections, snapshotLogs, snapshots,
-        totalStudents,
-        saveConfiguration, toggleCamera,
+    const finalizeAttendance = async () => {
+        if (isCameraRunning) {
+            setMessage('Stop the browser camera before finalizing attendance.');
+            return;
+        }
+        if (!window.confirm('Finalize attendance for this section? This will write attendance records and send notifications.')) return;
+
+        setIsCameraAction(true);
+        setMessage('');
+        try {
+            const response = await fetch('/api/teacher/finalize-attendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ source: 'browser' })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Failed to finalize attendance');
+            }
+            setMessage(result.message || 'Attendance finalized.');
+        } catch (error) {
+            setMessage(error instanceof Error ? error.message : String(error));
+        } finally {
+            setIsCameraAction(false);
+        }
     };
+
+    const handleBrowserSnapshot = async (imageBlob: Blob) => {
+        const imageUrl = URL.createObjectURL(imageBlob);
+        snapshotUrlsRef.current.add(imageUrl);
+        const now = new Date();
+        const timestamp = now.toLocaleTimeString();
+
+        setSnapshots(prev => {
+            const removed = prev.slice(19);
+            removed.forEach(snapshot => {
+                URL.revokeObjectURL(snapshot.url);
+                snapshotUrlsRef.current.delete(snapshot.url);
+            });
+            return [{ url: imageUrl, timestamp, capturedAt: now.toISOString() }, ...prev.slice(0, 19)];
+        });
+
+        try {
+            const imageBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    if (typeof reader.result !== 'string') {
+                        reject(new Error('Failed to encode the camera snapshot'));
+                        return;
+                    }
+                    const commaIndex = reader.result.indexOf(',');
+                    if (commaIndex < 0) {
+                        reject(new Error('Invalid encoded camera snapshot'));
+                        return;
+                    }
+                    resolve(reader.result.slice(commaIndex + 1));
+                };
+                reader.onerror = () => reject(reader.error || new Error('Failed to read the camera snapshot'));
+                reader.readAsDataURL(imageBlob);
+            });
+
+            const response = await fetch('/api/teacher/process-snapshot-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ image_base64: imageBase64 })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Recognition request failed');
+            }
+
+            const records = Array.isArray(result.data?.recognized) ? result.data.recognized : [];
+            const recognized = records
+                .map((record: { student?: string }) => record.student)
+                .filter((student: unknown): student is string => typeof student === 'string');
+            let storedCount = 0;
+
+            if (records.length > 0) {
+                const persistResponse = await fetch('/api/teacher/camera-detections', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ records: records.map((record: { student: string; confidence?: number }) => ({
+                        student: record.student,
+                        confidence: record.confidence
+                    })) })
+                });
+                const persistResult = await persistResponse.json();
+                if (!persistResponse.ok || !persistResult.success) {
+                    throw new Error(persistResult.error || 'Failed to save recognized students');
+                }
+                storedCount = Number(persistResult.data?.storedCount) || 0;
+                await refreshCameraDetections();
+            }
+
+            const summary = recognized.length === 0
+                ? 'No known students recognized.'
+                : storedCount === 0
+                    ? 'A face was recognized, but no identities matched students enrolled in this section.'
+                    : `Recognized and saved: ${recognized.join(', ')}`;
+
+            setSnapshotLogs(prev => [`[${timestamp}] ${summary}`, ...prev.slice(0, 19)]);
+            return { success: true, data: { url: imageUrl, timestamp, recognized, storedCount } };
+        } catch (error) {
+            console.error('Error processing browser snapshot:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            setSnapshotLogs(prev => [`[${timestamp}] Recognition failed: ${errorMessage}`, ...prev.slice(0, 19)]);
+            return { success: false, error: errorMessage };
+        }
+    };
+
+return {
+          room, setRoom, rooms, courseName, setCourseName, section, setSection,
+          contexts, startTime, setStartTime, endTime, setEndTime,
+          useScheduleOverride, setUseScheduleOverride,
+          isLoading, isSaving, isCameraRunning, isCameraAction,
+          message, detections, snapshotLogs, snapshots,
+          totalStudents,
+          saveConfiguration, toggleCamera, finalizeAttendance,
+          handleBrowserSnapshot,
+          selectedCameraId, setSelectedCameraId,
+          cameras, setCameras,
+          snapshotInterval, setSnapshotInterval,
+      };
 }
 
 function CameraSettingsForm(props: {
-    room: string; setRoom: (v: string) => void; rooms: string[];
-    courseName: string; setCourseName: (v: string) => void;
-    section: string; setSection: (v: string) => void;
-    contexts: Array<{ room: string; courseName: string; section: string }>;
-    startTime: string; setStartTime: (v: string) => void;
-    endTime: string; setEndTime: (v: string) => void;
-    useScheduleOverride: boolean; setUseScheduleOverride: (v: boolean) => void;
-    isLoading: boolean; isSaving: boolean; isCameraRunning: boolean; isCameraAction: boolean;
-    message: string;
-    saveConfiguration: () => Promise<void>; toggleCamera: () => Promise<void>;
-}) {
-    const roomContexts = props.contexts.filter(c => c.room === props.room);
-    const courseOptions = [...new Set(roomContexts.map(c => c.courseName))];
-    const sectionOptions = [...new Set(roomContexts
-        .filter(c => c.courseName === props.courseName)
-        .map(c => c.section))];
+      room: string; setRoom: (v: string) => void; rooms: string[];
+      courseName: string; setCourseName: (v: string) => void;
+      section: string; setSection: (v: string) => void;
+      contexts: Array<{ room: string; courseName: string; section: string }>;
+      startTime: string; setStartTime: (v: string) => void;
+      endTime: string; setEndTime: (v: string) => void;
+      useScheduleOverride: boolean; setUseScheduleOverride: (v: boolean) => void;
+      isLoading: boolean; isSaving: boolean; isCameraRunning: boolean; isCameraAction: boolean;
+      selectedCameraId: string; setSelectedCameraId: (v: string) => void; cameras: MediaDeviceInfo[];
+      message: string;
+      saveConfiguration: () => Promise<void>; toggleCamera: () => Promise<void>; finalizeAttendance: () => Promise<void>;
+  }) {
+      console.log('[CameraSettingsForm] Props received:', {
+        room: props.room,
+        rooms: props.rooms,
+        courseName: props.courseName,
+        section: props.section,
+        contexts: props.contexts,
+        startTime: props.startTime,
+        endTime: props.endTime,
+        useScheduleOverride: props.useScheduleOverride,
+        isLoading: props.isLoading,
+      });
+      
+      const roomContexts = props.contexts.filter(c => c.room === props.room);
+      const courseOptions = [...new Set(roomContexts.map(c => c.courseName))];
+      const sectionOptions = [...new Set(roomContexts
+          .filter(c => c.courseName === props.courseName)
+          .map(c => c.section))];
+
+      console.log('[CameraSettingsForm] Computed options:', { roomContexts, courseOptions, sectionOptions });
 
     return (
         <section className="teacher-camera-nav-settings" aria-label="Camera settings">
@@ -644,6 +734,17 @@ function CameraSettingsForm(props: {
                         <label htmlFor="camera-room">Room</label>
                         <select id="camera-room" className="teacher-select" value={props.room} onChange={e => { props.setRoom(e.target.value); props.setCourseName(''); props.setSection(''); }} disabled={props.isSaving || props.rooms.length === 0}>
                             {props.rooms.length === 0 ? <option value="">No assigned rooms available</option> : props.rooms.map(value => <option key={value} value={value}>{value}</option>)}
+                        </select>
+                    </div>
+                    <div className="appeal-field">
+                        <label htmlFor="camera-device">Camera Device</label>
+                        <select id="camera-device" className="teacher-select" value={props.selectedCameraId} onChange={e => props.setSelectedCameraId(e.target.value)} disabled={props.isSaving || props.rooms.length === 0}>
+                            <option value="">Auto-select</option>
+                            {props.cameras.map(camera => (
+                                <option key={camera.deviceId} value={camera.deviceId}>
+                                    {camera.label || camera.deviceId}
+                                </option>
+                            ))}
                         </select>
                     </div>
                     <div className="teacher-camera-nav-contexts">
@@ -682,6 +783,9 @@ function CameraSettingsForm(props: {
                         </button>
                         <button className="teacher-camera-control-btn" onClick={props.toggleCamera} disabled={props.isCameraAction}>
                             {props.isCameraAction ? 'Working...' : props.isCameraRunning ? 'Stop camera' : 'Start camera'}
+                        </button>
+                        <button className="teacher-camera-control-btn" onClick={props.finalizeAttendance} disabled={props.isCameraRunning || props.isCameraAction || !props.courseName || !props.section}>
+                            Finalize Attendance
                         </button>
                     </div>
                     {props.message && <p className="teacher-camera-nav-status" role="status">{props.message}</p>}
@@ -2424,8 +2528,11 @@ export default function Teacher() {
                                 useScheduleOverride={camera.useScheduleOverride} setUseScheduleOverride={camera.setUseScheduleOverride}
                                 isLoading={camera.isLoading} isSaving={camera.isSaving}
                                 isCameraRunning={camera.isCameraRunning} isCameraAction={camera.isCameraAction}
+                                selectedCameraId={camera.selectedCameraId} setSelectedCameraId={camera.setSelectedCameraId}
+                                cameras={camera.cameras}
                                 message={camera.message}
                                 saveConfiguration={camera.saveConfiguration} toggleCamera={camera.toggleCamera}
+                                finalizeAttendance={camera.finalizeAttendance}
                             />
                             <section className="teacher-camera-nav-settings camera-snapshot-log-section" aria-label="Snapshot log">
                                 <h3 className="camera-snapshot-log-title">Snapshot Activity Log</h3>
@@ -2440,8 +2547,15 @@ export default function Teacher() {
                                 </div>
                             </section>
                         </div>
-                        <div className="teacher-right-column">
+<div className="teacher-right-column">
                             <div className="teacher-camera-monitoring camera-monitoring-inline">
+                                <h3>Live Camera Feed</h3>
+                                <BrowserCamera
+                                    onSnapshotCapture={camera.handleBrowserSnapshot}
+                                    isRunning={camera.isCameraRunning}
+                                    snapshotInterval={camera.snapshotInterval}
+                                    deviceId={camera.selectedCameraId}
+                                />
                                 <h3>Snapshots</h3>
                                 {camera.isCameraRunning ? (
                                     camera.snapshots.length === 0 ? (

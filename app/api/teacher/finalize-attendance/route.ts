@@ -37,10 +37,12 @@ function getClassTime(schedule: unknown, date: string | Date): string | null {
     }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
     try {
         const user = await currentUser()
         if (!user) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+        const requestBody = await request.json().catch(() => ({}))
+        const isBrowserRequest = requestBody.source === 'browser'
 
         const config = await readCameraSettings(user.id)
         if (!config.courseName || !config.section) {
@@ -259,8 +261,9 @@ export async function POST() {
         // Clear temporary detections
         await db.query('DELETE FROM camera_session_detections WHERE course_id = $1', [sectionId])
 
-        // Stop the camera agent
-        await queueCameraCommand('stop', user.id)
+        if (!isBrowserRequest) {
+            await queueCameraCommand('stop', user.id)
+        }
 
         return NextResponse.json({
             success: true,

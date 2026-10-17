@@ -40,7 +40,7 @@ test('PUT clears both config times when the database schedule is selected', asyn
     }))
 
     expect(response.status).toBe(200)
-    expect(writeCameraSettings).toHaveBeenCalledWith({ room: 'R314', courseName: 'Science', section: 'A', startTime: '', endTime: '' }, 'teacher_123')
+    expect(writeCameraSettings).toHaveBeenCalledWith({ room: 'R314', courseName: 'Science', section: 'A', startTime: '', endTime: '', snapshotInterval: 30 }, 'teacher_123')
 })
 
 test('PUT rejects a room the teacher is not assigned to', async () => {

@@ -1,7 +1,9 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function CameraControls() {
+export default function CameraControls({ selectedCameraId }: { selectedCameraId: string }) {
   const [isRunning, setIsRunning] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [snapshotInProgress, setSnapshotInProgress] = useState(false);
@@ -13,7 +15,9 @@ export default function CameraControls() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await fetch('/api/teacher/camera-control');
+        const res = await fetch('/api/teacher/camera-control', {
+          credentials: 'include'
+        });
         if (!res.ok) throw new Error('Failed to fetch camera status');
         const data = await res.json();
         setIsRunning(data.data?.running ?? false);
@@ -74,7 +78,8 @@ export default function CameraControls() {
       const res = await fetch('/api/teacher/camera-control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start' }),
+        credentials: 'include',
+        body: JSON.stringify({ action: 'start', cameraId: selectedCameraId }),
       });
       if (!res.ok) throw new Error('Failed to start camera');
       const data = await res.json();
@@ -90,6 +95,7 @@ export default function CameraControls() {
       const res = await fetch('/api/teacher/camera-control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'stop' }),
       });
       if (!res.ok) throw new Error('Failed to stop camera');

@@ -6,8 +6,8 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import os
-import fs from 'fs'
+import * as os from 'os'
+import * as fs from 'fs'
 
 const execFileAsync = promisify(execFile)
 const TEMP_DIR = path.join(process.cwd(), 'tmp', 'snapshots')
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       }
 
       // Add timestamp to records
-      const recordsWithTimestamp = result.data.records.map(record => ({
+      const recordsWithTimestamp = result.data.records.map((record: { [key: string]: any }) => ({
         ...record,
         timestamp: new Date().toISOString()
       }))

@@ -20,12 +20,117 @@ def align_face_scrfd(img, landmarks, image_size=112):
     aligned = cv2.warpAffine(img, M, (image_size, image_size), borderValue=0.0)
     return aligned
 
+def _detect_faces_with_scale(image, scrfd_app, scale, score_floor, min_face_size):
+    height, width = image.shape[:2]
+    if scale > 1.0:
+        detection_image = cv2.resize(
+            image,
+            (int(width * scale), int(height * scale)),
+            interpolation=cv2.INTER_CUBIC,
+        )
+    else:
+        detection_image = image
+
+    candidates = []
+    for face in scrfd_app.get(detection_image):
+        det_score = float(getattr(face, "det_score", 0.0))
+        if det_score < score_floor:
+            continue
+
+        bbox = np.asarray(face.bbox, dtype=np.float32).copy()
+        landmarks = getattr(face, "kps", None)
+        if scale > 1.0:
+            bbox /= scale
+            if landmarks is not None:
+                landmarks = np.asarray(landmarks, dtype=np.float32).copy() / scale
+
+        x1, y1, x2, y2 = bbox.astype(int)
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(width, x2), min(height, y2)
+        if x2 - x1 < min_face_size or y2 - y1 < min_face_size:
+            continue
+
+        candidates.append({
+            "bbox": (x1, y1, x2, y2),
+            "kps": landmarks,
+            "det_score": det_score,
+            "source": "upscaled" if scale > 1.0 else "primary",
+        })
+
+    return candidates
+
+
+def _detect_faces_multi_pass(image, scrfd_app):
+    height, width = image.shape[:2]
+    primary_scale = 2.2 if max(height, width) < 960 else 1.0
+    candidates = _detect_faces_with_scale(image, scrfd_app, primary_scale, 0.45, 10)
+    if candidates:
+        return candidates
+
+    far_scale = 3.0 if max(height, width) < 960 else 1.8
+    return _detect_faces_with_scale(image, scrfd_app, far_scale, 0.30, 6)
+
+
+def face_luminance(face):
+    if face is None or face.size == 0:
+        return 0.0
+    ycrcb = cv2.cvtColor(face, cv2.COLOR_BGR2YCrCb)
+    return float(np.mean(ycrcb[:, :, 0]))
+
+
+def face_blur_measure(face):
+    if face is None or face.size == 0:
+        return 0.0
+    gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+    return float(cv2.Laplacian(gray, cv2.CV_64F).var())
+
+
+def apply_unsharp_mask(face, amount=0.75, radius=1.0):
+    amount = float(np.clip(amount, 0.0, 2.5))
+    radius = float(np.clip(radius, 0.1, 3.0))
+    blurred = cv2.GaussianBlur(face, (0, 0), sigmaX=radius)
+    return cv2.addWeighted(face, 1.0 + amount, blurred, -amount, 0)
+
+
+def enhance_face_for_recognition(face, strength=0.65, upscale_factor=1.0, too_dark_luminance=38.0):
+    if face is None or face.size == 0:
+        return None
+
+    height, width = face.shape[:2]
+    min_dim = max(min(height, width), 1)
+    target_upscale = min(max(float(upscale_factor), 112.0 / min_dim if min_dim < 112 else 1.0), 3.2)
+    if target_upscale > 1.05:
+        interpolation = cv2.INTER_LANCZOS4 if target_upscale >= 1.8 else cv2.INTER_CUBIC
+        face = cv2.resize(face, None, fx=target_upscale, fy=target_upscale, interpolation=interpolation)
+
+    strength = float(np.clip(strength, 0.0, 1.0))
+    if face_luminance(face) < float(too_dark_luminance):
+        return None
+
+    ycrcb = cv2.cvtColor(face, cv2.COLOR_BGR2YCrCb)
+    y, cr, cb = cv2.split(ycrcb)
+    mean_y = float(np.mean(y))
+    if mean_y < 120:
+        gain = 1.0 + ((120.0 - mean_y) / 120.0) * (0.75 * strength)
+        y = np.clip(y.astype(np.float32) * gain, 0, 255).astype(np.uint8)
+    if mean_y < 105:
+        y = cv2.convertScaleAbs(y, alpha=1.0 + (0.22 * strength), beta=int(round(10 * strength)))
+
+    gamma = 1.0 - (0.22 * strength)
+    table = np.array([((i / 255.0) ** gamma) * 255 for i in range(256)], dtype=np.uint8)
+    y = cv2.LUT(y, table)
+    clahe = cv2.createCLAHE(clipLimit=1.0 + (1.4 * strength), tileGridSize=(8, 8))
+    y_clahe = clahe.apply(y)
+    y = cv2.addWeighted(y, 1.0 - (0.45 * strength), y_clahe, 0.45 * strength, 0)
+    enhanced = cv2.cvtColor(cv2.merge([y, cr, cb]), cv2.COLOR_YCrCb2BGR)
+
+    blur_score = face_blur_measure(enhanced)
+    sharpen_amount = 0.45 + (0.55 * strength) + (0.35 if blur_score < 70.0 else 0.0)
+    return apply_unsharp_mask(enhanced, amount=sharpen_amount, radius=1.25 if blur_score < 70.0 else 1.0)
+
+
 def check_luminance(crop_img):
-    if crop_img is None or crop_img.size == 0:
-        return False
-    gray = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
-    avg_brightness = np.mean(gray)
-    return avg_brightness >= 40.0
+    return face_luminance(crop_img) >= 40.0
 
 def check_frontal_pose(landmarks, bbox):
     x1, y1, x2, y2 = bbox
@@ -121,94 +226,139 @@ def ensemble_vote(embedding, top_models, label_encoder, per_model_floor):
     return winner, confidence, filtered_votes
 
 def recognize_faces(image, model_data, scrfd_app):
-    """
-    Processes an image, detects faces using SCRFD, aligns them, extracts Facenet512 embeddings,
-    and runs ensemble model predictions with cosine distance verification.
-    """
-    faces = scrfd_app.get(image)
-    if not faces:
+    """Detect, align, embed, and match faces using the supplied model gallery."""
+    candidates = _detect_faces_multi_pass(image, scrfd_app)
+    if not candidates:
         return []
-        
-    top_models = model_data.get("top_models", {})
+
+    top_models = model_data.get("top_models") or model_data.get("ensemble_models", {})
     label_encoder = model_data.get("label_encoder")
-    distance_threshold = model_data.get("distance_threshold", 0.24)
-    ensemble_min_confidence = model_data.get("ensemble_min_confidence", 92.0)
-    ensemble_per_model_min_confidence = model_data.get("ensemble_per_model_min_confidence", 92.0)
-    ref_embeddings = np.asarray(model_data.get("reference_embeddings", []))
+    embedding_model = str(model_data.get("embedding_model") or "Facenet512")
+    distance_threshold = float(model_data.get("distance_threshold", model_data.get("calibrated_distance_threshold", 0.35)))
+    ensemble_min_confidence = float(model_data.get("ensemble_min_confidence", 92.0))
+    ensemble_per_model_min_confidence = float(model_data.get("ensemble_per_model_min_confidence", 90.0))
+    min_logging_confidence = float(model_data.get("min_logging_confidence", ensemble_min_confidence))
+    low_light_threshold = float(model_data.get("low_light_luminance_threshold", 110.0))
+    too_dark_threshold = float(model_data.get("too_dark_luminance_threshold", 38.0))
+
+    ref_embeddings = np.asarray(model_data.get("reference_embeddings", []), dtype=np.float32)
     ref_labels = np.asarray(model_data.get("reference_labels", []))
-    
-    ref_embeddings_norm = []
-    if len(ref_embeddings) > 0:
-        ref_norms = np.linalg.norm(ref_embeddings, axis=1, keepdims=True) + 1e-12
-        ref_embeddings_norm = ref_embeddings / ref_norms
-        
+    if ref_embeddings.size and ref_embeddings.ndim == 1:
+        ref_embeddings = np.expand_dims(ref_embeddings, axis=0)
+    if ref_embeddings.size and len(ref_labels) == len(ref_embeddings):
+        ref_embeddings_norm = ref_embeddings / (np.linalg.norm(ref_embeddings, axis=1, keepdims=True) + 1e-12)
+    else:
+        ref_embeddings_norm = np.empty((0, 0), dtype=np.float32)
+
     results = []
-    for face in faces:
-        bbox = face.bbox.astype(int)
-        x1, y1, x2, y2 = bbox
-        
-        if face.det_score < 0.25:
+    for candidate in candidates:
+        x1, y1, x2, y2 = candidate["bbox"]
+        kps = candidate.get("kps")
+        face_w, face_h = x2 - x1, y2 - y1
+        face_crop = image[y1:y2, x1:x2]
+        if face_crop.size == 0:
             continue
-            
-        h, w = image.shape[:2]
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(w, x2), min(h, y2)
-        if (x2 - x1) < 20 or (y2 - y1) < 20:
-            continue
-            
+
         is_frontal = True
-        if hasattr(face, 'kps') and face.kps is not None:
-            is_frontal = check_frontal_pose(face.kps, bbox)
-            
-        if hasattr(face, 'kps') and face.kps is not None:
+        if kps is not None:
             try:
-                face_crop = align_face_scrfd(image, face.kps, image_size=112)
+                is_frontal = check_frontal_pose(kps, (x1, y1, x2, y2))
+                face_for_embedding = align_face_scrfd(image, kps, image_size=112)
             except Exception:
-                face_crop = image[y1:y2, x1:x2]
+                face_for_embedding = face_crop
         else:
-            face_crop = image[y1:y2, x1:x2]
-            
-        is_bright = check_luminance(face_crop)
-        
+            face_for_embedding = face_crop
+
+        luminance = face_luminance(face_for_embedding)
+        if luminance < too_dark_threshold:
+            results.append({
+                "bbox": [int(x1), int(y1), int(x2), int(y2)],
+                "det_score": candidate["det_score"],
+                "is_frontal": is_frontal,
+                "is_bright": False,
+                "min_distance": 1.0,
+                "ensemble_identity": "Unknown",
+                "ensemble_confidence": 0.0,
+                "identity": "Unknown",
+                "confidence": 0.0,
+                "face_crop": face_crop,
+            })
+            continue
+
         try:
-            emb = DeepFace.represent(face_crop, model_name="Facenet512", enforce_detection=False)[0]["embedding"]
+            embedding = np.asarray(
+                DeepFace.represent(face_for_embedding, model_name=embedding_model, enforce_detection=False)[0]["embedding"],
+                dtype=np.float32,
+            )
+            face_size = min(face_w, face_h)
+            if face_size < 96 or luminance < low_light_threshold:
+                try:
+                    enhanced = enhance_face_for_recognition(
+                        face_for_embedding.copy(),
+                        strength=0.85 if luminance < 85.0 or face_size < 45 else 0.65,
+                        upscale_factor=2.2 if face_size < 45 else 1.6,
+                        too_dark_luminance=too_dark_threshold,
+                    )
+                    if enhanced is not None:
+                        enhanced_embedding = np.asarray(
+                            DeepFace.represent(enhanced, model_name=embedding_model, enforce_detection=False)[0]["embedding"],
+                            dtype=np.float32,
+                        )
+                        if enhanced_embedding.shape == embedding.shape:
+                            embedding = (embedding * 0.55) + (enhanced_embedding * 0.45)
+                except Exception:
+                    pass
         except Exception:
             continue
-            
-        pred_name, confidence, votes = ensemble_vote(
-            emb, top_models, label_encoder, ensemble_per_model_min_confidence
+
+        classifier_label, classifier_confidence, votes = ensemble_vote(
+            embedding, top_models, label_encoder, ensemble_per_model_min_confidence
         )
-        
-        passed_distance_check = False
+
+        gallery_label = None
+        gallery_confidence = 0.0
         min_distance = 1.0
-        
-        if pred_name != "Unknown" and len(ref_embeddings_norm) > 0:
-            emb_norm = np.asarray(emb) / (np.linalg.norm(emb) + 1e-12)
-            matching_indices = np.where(ref_labels == pred_name)[0]
-            if len(matching_indices) > 0:
-                dists = 1.0 - np.dot(ref_embeddings_norm[matching_indices], emb_norm)
-                min_distance = float(np.min(dists))
-                if min_distance <= distance_threshold:
-                    passed_distance_check = True
-                    
+        if ref_embeddings_norm.size:
+            embedding_norm = embedding / (np.linalg.norm(embedding) + 1e-12)
+            if embedding_norm.shape[0] == ref_embeddings_norm.shape[1]:
+                distances = 1.0 - np.dot(ref_embeddings_norm, embedding_norm)
+                best_index = int(np.argmin(distances))
+                gallery_label = str(ref_labels[best_index])
+                min_distance = float(distances[best_index])
+                gallery_confidence = max(0.0, 1.0 - min_distance) * 100.0
+
+        gallery_accepted = gallery_label is not None and min_distance <= distance_threshold
         final_identity = "Unknown"
         final_confidence = 0.0
-        
-        if pred_name != "Unknown" and passed_distance_check and confidence >= ensemble_min_confidence:
-            final_identity = pred_name
-            final_confidence = confidence
-            
+        if classifier_label != "Unknown":
+            if gallery_label == classifier_label:
+                final_identity = classifier_label
+                final_confidence = max(classifier_confidence, gallery_confidence)
+            elif gallery_accepted:
+                final_identity = gallery_label
+                final_confidence = gallery_confidence
+            else:
+                final_identity = classifier_label
+                final_confidence = classifier_confidence * 0.5
+        elif gallery_accepted:
+            final_identity = gallery_label
+            final_confidence = gallery_confidence
+
+        if final_identity != "Unknown" and final_confidence < min_logging_confidence:
+            final_identity = "Unknown"
+            final_confidence = 0.0
+
         results.append({
             "bbox": [int(x1), int(y1), int(x2), int(y2)],
-            "det_score": float(face.det_score),
+            "det_score": float(candidate["det_score"]),
             "is_frontal": is_frontal,
-            "is_bright": is_bright,
+            "is_bright": luminance >= 40.0,
             "min_distance": min_distance,
-            "ensemble_identity": pred_name,
-            "ensemble_confidence": confidence,
+            "ensemble_identity": classifier_label,
+            "ensemble_confidence": float(classifier_confidence),
             "identity": final_identity,
-            "confidence": final_confidence,
-            "face_crop": face_crop
+            "confidence": float(final_confidence),
+            "face_crop": face_crop,
         })
-        
+
     return results
