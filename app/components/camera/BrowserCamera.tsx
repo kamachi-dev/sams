@@ -171,14 +171,6 @@ export default function BrowserCamera({
             </div>
           </div>
         )}
-        {isProcessing && (
-          <div className="absolute inset-0 bg-blue-500 bg-opacity-25 flex items-center justify-center pointer-events-none">
-            <div className="flex items-center gap-2 text-white text-sm" role="status">
-              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
-              <span>Processing recognition...</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

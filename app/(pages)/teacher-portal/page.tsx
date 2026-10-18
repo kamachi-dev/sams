@@ -797,6 +797,8 @@ function CameraSettingsForm(props: {
 
 export default function Teacher() {
     const camera = useCamera();
+    const [isSnapshotLogVisible, setIsSnapshotLogVisible] = useState(false);
+    const [areDetectionsVisible, setAreDetectionsVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [isExporting, setIsExporting] = useState(false);
     const [selectedView, setSelectedView] = useState<"daily" | "weekly" | "monthly" | "quarterly">("daily");
@@ -2535,8 +2537,17 @@ export default function Teacher() {
                                 finalizeAttendance={camera.finalizeAttendance}
                             />
                             <section className="teacher-camera-nav-settings camera-snapshot-log-section" aria-label="Snapshot log">
-                                <h3 className="camera-snapshot-log-title">Snapshot Activity Log</h3>
-                                <div className="activity-log-box" style={{ height: '140px' }}>
+                                <button
+                                    type="button"
+                                    className="camera-panel-toggle"
+                                    aria-expanded={isSnapshotLogVisible}
+                                    aria-controls="camera-snapshot-log"
+                                    onClick={() => setIsSnapshotLogVisible(visible => !visible)}
+                                >
+                                    <span className="camera-panel-toggle-label">Snapshot Activity Log</span>
+                                    <span className="camera-panel-toggle-action">{isSnapshotLogVisible ? 'Hide' : 'Show'}</span>
+                                </button>
+                                <div id="camera-snapshot-log" className="activity-log-box" style={{ height: '140px' }} hidden={!isSnapshotLogVisible}>
                                     {camera.snapshotLogs.length === 0 ? (
                                         <p className="no-log-text">No snapshot activity yet.</p>
                                     ) : (
@@ -2576,8 +2587,20 @@ export default function Teacher() {
                                     </p>
                                 )}
                             </div>
-                            <div className="camera-detections-inline">
-                                <div className="detections-split">
+                            <section className="camera-detections-inline" aria-label="Camera detection results">
+                                <button
+                                    type="button"
+                                    className="camera-panel-toggle"
+                                    aria-expanded={areDetectionsVisible}
+                                    aria-controls="camera-detection-results"
+                                    onClick={() => setAreDetectionsVisible(visible => !visible)}
+                                >
+                                    <span className="camera-panel-toggle-label">
+                                        Detection Results · Detected {camera.detections.detected.length} · Not detected {camera.detections.undetected.length}
+                                    </span>
+                                    <span className="camera-panel-toggle-action">{areDetectionsVisible ? 'Hide' : 'Show'}</span>
+                                </button>
+                                <div id="camera-detection-results" className="detections-split" hidden={!areDetectionsVisible}>
                                     <div className="detections-column">
                                         <h4>✓ Detected ({camera.detections.detected.length})</h4>
                                         <ul className="detections-list present-list">
@@ -2610,7 +2633,7 @@ export default function Teacher() {
                                         </ul>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
                         </div>
                     </div>
                 )

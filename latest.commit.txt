@@ -5,3 +5,6 @@ Updated `/api/courses` POST endpoint and tests to support teacher, classroom, an
 Updated the course creation modal UI to support custom time slots (start time and end time) for each day of the week independently.
 Modified students and teachers GET & count API endpoints to return newly created/unenrolled users, allowing them to appear in portal lists for management and enrollment.
 Added Vitest tests for `/api/users` and `/api/courses` API endpoints to ensure reliable creation of all resources.
+Updated the teacher camera snapshot gallery to preserve fixed-height thumbnail rows and scroll internally as snapshots accumulate.
+Added show/hide toggles for camera detection results and snapshot activity logs, collapsed by default to maximize camera viewing space.
+Removed the recurring recognition-processing overlay from the live camera preview so it stays unobstructed while snapshots are processed.
