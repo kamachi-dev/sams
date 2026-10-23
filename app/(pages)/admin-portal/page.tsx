@@ -1182,7 +1182,7 @@ export default function Admin() {
                     content: <section className="import-section">
                         {importStatus && <div className="import-status">{importStatus}</div>}
 
-                        <Tabs.Root defaultValue="view" className="user-tabs" style={{ width: '100%' }}>
+                        <Tabs.Root defaultValue="view" className="user-tabs">
                             <Tabs.List className="tab-list" aria-label="Course tabs">
                                 <Tabs.Trigger value="view" className="tab-trigger">View Courses</Tabs.Trigger>
                             </Tabs.List>
