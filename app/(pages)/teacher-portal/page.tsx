@@ -233,7 +233,7 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
                             filteredAppeals.map((appeal: any) => (
                                 <div
                                     key={appeal.id}
-                                    className={`appeal-item ${appeal.status}`}
+                                    className={`appeal-item ${appeal.status} ${selectedAppeal?.id === appeal.id ? "active" : ""}`}
                                     onClick={() => setSelectedAppeal(appeal)}
                                 >
                                     <div className="appeal-item-header">

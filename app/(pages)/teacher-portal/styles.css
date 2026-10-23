@@ -1818,11 +1818,300 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
     width: 100%;
 }
 
+/* Attendance Appeal Layout (mirrors student portal) */
+.appeal-container {
+    padding: 0 10px;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.appeal-card {
+    background: var(--background1);
+    padding: 16px;
+    border-radius: 6px;
+    border: 1px solid #F2F2F2;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+    max-width: 350px;
+    flex: 0 0 350px;
+    min-width: 0;
+}
+
+.appeal-title {
+    color: #1F2F57;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.appeal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.appeal-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.appeal-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent1);
+}
+
+.appeal-field input,
+.appeal-field select,
 .appeal-field textarea {
-    resize: none;       
-    max-height: 120px;    
-    min-height: 120px;   
-    overflow-y: auto;    
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #F2F2F2;
+    background: var(--foreground5);
+    color: var(--accent1);
+    font-size: 13px;
+}
+
+.appeal-field textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.appeal-split-layout {
+    display: grid;
+    grid-template-columns: 35% 65%;
+    gap: 10px;
+    height: 100%;
+    min-height: 0;
+}
+
+/* LEFT */
+.appeal-list,
+.appeal-form-container,
+.appeal-history-card {
+    min-height: 0;
+}
+
+.appeal-list {
+    background: var(--background1);
+    border: 1px solid #F2F2F2;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+}
+
+.appeal-list-title {
+    text-align: center;
+    background: var(--accent1);
+    color: var(--background1);
+    padding: 10px;
+    font-weight: 600;
+    border-radius: 6px 6px 0 0;
+}
+
+.appeal-list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.appeal-item {
+    padding: 10px;
+    border-bottom: 1px solid #F2F2F2;
+    cursor: pointer;
+}
+
+.appeal-item:hover {
+    background: #EAF4FF;
+}
+
+.appeal-item.active {
+    background: var(--foreground3);
+}
+
+.appeal-item.late {
+    border-left: 5px solid var(--late);
+}
+
+.appeal-item.absent {
+    border-left: 5px solid var(--absent);
+}
+
+.appeal-item.approved {
+    border-left: 5px solid var(--present);
+}
+
+.appeal-item.pending {
+    border-left: 5px solid var(--late);
+}
+
+.appeal-item.rejected {
+    border-left: 5px solid var(--absent);
+}
+
+/* RIGHT */
+.appeal-form-container {
+    display: flex;
+    min-height: 0;
+}
+
+.appeal-empty {
+    padding: 20px;
+    color: var(--foreground2);
+}
+
+.appeal-item-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+}
+
+.appeal-item-course {
+    font-size: 14px;
+    color: var(--accent1);
+}
+
+.appeal-item-prof {
+    font-size: 12px;
+    color: var(--foreground2);
+}
+
+.appeal-item-time-range {
+    font-size: 12px;
+    color: var(--foreground2);
+}
+
+.appeal-item-reason {
+    font-size: 11px;
+    color: var(--foreground1);
+    margin-top: 4px;
+}
+
+.appeal-item.late .appeal-item-status {
+    color: var(--late);
+}
+
+.appeal-item.absent .appeal-item-status {
+    color: var(--absent);
+}
+
+.appeal-item.pending .appeal-item-status {
+    color: var(--late);
+}
+
+.appeal-item.approved .appeal-item-status {
+    color: var(--present);
+}
+
+.appeal-item.rejected .appeal-item-status {
+    color: var(--absent);
+}
+
+.appeal-right-layout {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+
+.appeal-history-card {
+    background: var(--background1);
+    border: 1px solid #F2F2F2;
+    border-radius: 6px;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.appeal-history-scroll {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.appeal-history-title {
+    text-align: center;
+    background: var(--accent1);
+    color: var(--background1);
+    font-weight: 600;
+    padding: 10px;
+}
+
+.appeal-history-item {
+    padding: 8px;
+    border-left: 5px solid;
+    background: var(--background1);
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.appeal-history-item:last-child {
+    border-bottom: none;
+}
+
+.appeal-history-item.pending {
+    border-left-color: var(--late);
+}
+
+.appeal-history-item.approved {
+    border-left-color: var(--present);
+}
+
+.appeal-history-item.rejected {
+    border-left-color: var(--absent);
+}
+
+.appeal-history-item.pending .appeal-history-status {
+    color: var(--late);
+}
+
+.appeal-history-item.approved .appeal-history-status {
+    color: var(--present);
+}
+
+.appeal-history-item.rejected .appeal-history-status {
+    color: var(--absent);
+}
+
+.appeal-history-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+}
+
+.appeal-history-status.pending {
+    color: var(--late);
+}
+
+.appeal-history-status.approved {
+    color: var(--present);
+}
+
+.appeal-history-status.rejected {
+    color: var(--absent);
+}
+
+.appeal-history-meta {
+    font-size: 11px;
+    color: var(--foreground2);
+}
+
+.appeal-history-reason {
+    font-size: 12px;
+}
+
+.appeal-history-teacher-response {
+    margin-top: 6px;
+    padding: 6px;
+    border-radius: 4px;
+    background: rgb(0 0 0 / 5%);
+    font-size: 12px;
 }
 
 .appeal-item-status,
@@ -1831,9 +2120,11 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
     font-weight: 600;
 }
 
-.appeal-item-status.pending,
-.appeal-history-status.pending {
-    color: var(--late);
+.appeal-field textarea {
+    resize: none;
+    max-height: 120px;
+    min-height: 120px;
+    overflow-y: auto;
 }
 
 .appeal-empty {
@@ -1845,6 +2136,7 @@ input.teacher-select[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 14px;
     font-weight: 500;
 }
+
 
 /* At-Risk Badge on Course Cards */
 .at-risk-badge-row {
