@@ -214,6 +214,10 @@ a {
     color: #ED1E28;
 }
 
+.sams-mobile-menu-toggle {
+    display: none;
+}
+
 .sams-nav-body {
     display: flex;
     flex-direction: column;
