@@ -260,7 +260,7 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
                 <div className="appeal-form-container">
                     <div className="appeal-right-layout">
                         {/* REVIEW FORM */}
-                        <div className="appeal-card">
+                        <div className="appeal-card teacher-appeal-card">
                             <>
                                 <h3 className="appeal-title">Review Appeal</h3>
                                 <div className="appeal-form">
@@ -287,12 +287,12 @@ function TeacherAppealsSection({ courses, appeals, setAppeals, isLoadingAppeals 
                                             readOnly
                                         />
                                     </div>
-                                    <div className="appeal-field">
+                                    <div className="appeal-field appeal-field-grow">
                                         <label>Student Reason</label>
                                         <textarea value={selectedAppeal?.reason || ""} readOnly />
                                     </div>
-                                    <div className="appeal-field">
-                                        <label>Teacher Response</label>
+                                    <div className="appeal-field appeal-field-grow">
+                                        <label>Your Response</label>
                                         <textarea
                                             value={teacherResponse}
                                             onChange={(e) => setTeacherResponse(e.target.value)}
