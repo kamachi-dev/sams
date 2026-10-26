@@ -40,7 +40,9 @@ export async function GET(
 
         const result = await db.query(`
             SELECT
+                s.id as course_id,
                 c.name as course_name,
+                s.name as section_name,
                 COUNT(CASE WHEN r.attendance = 1 THEN 1 END) as present_count,
                 COUNT(CASE WHEN r.attendance = 2 THEN 1 END) as late_count,
                 COUNT(CASE WHEN r.attendance IN (0, NULL) THEN 1 END) as absent_count,
@@ -51,8 +53,8 @@ export async function GET(
             WHERE r.student = $1
               AND c.school_year = (SELECT active_school_year FROM meta WHERE id='1')
               AND r.time IS NOT NULL
-            GROUP BY c.name
-            ORDER BY c.name
+            GROUP BY s.id, c.name, s.name
+            ORDER BY c.name, s.name
         `, [childId])
 
         const courses = result.rows.map(row => {
@@ -66,7 +68,9 @@ export async function GET(
                 : 0
 
             return {
+                courseId: row.course_id,
                 course: row.course_name,
+                section: row.section_name,
                 present: presentCount,
                 late: lateCount,
                 absent: absentCount,

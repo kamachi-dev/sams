@@ -4,6 +4,7 @@
 .student-courses-card-left {
     margin: 0;
     height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -341,25 +342,115 @@
     height: 16px;
 }
 
+/* Export popover */
+.parent-export-wrapper {
+    position: relative;
+}
+
+.parent-export-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 100;
+    background: var(--background1);
+    border: 1px solid rgb(0 0 0 / 12%);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 220px;
+    animation: parentExportPopoverIn 0.15s ease-out;
+}
+
+@keyframes parentExportPopoverIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.parent-export-popover-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent1);
+    margin: 0;
+    white-space: nowrap;
+}
+
+.parent-export-popover-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--foreground1);
+    white-space: nowrap;
+}
+
+.parent-export-popover .parent-export-month-select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.parent-export-confirm {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 0;
+    background: var(--present);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.parent-export-confirm:hover {
+    filter: brightness(1.08);
+    transform: scale(1.02);
+}
+
+.parent-export-format-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.parent-export-format-btns .parent-export-confirm {
+    flex: 1;
+    font-size: 12px;
+    padding: 8px 6px;
+}
+
+.parent-export-excel {
+    background: var(--present);
+}
+
+.parent-export-pdf {
+    background: #DB4437;
+}
+
 /* Chart Container */
 .student-chart-container {
     display: grid;
     grid-template-columns: 1fr;
     gap: 8px;
-    flex: 1;
-    min-height: 0;
+    flex: none;
+    min-height: 296px;
 }
 
 .student-chart-card {
     background: var(--background1);
     padding: 8px;
-    height: 100%;
+    height: 296px;
+    min-height: 296px;
     display: flex;
     border-radius: 6px;
     border: 1px solid #F2F2F2;
     box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
     min-width: 0;
     max-width: 100%;
+    overflow: hidden;
 }
 
 .student-chart-header {
@@ -681,6 +772,7 @@
   grid-template-columns: 50% 50%;
   gap: 10px;
   height: 100%;
+  min-height: 0;
 }
 
 @media (width <= 1024px) {

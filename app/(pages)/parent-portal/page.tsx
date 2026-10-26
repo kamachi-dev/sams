@@ -2,6 +2,7 @@
 
 import SamsTemplate from "@/app/components/SamsTemplate";
 import { usePushNotifications } from "@/lib/usePushNotifications";
+import { exportAttendanceReport } from "@/lib/attendanceReportExport";
 import {
   CalendarIcon,
   DownloadIcon,
@@ -37,27 +38,28 @@ import {
 } from "./constants";
 import { useDragScroll } from "./useDragScroll";
 
-// Helper function to calculate weekly trend from daily records
-const calculateWeeklyTrend = (daily: any[]) => {
-  const weeks: { [key: string]: { present: number; late: number; absent: number } } = {};
+const AttendanceTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
 
-  daily.forEach(record => {
-    const date = new Date(record.date);
-    const week = `Week ${Math.ceil(date.getDate() / 7)}`;
+  const point = payload[0]?.payload ?? {};
 
-    if (!weeks[week]) {
-      weeks[week] = { present: 0, late: 0, absent: 0 };
-    }
-
-    if (record.status === 'Present') weeks[week].present++;
-    else if (record.status === 'Late') weeks[week].late++;
-    else weeks[week].absent++;
-  });
-
-  return Object.entries(weeks).map(([week, data]) => ({
-    week,
-    ...data
-  }));
+  return (
+    <div
+      style={{
+        backgroundColor: "white",
+        padding: "10px",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+      }}
+    >
+      <p style={{ fontWeight: "bold", marginBottom: "5px" }}>
+        {point.dateRange || label}
+      </p>
+      <p style={{ color: "var(--present)" }}>Present: {point.present ?? 0}</p>
+      <p style={{ color: "var(--late)" }}>Late: {point.late ?? 0}</p>
+      <p style={{ color: "var(--absent)" }}>Absent: {point.absent ?? 0}</p>
+    </div>
+  );
 };
 
 const buildChildAttendancePieData = (child: any) => {
@@ -78,7 +80,9 @@ const buildChildAttendancePieData = (child: any) => {
 };
 
 type CourseAttendanceItem = {
+  courseId: string;
   course: string;
+  section?: string;
   present: number;
   late: number;
   absent: number;
@@ -100,13 +104,12 @@ export default function Parent() {
   const [courseAttendance, setCourseAttendance] = useState<CourseAttendanceItem[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [selectedChildData, setSelectedChildData] = useState<any>(null);
-  const [weeklyTrend, setWeeklyTrend] = useState<any[]>([]);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
-  const [quarterlyData, setQuarterlyData] = useState<any[]>([]);
+  const [trendsData, setTrendsData] = useState<any[]>([]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
   const [childDetailsLoading, setChildDetailsLoading] = useState(false);
+  const [isLoadingTrends, setIsLoadingTrends] = useState(false);
 
   const [childRecordFilters, setChildRecordFilters] = useState({
     yesterday: false,
@@ -120,6 +123,11 @@ export default function Parent() {
 
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportPicker, setShowExportPicker] = useState(false);
+  const [exportMonth, setExportMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
   void useState<
     "overview" | "analytics" | "courses"
   >("overview");
@@ -383,56 +391,94 @@ export default function Parent() {
 
   // Fetch detailed data when a child is selected in dashboard view
   useEffect(() => {
-    if (view === "dashboard" && selectedChild) {
-      const fetchChildDetails = async () => {
-        try {
-          setChildDetailsLoading(true);
+    if (view !== "dashboard" || !selectedChild) return;
 
-          // Fetch daily records
-          const dailyRes = await fetch(`/api/parent/children/${selectedChild.id}/daily`);
-          const dailyData = await dailyRes.json();
-          if (dailyData.success) {
-            setDailyAttendance(dailyData.data || []);
-            // Calculate weekly trend from daily data
-            setWeeklyTrend(calculateWeeklyTrend(dailyData.data || []));
-          }
+    const fetchChildDetails = async () => {
+      try {
+        setChildDetailsLoading(true);
 
-          // Fetch courses
-          const coursesRes = await fetch(`/api/parent/children/${selectedChild.id}/courses`);
-          const coursesData = await coursesRes.json();
-          if (coursesData.success) {
-            const normalizedCourses: CourseAttendanceItem[] = (coursesData.data || []).map((course: any) => ({
-              course: course.course ?? course.subject ?? 'Unknown',
-              present: Number(course.present ?? 0),
-              late: Number(course.late ?? 0),
-              absent: Number(course.absent ?? 0),
-              percentage: Number(course.percentage ?? 0),
-            }));
-
-            setCourseAttendance(normalizedCourses);
-          }
-
-          // Set placeholder data for monthly and quarterly
-          setMonthlyData([
-            { month: "This Month", percentage: selectedChild.percentage || 0 }
-          ]);
-          setQuarterlyData([
-            { name: "Current Quarter", present: selectedChild.present || 0, late: selectedChild.late || 0, absent: selectedChild.absent || 0 }
-          ]);
-
-          // Set selected child data
-          setSelectedChildData(selectedChild);
-
-          setChildDetailsLoading(false);
-        } catch (error) {
-          console.error('Error fetching child details:', error);
-          setChildDetailsLoading(false);
+        // Fetch daily records (used by the alerts panel)
+        const dailyRes = await fetch(`/api/parent/children/${selectedChild.id}/daily`);
+        const dailyData = await dailyRes.json();
+        if (dailyData.success) {
+          setDailyAttendance(dailyData.data || []);
         }
-      };
 
-      fetchChildDetails();
-    }
+        // Fetch courses
+        const coursesRes = await fetch(`/api/parent/children/${selectedChild.id}/courses`);
+        const coursesData = await coursesRes.json();
+        if (coursesData.success) {
+          const normalizedCourses: CourseAttendanceItem[] = (coursesData.data || []).map((course: any) => ({
+            courseId: String(course.courseId ?? course.course_id ?? course.course ?? ""),
+            course: course.course ?? course.subject ?? 'Unknown',
+            section: course.section,
+            present: Number(course.present ?? 0),
+            late: Number(course.late ?? 0),
+            absent: Number(course.absent ?? 0),
+            percentage: Number(course.percentage ?? 0),
+          }));
+
+          setCourseAttendance(normalizedCourses);
+        }
+
+        // Set selected child data
+        setSelectedChildData(selectedChild);
+
+        setChildDetailsLoading(false);
+      } catch (error) {
+        console.error('Error fetching child details:', error);
+        setChildDetailsLoading(false);
+      }
+    };
+
+    fetchChildDetails();
   }, [view, selectedChild]);
+
+  // Keep the summary card in sync with the auto-refreshed children list
+  useEffect(() => {
+    if (!selectedChild) return;
+
+    const latest = children.find((child) => child.id === selectedChild.id);
+    if (latest) {
+      setSelectedChildData(latest);
+    }
+  }, [children, selectedChild]);
+
+  // Fetch chart data whenever the child, view, or course filter changes
+  useEffect(() => {
+    if (view !== "dashboard" || !selectedChild) {
+      setTrendsData([]);
+      return;
+    }
+
+    const fetchTrends = async () => {
+      setIsLoadingTrends(true);
+      try {
+        const params = new URLSearchParams({ view: selectedView });
+        if (selectedCourse !== "all") {
+          params.append("course", selectedCourse);
+        }
+
+        const response = await fetch(
+          `/api/parent/children/${selectedChild.id}/trends?${params.toString()}`
+        );
+        const result = await response.json();
+
+        if (result.success) {
+          setTrendsData(result.data || []);
+        } else {
+          setTrendsData([]);
+        }
+      } catch (error) {
+        console.error('Error fetching child trends:', error);
+        setTrendsData([]);
+      } finally {
+        setIsLoadingTrends(false);
+      }
+    };
+
+    fetchTrends();
+  }, [view, selectedChild, selectedView, selectedCourse]);
 
   // ==========================
   // ATTENDANCE CALCULATIONS
@@ -512,12 +558,39 @@ export default function Parent() {
   // Count warnings/alert notifications
   const warningsCount = notifications.filter(n => n.type === 'warning' || n.type === 'alert').length;
 
-  const handleExport = () => {
+  const handleExport = async (
+    monthOverride?: string,
+    format: "excel" | "pdf" = "excel"
+  ) => {
+    if (!selectedChild) {
+      alert("Please select a child first.");
+      return;
+    }
+
     setIsExporting(true);
-    setTimeout(() => {
-      alert("Attendance report exported successfully!");
+    setShowExportPicker(false);
+
+    try {
+      const picked = monthOverride || exportMonth;
+      const [yearStr, monthStr] = picked.split("-");
+
+      const response = await fetch(
+        `/api/parent/children/${selectedChild.id}/sf2?month=${parseInt(monthStr, 10)}&year=${parseInt(yearStr, 10)}`
+      );
+      const result = await response.json();
+
+      if (!result.success) {
+        alert(result.error || "Failed to fetch attendance data.");
+        return;
+      }
+
+      await exportAttendanceReport(result.data, format);
+    } catch (error) {
+      console.error("Export error:", error);
+      alert("Failed to export attendance report. Please try again.");
+    } finally {
       setIsExporting(false);
-    }, 1500);
+    }
   };
 
   // Filters for student records
@@ -746,6 +819,7 @@ export default function Parent() {
                       className="check-info-btn"
                       onClick={() => {
                         setSelectedChild(child);
+                        setSelectedCourse("all");
                         setView("dashboard");
                       }}
                     >
@@ -872,11 +946,6 @@ export default function Parent() {
 
                   <div className="student-filters">
                     <div className="student-filters-group">
-                      <select className="student-select">
-                        <option>1st Semester</option>
-                        <option>2nd Semester</option>
-                      </select>
-
                       <select
                         value={selectedView}
                         onChange={(e) =>
@@ -898,91 +967,204 @@ export default function Parent() {
                         className="student-select"
                       >
                         <option value="all">All Courses</option>
-                        <option value="mathematics">Mathematics</option>
-                        <option value="science">Science</option>
-                        <option value="english">English</option>
-                        <option value="filipino">Filipino</option>
-                        <option value="social">Social Studies</option>
+                        {courseAttendance.map((courseItem, index) => (
+                          <option
+                            key={`${courseItem.courseId}-${index}`}
+                            value={courseItem.courseId}
+                          >
+                            {courseItem.course}
+                            {courseItem.section
+                              ? ` — ${courseItem.section}`
+                              : ""}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
-                    <button
-                      onClick={handleExport}
-                      disabled={isExporting}
-                      className="student-export-btn"
-                    >
-                      <DownloadIcon />
-                      {isExporting ? "Exporting..." : ""}
-                    </button>
+                    <div className="parent-export-wrapper">
+                      <button
+                        type="button"
+                        onClick={() => setShowExportPicker(!showExportPicker)}
+                        disabled={isExporting}
+                        className="student-export-btn"
+                        title="Download Attendance Report"
+                      >
+                        <DownloadIcon />
+                        {isExporting ? "Exporting..." : "Export"}
+                      </button>
+
+                      {showExportPicker && (
+                        <div className="parent-export-popover">
+                          <p className="parent-export-popover-title">
+                            Export Attendance Report
+                          </p>
+                          <label className="parent-export-popover-label">
+                            Select Month
+                          </label>
+                          <select
+                            value={exportMonth}
+                            onChange={(e) => setExportMonth(e.target.value)}
+                            className="student-select parent-export-month-select"
+                          >
+                            {Array.from({ length: 12 }, (_, i) => {
+                              const d = new Date();
+                              d.setMonth(d.getMonth() - i);
+                              const val = `${d.getFullYear()}-${String(
+                                d.getMonth() + 1
+                              ).padStart(2, "0")}`;
+                              const label = d.toLocaleString("default", {
+                                month: "long",
+                                year: "numeric",
+                              });
+                              return (
+                                <option key={val} value={val}>
+                                  {label}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <label
+                            className="parent-export-popover-label"
+                            style={{ marginTop: 6 }}
+                          >
+                            Select Format
+                          </label>
+                          <div className="parent-export-format-btns">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleExport(exportMonth, "excel")
+                              }
+                              className="parent-export-confirm parent-export-excel"
+                            >
+                              <DownloadIcon /> Excel (.xlsx)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleExport(exportMonth, "pdf")}
+                              className="parent-export-confirm parent-export-pdf"
+                            >
+                              <DownloadIcon /> PDF (.pdf)
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="student-chart-container">
                     <div className="student-chart-card">
-                      <ResponsiveContainer width="100%" height="100%">
-                        {selectedView === "weekly" && (
-                          <BarChart data={weeklyTrend}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="week" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="present" fill="var(--present)" />
-                            <Bar dataKey="late" fill="var(--late)" />
-                            <Bar dataKey="absent" fill="var(--absent)" />
-                          </BarChart>
-                        )}
+                      {isLoadingTrends ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            height: 280,
+                            width: "100%",
+                          }}
+                        >
+                          <p>Loading chart data...</p>
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={280}>
+                          {selectedView === "weekly" && (
+                            <BarChart data={trendsData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="week" />
+                              <YAxis allowDecimals={false} />
+                              <Tooltip content={<AttendanceTooltip />} />
+                              <Legend />
+                              <Bar
+                                dataKey="present"
+                                fill="var(--present)"
+                                name="Present"
+                              />
+                              <Bar
+                                dataKey="late"
+                                fill="var(--late)"
+                                name="Late"
+                              />
+                              <Bar
+                                dataKey="absent"
+                                fill="var(--absent)"
+                                name="Absent"
+                              />
+                            </BarChart>
+                          )}
 
-                        {selectedView === "monthly" && (
-                          <LineChart data={monthlyData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" />
-                            <YAxis domain={[80, 100]} />
-                            <Tooltip />
-                            <Line
-                              type="monotone"
-                              dataKey="percentage"
-                              stroke="var(--present)"
-                              strokeWidth={3}
-                            />
-                          </LineChart>
-                        )}
+                          {selectedView === "monthly" && (
+                            <LineChart data={trendsData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="month" />
+                              <YAxis domain={[0, 100]} unit="%" />
+                              <Tooltip
+                                formatter={(value: any) => [
+                                  `${value}%`,
+                                  "Attendance Rate",
+                                ]}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="attendanceRate"
+                                stroke="var(--present)"
+                                strokeWidth={3}
+                                name="Attendance Rate"
+                              />
+                            </LineChart>
+                          )}
 
-                        {selectedView === "quarterly" && (
-                          <BarChart data={quarterlyData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="present" fill="var(--present)" />
-                            <Bar dataKey="late" fill="var(--late)" />
-                            <Bar dataKey="absent" fill="var(--absent)" />
-                          </BarChart>
-                        )}
+                          {selectedView === "quarterly" && (
+                            <BarChart data={trendsData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis allowDecimals={false} />
+                              <Tooltip content={<AttendanceTooltip />} />
+                              <Legend />
+                              <Bar
+                                dataKey="present"
+                                fill="var(--present)"
+                                name="Present"
+                              />
+                              <Bar
+                                dataKey="late"
+                                fill="var(--late)"
+                                name="Late"
+                              />
+                              <Bar
+                                dataKey="absent"
+                                fill="var(--absent)"
+                                name="Absent"
+                              />
+                            </BarChart>
+                          )}
 
-                        {selectedView === "daily" && (
-                          <BarChart data={dailyAttendance}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey={() => 1}>
-                              {dailyAttendance.map((entry, i) => (
-                                <Cell
-                                  key={i}
-                                  fill={
-                                    entry.status === "Present"
-                                      ? "var(--present)"
-                                      : entry.status === "Late"
-                                      ? "var(--late)"
-                                      : "var(--absent)"
-                                  }
-                                />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        )}
-                      </ResponsiveContainer>
+                          {selectedView === "daily" && (
+                            <BarChart data={trendsData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="date" />
+                              <YAxis allowDecimals={false} />
+                              <Tooltip content={<AttendanceTooltip />} />
+                              <Legend />
+                              <Bar
+                                dataKey="present"
+                                fill="var(--present)"
+                                name="Present"
+                              />
+                              <Bar
+                                dataKey="late"
+                                fill="var(--late)"
+                                name="Late"
+                              />
+                              <Bar
+                                dataKey="absent"
+                                fill="var(--absent)"
+                                name="Absent"
+                              />
+                            </BarChart>
+                          )}
+                        </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
                 </div>
